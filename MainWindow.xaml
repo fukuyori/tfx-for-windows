@@ -1,0 +1,253 @@
+<Window x:Class="Tfx.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Tfx"
+        mc:Ignorable="d"
+        Title="tfx"
+        MinHeight="560"
+        MinWidth="980"
+        Height="760"
+        Width="1280"
+        Background="{StaticResource TfxBackground}"
+        Foreground="{StaticResource TfxForeground}"
+        FontFamily="Consolas, Yu Gothic UI"
+        KeyDown="Window_KeyDown"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        Closing="Window_Closing">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#0B0E10" BorderBrush="{StaticResource TfxBorder}" BorderThickness="0,0,0,1" Padding="8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="tfx" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TfxAccent}" Margin="0,0,14,0" VerticalAlignment="Center" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Back_Click" ToolTip="Back (Ctrl+[)" Content="&#xE72B;" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Forward_Click" ToolTip="Forward (Ctrl+])" Content="&#xE72A;" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Parent_Click" ToolTip="Up (Ctrl+Up / Backspace)" Content="&#xE70E;" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Reload_Click" ToolTip="Reload (Ctrl+R)" Content="&#xE72C;" />
+                    <Border Width="1" Margin="6,4" Background="{StaticResource TfxBorder}" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Split_Click" ToolTip="Toggle split pane" Content="&#xE89F;" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Preview_Click" ToolTip="Toggle preview" Content="&#xE890;" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="ViewMode_Click" ToolTip="Switch view mode" Content="&#xE8A9;" />
+                    <Button Style="{StaticResource ToolbarButton}" x:Name="ColumnsButton" Click="Columns_Click" ToolTip="Columns" Content="&#xE71D;" />
+                </StackPanel>
+                <TextBox x:Name="SearchBox" Grid.Column="1" Margin="12,0" VerticalContentAlignment="Center" TextChanged="SearchBox_TextChanged" KeyDown="SearchBox_KeyDown" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Style="{StaticResource ToolbarButton}" Click="NewFolder_Click" ToolTip="New folder (Ctrl+N)" Content="&#xE8F4;" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Rename_Click" ToolTip="Rename (F2)" Content="&#xE8AC;" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Trash_Click" ToolTip="Move to Recycle Bin (Del)" Content="&#xE74D;" />
+                    <Border Width="1" Margin="6,4" Background="{StaticResource TfxBorder}" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Terminal_Click" ToolTip="Open Terminal here (Ctrl+Shift+T)" Content="&#xE756;" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Explorer_Click" ToolTip="Reveal in Explorer" Content="&#xE838;" />
+                    <Border Width="1" Margin="6,4" Background="{StaticResource TfxBorder}" />
+                    <Button Style="{StaticResource ToolbarButton}" Click="Hidden_Click" ToolTip="Toggle hidden files (Ctrl+Shift+.)" Content="&#xED1A;" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <StatusBar DockPanel.Dock="Bottom" Background="#0B0E10" Foreground="{StaticResource TfxMuted}" BorderBrush="{StaticResource TfxBorder}" BorderThickness="0,1,0,0">
+            <StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <DockPanel HorizontalAlignment="Stretch" />
+                </ItemsPanelTemplate>
+            </StatusBar.ItemsPanel>
+            <StatusBarItem DockPanel.Dock="Left">
+                <TextBlock x:Name="StatusText" />
+            </StatusBarItem>
+            <StatusBarItem DockPanel.Dock="Right">
+                <TextBlock x:Name="FreeSpaceText" Margin="0,0,8,0" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260" MinWidth="180" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" MinWidth="420" />
+                <ColumnDefinition x:Name="PreviewSplitterColumn" Width="5" />
+                <ColumnDefinition x:Name="PreviewColumn" Width="320" MinWidth="240" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="{StaticResource TfxPanel}" BorderBrush="{StaticResource TfxBorder}" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="PINNED" Foreground="{StaticResource TfxMuted}" Margin="10,10,10,4" />
+                    <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Height="118" Background="{StaticResource TfxPanel}" Foreground="{StaticResource TfxForeground}" BorderThickness="0" MouseDoubleClick="PinnedList_MouseDoubleClick" PreviewMouseMove="PinnedList_PreviewMouseMove" Drop="PinnedList_Drop" AllowDrop="True" />
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,0,8,8">
+                        <Button Content="Pin +" Click="Pin_Click" />
+                        <Button Content="Pin -" Click="Unpin_Click" />
+                    </StackPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="FOLDERS" Foreground="{StaticResource TfxMuted}" Margin="10,4,10,4" />
+                    <TreeView x:Name="FolderTree" Background="{StaticResource TfxPanel}" Foreground="{StaticResource TfxForeground}" BorderThickness="0" SelectedItemChanged="FolderTree_SelectedItemChanged" PreviewMouseLeftButtonUp="FolderTree_PreviewMouseLeftButtonUp" />
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="5" Background="{StaticResource TfxBorder}" HorizontalAlignment="Stretch" />
+
+            <Grid Grid.Column="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition x:Name="PaneSplitterColumn" Width="5" />
+                    <ColumnDefinition x:Name="RightPaneColumn" Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border x:Name="LeftPaneBorder" Grid.Column="0" Background="{StaticResource TfxPanelActive}" BorderBrush="{StaticResource TfxBorder}" BorderThickness="1" Margin="8">
+                    <DockPanel>
+                        <local:PathBar x:Name="LeftPathBar" DockPanel.Dock="Top" Margin="6,6,6,4" PathRequested="LeftPathBar_PathRequested" />
+                        <Grid>
+                        <DataGrid x:Name="LeftGrid" ItemsSource="{Binding LeftItems}" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn x:Name="LeftNameColumn" Header="Name" Width="280" MinWidth="200" SortMemberPath="Name">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
+                                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center" SnapsToDevicePixels="True" />
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding Name, Mode=OneWay}" VerticalAlignment="Center" Padding="6,2" FontFamily="Consolas, Yu Gothic UI" Loaded="RenameTextBox_Loaded" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn x:Name="LeftDateModifiedColumn" Header="Date modified" Binding="{Binding ModifiedText}" SortMemberPath="Modified" Width="155" />
+                                <DataGridTextColumn x:Name="LeftTypeColumn" Header="Type" Binding="{Binding Kind}" SortMemberPath="Kind" Width="110" />
+                                <DataGridTextColumn x:Name="LeftSizeColumn" Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="95" />
+                                <DataGridTextColumn x:Name="LeftDateCreatedColumn" Header="Date created" Binding="{Binding CreatedText}" SortMemberPath="Created" Width="155" />
+                                <DataGridTextColumn x:Name="LeftOwnerColumn" Header="Owner" Binding="{Binding OwnerText}" SortMemberPath="OwnerText" Width="160" />
+                                <DataGridTextColumn x:Name="LeftAttributeColumn" Header="Attribute" Binding="{Binding AttributeText}" SortMemberPath="AttributeText" Width="140" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <ListBox x:Name="LeftIconView" Visibility="Collapsed" ItemsSource="{Binding LeftItems}"
+                                 Background="{StaticResource TfxPanel}" BorderThickness="0" SelectionMode="Extended"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 SelectionChanged="IconView_SelectionChanged" MouseDoubleClick="IconView_MouseDoubleClick"
+                                 GotFocus="IconView_GotFocus" PreviewMouseRightButtonDown="IconView_PreviewMouseRightButtonDown"
+                                 ContextMenuOpening="IconView_ContextMenuOpening" PreviewMouseMove="IconView_PreviewMouseMove"
+                                 AllowDrop="True" DragOver="Grid_DragOver" Drop="Grid_Drop">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Margin" Value="0" />
+                                    <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#263845" />
+                                            <Setter Property="Foreground" Value="#FFFFFF" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Width="100" Margin="4">
+                                        <Image Source="{Binding LargeIcon}" Width="32" Height="32" HorizontalAlignment="Center" Stretch="None" SnapsToDevicePixels="True" />
+                                        <TextBlock Text="{Binding Name}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <GridSplitter Grid.Column="1" Width="5" Background="{StaticResource TfxBorder}" HorizontalAlignment="Stretch" />
+
+                <Border x:Name="RightPaneBorder" Grid.Column="2" Background="{StaticResource TfxPanel}" BorderBrush="{StaticResource TfxBorder}" BorderThickness="1" Margin="8">
+                    <DockPanel>
+                        <local:PathBar x:Name="RightPathBar" DockPanel.Dock="Top" Margin="6,6,6,4" PathRequested="RightPathBar_PathRequested" />
+                        <Grid>
+                        <DataGrid x:Name="RightGrid" ItemsSource="{Binding RightItems}" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn x:Name="RightNameColumn" Header="Name" Width="280" MinWidth="200" SortMemberPath="Name">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
+                                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center" SnapsToDevicePixels="True" />
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding Name, Mode=OneWay}" VerticalAlignment="Center" Padding="6,2" FontFamily="Consolas, Yu Gothic UI" Loaded="RenameTextBox_Loaded" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn x:Name="RightDateModifiedColumn" Header="Date modified" Binding="{Binding ModifiedText}" SortMemberPath="Modified" Width="155" />
+                                <DataGridTextColumn x:Name="RightTypeColumn" Header="Type" Binding="{Binding Kind}" SortMemberPath="Kind" Width="110" />
+                                <DataGridTextColumn x:Name="RightSizeColumn" Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="95" />
+                                <DataGridTextColumn x:Name="RightDateCreatedColumn" Header="Date created" Binding="{Binding CreatedText}" SortMemberPath="Created" Width="155" />
+                                <DataGridTextColumn x:Name="RightOwnerColumn" Header="Owner" Binding="{Binding OwnerText}" SortMemberPath="OwnerText" Width="160" />
+                                <DataGridTextColumn x:Name="RightAttributeColumn" Header="Attribute" Binding="{Binding AttributeText}" SortMemberPath="AttributeText" Width="140" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <ListBox x:Name="RightIconView" Visibility="Collapsed" ItemsSource="{Binding RightItems}"
+                                 Background="{StaticResource TfxPanel}" BorderThickness="0" SelectionMode="Extended"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 SelectionChanged="IconView_SelectionChanged" MouseDoubleClick="IconView_MouseDoubleClick"
+                                 GotFocus="IconView_GotFocus" PreviewMouseRightButtonDown="IconView_PreviewMouseRightButtonDown"
+                                 ContextMenuOpening="IconView_ContextMenuOpening" PreviewMouseMove="IconView_PreviewMouseMove"
+                                 AllowDrop="True" DragOver="Grid_DragOver" Drop="Grid_Drop">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Margin" Value="0" />
+                                    <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#263845" />
+                                            <Setter Property="Foreground" Value="#FFFFFF" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Width="100" Margin="4">
+                                        <Image Source="{Binding LargeIcon}" Width="32" Height="32" HorizontalAlignment="Center" Stretch="None" SnapsToDevicePixels="True" />
+                                        <TextBlock Text="{Binding Name}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <GridSplitter Grid.Column="3" Width="5" Background="{StaticResource TfxBorder}" HorizontalAlignment="Stretch" />
+
+            <Border x:Name="PreviewHost" Grid.Column="4" Margin="0,8,8,8" Background="{StaticResource TfxPanel}" BorderBrush="{StaticResource TfxBorder}" BorderThickness="1">
+                <DockPanel>
+                    <TextBlock Text="PREVIEW" DockPanel.Dock="Top" Foreground="{StaticResource TfxMuted}" Margin="10,8" />
+                    <ScrollViewer>
+                        <StackPanel Margin="10">
+                            <Image x:Name="ImagePreview" Stretch="Uniform" Visibility="Collapsed" />
+                            <TextBox x:Name="TextPreview" Background="#0D1013" Foreground="{StaticResource TfxForeground}" BorderThickness="0" FontFamily="Consolas, Yu Gothic UI" TextWrapping="NoWrap" AcceptsReturn="True" IsReadOnly="True" Visibility="Collapsed" />
+                            <TextBlock x:Name="InfoPreview" Foreground="{StaticResource TfxForeground}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>
