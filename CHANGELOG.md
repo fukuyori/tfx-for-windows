@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Hide dot-prefixed files and folders, such as `.git` and `.env`, when hidden files are disabled.
+
 ## 0.1.0
 
 Initial Windows release of `tfx`.

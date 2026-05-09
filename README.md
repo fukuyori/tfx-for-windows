@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.1.0
+Version: 0.1.1
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -199,6 +199,8 @@ Saved automatically to `%APPDATA%\tfx\settings.json` on every change and on clos
 | `ViewMode` | `Details` or `Icons` |
 
 Delete the file to reset to defaults.
+
+When hidden files are disabled, tfx hides both Windows Hidden-attribute entries and names that start with `.`, such as `.git` or `.env`.
 
 ---
 

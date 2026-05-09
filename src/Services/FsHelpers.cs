@@ -63,12 +63,18 @@ internal static class FsHelpers
     {
         try
         {
-            return File.GetAttributes(path).HasFlag(FileAttributes.Hidden);
+            return File.GetAttributes(path).HasFlag(FileAttributes.Hidden) || IsDotHidden(path);
         }
         catch
         {
-            return false;
+            return IsDotHidden(path);
         }
+    }
+
+    private static bool IsDotHidden(string path)
+    {
+        var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        return name.Length > 1 && name.StartsWith('.');
     }
 
     public static string NextAvailablePath(string path)

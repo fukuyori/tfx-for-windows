@@ -7,7 +7,7 @@
 
 ## 1. 起動とレイアウト
 
-- [ ] `dotnet run` で起動するとウィンドウタイトルが `tfx 0.1.0 - <パス>` になる
+- [ ] `dotnet run` で起動するとウィンドウタイトルが `tfx 0.1.1 - <パス>` になる
 - [ ] サイドバー（PINNED / FOLDERS）、左ペイン、右ペイン、プレビューペインが正しく配置される
 - [ ] 既定ではスプリット表示（左右ペイン）かつプレビュー表示
 - [ ] アクティブなペインの枠が明るい緑、非アクティブはグレー
@@ -151,6 +151,7 @@
 - [ ] Terminal ボタン / `Ctrl + Shift + T` で現在のフォルダをカレントとして PowerShell（または Windows Terminal）が起動
 - [ ] Explorer ボタンで現在パスがエクスプローラで開く（選択中ファイルがあれば選択状態）
 - [ ] `Ctrl + Shift + .` または Hidden ボタンで隠しファイル表示切替
+- [ ] Hidden OFF では Windows Hidden 属性の項目と `.git` / `.env` など `.` 始まりの項目が非表示になる
 
 ## 16. 設定の永続化
 
@@ -181,7 +182,7 @@ dotnet run -- "C:\path\to\folder"
 - [ ] `dotnet publish -c Release -r win-x64 --self-contained true` が成功
 - [ ] 出力 EXE のファイルプロパティ → 詳細タブで以下が表示される
   - [ ] 製品名: `tfx for Windows`
-  - [ ] 製品バージョン: `0.1.0`
+  - [ ] 製品バージョン: `0.1.1`
   - [ ] 著作権: `Copyright (c) fukuyori`
 
 ## 19. リグレッション確認
