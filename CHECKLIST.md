@@ -7,7 +7,7 @@
 
 ## 1. 起動とレイアウト
 
-- [ ] `dotnet run` で起動するとウィンドウタイトルが `tfx 0.1.2 - <パス>` になる
+- [ ] `dotnet run` で起動するとウィンドウタイトルが `tfx 0.1.3 - <パス>` になる
 - [ ] サイドバー（PINNED / FOLDERS）、左ペイン、右ペイン、プレビューペインが正しく配置される
 - [ ] 既定ではスプリット表示（左右ペイン）かつプレビュー表示
 - [ ] アクティブなペインの枠が明るい緑、非アクティブはグレー
@@ -158,12 +158,15 @@
 `%APPDATA%\tfx\settings.json` を確認：
 
 - [ ] LeftPath / RightPath
+- [ ] ActivePane
 - [ ] ShowSplit / ShowPreview / ShowHidden
-- [ ] Width / Height
+- [ ] Left / Top / Width / Height / IsMaximized
+- [ ] SidebarWidth / PreviewWidth / LeftPaneRatio
 - [ ] PinnedFolders（順序）
 - [ ] VisibleFileColumns
 - [ ] FileColumnOrder
 - [ ] ViewMode（`Details` / `Icons`）
+- [ ] 再起動すると前回終了時のパス、アクティブペイン、表示モード、列、サイドバー幅、プレビュー幅、左右ペイン比率、ウィンドウ位置が復元される
 - [ ] ファイルを削除して再起動 → 既定状態に戻る
 
 ## 17. 起動時引数
@@ -182,7 +185,7 @@ dotnet run -- "C:\path\to\folder"
 - [ ] `dotnet publish -c Release -r win-x64 --self-contained true` が成功
 - [ ] 出力 EXE のファイルプロパティ → 詳細タブで以下が表示される
   - [ ] 製品名: `tfx for Windows`
-  - [ ] 製品バージョン: `0.1.2`
+  - [ ] 製品バージョン: `0.1.3`
   - [ ] 著作権: `Copyright (c) fukuyori`
 
 ## 19. リグレッション確認

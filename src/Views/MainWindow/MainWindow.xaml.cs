@@ -33,6 +33,7 @@ public partial class MainWindow : Window
     private string[] _cutBuffer = [];
     private Point _dragStart;
     private bool _syncingSelection;
+    private bool _suspendSettingsSave;
 
     public MainWindow()
     {
@@ -51,11 +52,13 @@ public partial class MainWindow : Window
         FolderTree.AddHandler(TreeViewItem.ExpandedEvent, new RoutedEventHandler(FolderTree_Expanded));
         LoadDrives();
 
+        _suspendSettingsSave = true;
         var initial = ResolveInitialPath();
         Navigate(LeftGrid, initial, false);
         Navigate(RightGrid, _settings.RightPath, false);
         ApplyLayoutSettings();
-        UpdateActivePane(LeftGrid);
+        UpdateActivePane(string.Equals(_settings.ActivePane, "Right", StringComparison.OrdinalIgnoreCase) && _settings.ShowSplit ? RightGrid : LeftGrid);
+        _suspendSettingsSave = false;
     }
 
     private string ResolveInitialPath()
@@ -102,10 +105,18 @@ public partial class MainWindow : Window
 
     private void SaveSettings()
     {
+        if (_suspendSettingsSave)
+        {
+            return;
+        }
+
         _settings.LeftPath = _leftPath;
         _settings.RightPath = _rightPath;
-        _settings.ShowPreview = PreviewColumn.Width.Value > 0;
-        _settings.ShowSplit = RightPaneColumn.Width.Value > 0;
+        _settings.ActivePane = _activeGrid == RightGrid ? "Right" : "Left";
+        var showPreview = PreviewColumn.Width.Value > 0;
+        var showSplit = RightPaneColumn.Width.Value > 0;
+        _settings.ShowPreview = showPreview;
+        _settings.ShowSplit = showSplit;
         _settings.ShowHidden = ShowHidden;
         _settings.PinnedFolders = _pinned.ToList();
         _settings.VisibleFileColumns = _fileColumns
@@ -113,8 +124,23 @@ public partial class MainWindow : Window
             .Select(column => column.Id)
             .ToList();
         _settings.FileColumnOrder = _fileColumns.Select(c => c.Id).ToList();
-        _settings.Width = Width;
-        _settings.Height = Height;
+        var bounds = WindowState == WindowState.Maximized ? RestoreBounds : new Rect(Left, Top, Width, Height);
+        _settings.Left = bounds.Left;
+        _settings.Top = bounds.Top;
+        _settings.Width = bounds.Width;
+        _settings.Height = bounds.Height;
+        _settings.IsMaximized = WindowState == WindowState.Maximized;
+        _settings.SidebarWidth = SidebarColumn.ActualWidth > 0 ? SidebarColumn.ActualWidth : SidebarColumn.Width.Value;
+        if (showPreview)
+        {
+            _settings.PreviewWidth = PreviewColumn.ActualWidth > 0 ? PreviewColumn.ActualWidth : PreviewColumn.Width.Value;
+        }
+
+        var totalPaneWidth = LeftPaneColumn.ActualWidth + RightPaneColumn.ActualWidth;
+        if (showSplit && totalPaneWidth > 0)
+        {
+            _settings.LeftPaneRatio = Math.Clamp(LeftPaneColumn.ActualWidth / totalPaneWidth, 0.15, 0.85);
+        }
 
         var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_settingsPath, json);
@@ -138,8 +164,24 @@ public partial class MainWindow : Window
             Height = _settings.Height;
         }
 
+        if (!double.IsNaN(_settings.Left) && !double.IsNaN(_settings.Top))
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = _settings.Left;
+            Top = _settings.Top;
+        }
+
+        if (_settings.SidebarWidth >= SidebarColumn.MinWidth)
+        {
+            SidebarColumn.Width = new GridLength(_settings.SidebarWidth);
+        }
+
         SetSplitVisible(_settings.ShowSplit);
         SetPreviewVisible(_settings.ShowPreview);
+        if (_settings.IsMaximized)
+        {
+            WindowState = WindowState.Maximized;
+        }
         HiddenButton.IsChecked = _settings.ShowHidden;
         ApplyColumnVisibility();
         ApplyColumnOrder();

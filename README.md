@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.1.2
+Version: 0.1.3
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -191,8 +191,10 @@ Saved automatically to `%APPDATA%\tfx\settings.json` on every change and on clos
 | Key | Description |
 | --- | --- |
 | `LeftPath`, `RightPath` | Current folder of each pane |
+| `ActivePane` | Last active pane |
 | `ShowSplit`, `ShowPreview`, `ShowHidden` | View toggles |
-| `Width`, `Height` | Window size |
+| `Left`, `Top`, `Width`, `Height`, `IsMaximized` | Window placement |
+| `SidebarWidth`, `PreviewWidth`, `LeftPaneRatio` | Pane layout |
 | `PinnedFolders` | Pinned entries in display order |
 | `VisibleFileColumns` | Which columns are visible |
 | `FileColumnOrder` | Column display order |

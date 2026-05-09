@@ -69,7 +69,8 @@ public partial class MainWindow
     {
         PreviewSplitterColumn.Width = visible ? new GridLength(5) : new GridLength(0);
         PreviewColumn.MinWidth = visible ? 240 : 0;
-        PreviewColumn.Width = visible ? new GridLength(320) : new GridLength(0);
+        var previewWidth = _settings.PreviewWidth >= 240 ? _settings.PreviewWidth : 320;
+        PreviewColumn.Width = visible ? new GridLength(previewWidth) : new GridLength(0);
         PreviewHost.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         PreviewButton.IsChecked = visible;
     }

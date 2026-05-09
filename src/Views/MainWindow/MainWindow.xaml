@@ -126,7 +126,7 @@
 
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="260" MinWidth="180" />
+                <ColumnDefinition x:Name="SidebarColumn" Width="260" MinWidth="180" />
                 <ColumnDefinition Width="5" />
                 <ColumnDefinition Width="*" MinWidth="420" />
                 <ColumnDefinition x:Name="PreviewSplitterColumn" Width="5" />
@@ -158,7 +158,7 @@
 
             <Grid Grid.Column="2">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition x:Name="LeftPaneColumn" Width="*" />
                     <ColumnDefinition x:Name="PaneSplitterColumn" Width="5" />
                     <ColumnDefinition x:Name="RightPaneColumn" Width="*" />
                 </Grid.ColumnDefinitions>

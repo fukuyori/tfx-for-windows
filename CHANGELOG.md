@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- Restore the previous session on startup, including pane paths, active pane, view/layout state, window placement, and splitter widths.
+
 ## 0.1.2
 
 - Apply the upstream `tfx` app icon to the Windows executable and main window.

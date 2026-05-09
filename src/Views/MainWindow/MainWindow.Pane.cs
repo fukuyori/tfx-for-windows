@@ -56,9 +56,27 @@ public partial class MainWindow
     private void SetSplitVisible(bool visible)
     {
         PaneSplitterColumn.Width = visible ? new GridLength(5) : new GridLength(0);
-        RightPaneColumn.Width = visible ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        if (visible)
+        {
+            ApplyPaneSplitRatio();
+        }
+        else
+        {
+            RightPaneColumn.Width = new GridLength(0);
+            if (_activeGrid == RightGrid)
+            {
+                UpdateActivePane(LeftGrid);
+            }
+        }
         RightPaneBorder.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         SplitButton.IsChecked = visible;
+    }
+
+    private void ApplyPaneSplitRatio()
+    {
+        var ratio = Math.Clamp(_settings.LeftPaneRatio, 0.15, 0.85);
+        LeftPaneColumn.Width = new GridLength(ratio, GridUnitType.Star);
+        RightPaneColumn.Width = new GridLength(1 - ratio, GridUnitType.Star);
     }
 
     private void Split_Click(object sender, RoutedEventArgs e)
