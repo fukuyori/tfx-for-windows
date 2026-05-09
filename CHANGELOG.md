@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Apply the upstream `tfx` app icon to the Windows executable and main window.
+
 ## 0.1.1
 
 - Hide dot-prefixed files and folders, such as `.git` and `.env`, when hidden files are disabled.

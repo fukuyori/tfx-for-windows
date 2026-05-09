@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:Tfx"
         mc:Ignorable="d"
         Title="tfx"
+        Icon="/Assets/AppIcon.ico"
         MinHeight="560"
         MinWidth="980"
         Height="760"
