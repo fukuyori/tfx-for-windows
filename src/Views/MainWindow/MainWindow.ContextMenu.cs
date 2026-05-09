@@ -46,9 +46,10 @@ public partial class MainWindow
     private ContextMenu BuildGridContextMenu(DataGrid grid)
     {
         var menu = new ContextMenu();
-        var selection = grid.SelectedItems.OfType<FileItem>().Where(i => !i.IsParent).ToArray();
+        var selection = ActiveSelectedItems().Where(i => !i.IsParent).ToArray();
         var hasSelection = selection.Length > 0;
         var oneSelected = selection.Length == 1;
+        var hasZipSelection = selection.Any(i => !i.IsDirectory && System.IO.Path.GetExtension(i.FullPath).Equals(".zip", StringComparison.OrdinalIgnoreCase));
         var hasClipboard = Clipboard.ContainsFileDropList();
 
         var open = new MenuItem { Header = "Open", InputGestureText = "Enter", IsEnabled = oneSelected };
@@ -79,6 +80,14 @@ public partial class MainWindow
         paste.Click += (_, _) => PasteIntoActivePane();
         menu.Items.Add(paste);
 
+        var compress = new MenuItem { Header = "Compress to Zip", InputGestureText = "Ctrl+K", IsEnabled = hasSelection };
+        compress.Click += (_, _) => CompressSelection();
+        menu.Items.Add(compress);
+
+        var extract = new MenuItem { Header = "Extract Zip", InputGestureText = "Ctrl+Shift+E", IsEnabled = hasZipSelection };
+        extract.Click += (_, _) => ExtractSelectedArchives();
+        menu.Items.Add(extract);
+
         menu.Items.Add(new Separator());
 
         var rename = new MenuItem { Header = "Rename", InputGestureText = "F2", IsEnabled = oneSelected };
@@ -104,6 +113,10 @@ public partial class MainWindow
         var newFolder = new MenuItem { Header = "New Folder", InputGestureText = "Ctrl+N" };
         newFolder.Click += (_, _) => NewFolder();
         menu.Items.Add(newFolder);
+
+        var newFile = new MenuItem { Header = "New File", InputGestureText = "Ctrl+Shift+N" };
+        newFile.Click += (_, _) => NewFile();
+        menu.Items.Add(newFile);
 
         var openTerminal = new MenuItem { Header = "Open Terminal here", InputGestureText = "Ctrl+Shift+T" };
         openTerminal.Click += (_, _) => OpenTerminal();

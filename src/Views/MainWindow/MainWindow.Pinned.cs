@@ -105,6 +105,21 @@ public partial class MainWindow
         }
     }
 
+    private void TogglePin_Click(object sender, RoutedEventArgs e)
+    {
+        var path = GetCurrentPath(_activeGrid);
+        if (_pinned.Contains(path))
+        {
+            _pinned.Remove(path);
+            SetStatus($"Unpinned {path}");
+        }
+        else
+        {
+            _pinned.Add(path);
+            SetStatus($"Pinned {path}");
+        }
+    }
+
     private void Unpin_Click(object sender, RoutedEventArgs e)
     {
         if (PinnedList.SelectedItem is string path)

@@ -39,6 +39,12 @@ public partial class MainWindow
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => ApplySearchFilter();
 
+    private void FocusSearch_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        SearchBox.Focus();
+        SearchBox.SelectAll();
+    }
+
     private void SearchBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)

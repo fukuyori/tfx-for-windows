@@ -23,9 +23,24 @@ public partial class MainWindow
             GetActivePathBar().EnterEditMode();
             e.Handled = true;
         }
+        else if (ctrl && shift && e.Key == Key.N)
+        {
+            NewFile();
+            e.Handled = true;
+        }
         else if (ctrl && e.Key == Key.N)
         {
             NewFolder();
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Key.K)
+        {
+            CompressSelection();
+            e.Handled = true;
+        }
+        else if (ctrl && shift && e.Key == Key.E)
+        {
+            ExtractSelectedArchives();
             e.Handled = true;
         }
         else if (ctrl && e.Key == Key.R)

@@ -58,6 +58,7 @@ public partial class MainWindow
         PaneSplitterColumn.Width = visible ? new GridLength(5) : new GridLength(0);
         RightPaneColumn.Width = visible ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
         RightPaneBorder.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        SplitButton.IsChecked = visible;
     }
 
     private void Split_Click(object sender, RoutedEventArgs e)

@@ -5,3 +5,4 @@ obj/
 *.suo
 *.cache
 *.log
+artifacts/

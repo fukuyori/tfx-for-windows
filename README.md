@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.01
+Version: 0.1.0
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -10,6 +10,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 
 - Repository: <https://github.com/fukuyori/tfx-for-windows>
 - Author: fukuyori (<self@spumoni.org>)
+- Release notes: [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
@@ -19,7 +20,8 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Folder tree sidebar plus persistent pinned folders
 - Editable address bar with clickable breadcrumb segments and free-text input
 - Two view modes: **Details** (multi-column metadata) and **Icons** (large-icon grid)
-- Inline rename, drag-and-drop with full Windows modifier-key conventions, shortcut (`.lnk`) creation
+- New File / New Folder, inline rename, drag-and-drop with full Windows modifier-key conventions, shortcut (`.lnk`) creation
+- Zip compression and extraction from the file pane or context menu
 - Right-click context menu, sortable columns, customizable column visibility and order
 - Image / text preview pane
 - Status bar with item counts, selection size, and active drive's free space
@@ -31,8 +33,8 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 
 ```text
 +-- Toolbar -----------------------------------------------------------+
-| tfx 0.01  Back Forward Up Reload | Split Preview View Cols  [Search]|
-|                          | New Rename Trash | Term Expl | Hide      |
+| Back Forward Up Folder Pin | <active path> [Search] | View Hidden   |
+| Terminal Explorer Select Reload Preview Split Columns CopyPath       |
 +--------------+----------------+----------------+--------------------+
 | PINNED       | Address bar    | Address bar    | PREVIEW            |
 | folder list  | Left file view | Right file view| info / image / text|
@@ -49,17 +51,16 @@ The active file pane is outlined with a bright green border.
 
 ## Toolbar
 
-Buttons use the **Segoe MDL2 Assets** font (built into Windows 10+). Hover for tooltip + shortcut.
+Buttons use **Segoe Fluent Icons** with **Segoe MDL2 Assets** fallback. Hover for tooltip + shortcut.
 
 | Group | Buttons |
 | --- | --- |
-| Navigation | Back, Forward, Up, Reload |
-| View | Split toggle, Preview toggle, View mode (Details / Icons), Columns |
-| File ops | New folder, Rename, Move to Recycle Bin |
-| External | Open Terminal here, Reveal in Explorer |
-| Misc | Toggle hidden files |
+| Navigation | Back, Forward, Up, Open folder, Pin / unpin current folder |
+| Path / search | Active path, Search, Focus search |
+| View | View mode (Details / Icons), Toggle hidden files |
+| Utility | Open Terminal here, Reveal in Explorer, Select all, Reload, Preview toggle, Split toggle, Columns, Copy current path |
 
-The search box sits between the left and right groups in the toolbar.
+File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste are available from the keyboard and context menu.
 
 ---
 
@@ -77,6 +78,9 @@ The search box sits between the left and right groups in the toolbar.
 | `Ctrl + C` / `Ctrl + X` / `Ctrl + V` | Copy / Cut / Paste |
 | `Ctrl + A` | Select all in active view |
 | `Ctrl + N` | New folder |
+| `Ctrl + Shift + N` | New file |
+| `Ctrl + K` | Compress selected items to a zip archive |
+| `Ctrl + Shift + E` | Extract selected zip archive(s) |
 | `Ctrl + R` | Reload |
 | `Ctrl + F` | Focus Search |
 | `Ctrl + L` / `F4` | Focus address bar (edit path) |
@@ -95,7 +99,7 @@ The search box sits between the left and right groups in the toolbar.
 - **Click** on the expander triangle -> expand/collapse only (no navigate)
 - **Single click** on row / icon -> select; **Ctrl** / **Shift** for multi-select
 - **Double-click** on row / icon -> open
-- **Right-click** -> context menu (Open, Reveal, Cut, Copy, Paste, Rename, Trash, Delete permanently, New folder, Open Terminal)
+- **Right-click** -> context menu (Open, Reveal, Cut, Copy, Paste, Compress, Extract, Rename, Trash, Delete permanently, New folder, New file, Open Terminal)
 - **Click** on a breadcrumb segment -> jump to that ancestor
 - **Click** on the empty area of the address bar -> switch to free-text edit mode
 - **Click** column header -> sort by that column (toggle ascending / descending)
@@ -113,7 +117,7 @@ Works within tfx, between tfx and Windows Explorer, or any other app that exchan
 | `Ctrl` | Force Copy | Copy |
 | `Alt` | Create shortcut (`.lnk`) at destination | Shortcut |
 
-After any drag-out (move or copy by external app), tfx refreshes both panes automatically. Name conflicts on copy / move are resolved by appending `(2)`, `(3)`, and so on.
+After any drag-out (move or copy by external app), tfx refreshes both panes automatically. Name conflicts are resolved by appending `(2)`, `(3)`, and so on. Dragging an item back into the same folder with Move does nothing instead of creating a duplicate name.
 
 ---
 
@@ -155,8 +159,17 @@ Sidebar `PINNED` section.
 - **Pin -** removes the selected entry
 - Drag a pinned entry to reorder
 - Double-click an entry to navigate the active pane
+- Long paths are shown with a middle ellipsis, such as `C: ... \Downloads`, while the full path remains available as a tooltip.
 
 Default pins on first run: User profile, Desktop, Documents, Downloads.
+
+---
+
+## Zip archives
+
+- **Compress to Zip** creates `<selected-name>.zip` for one item, or `Archive.zip` for multiple items.
+- Name conflicts are resolved with `(2)`, `(3)`, and so on.
+- **Extract Zip** extracts each selected `.zip` into a same-named folder in the current pane.
 
 ---
 
@@ -205,11 +218,19 @@ dotnet run -- "C:\path\to\folder"
 
 The first command-line argument, if it is a valid directory, becomes the initial folder for the left pane. Otherwise the previously saved path is restored.
 
-Publish a self-contained Windows executable:
+Publish a self-contained single-file Windows executable:
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained true
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
+
+Or build the release artifact:
+
+```powershell
+.\scripts\build-release.ps1
+```
+
+The script writes `artifacts\release\tfx-for-windows-<version>-win-x64\Tfx.exe`. By default the app is published as a self-contained single executable.
 
 ---
 
@@ -219,32 +240,31 @@ dotnet publish -c Release -r win-x64 --self-contained true
 Tfx.csproj
 App.xaml / App.xaml.cs              Application bootstrap; brushes; default control styles
 AssemblyInfo.cs                     WPF theme info
+scripts/build-release.ps1           Release publish helper
 
-PathBar.xaml / PathBar.xaml.cs      Breadcrumb + edit-mode address bar UserControl
+src/Views/MainWindow/MainWindow.xaml
+                                    Main window layout
+src/Views/MainWindow/MainWindow.xaml.cs
+                                    Core: fields, ctor, settings load/save, status helpers
+src/Views/MainWindow/*.cs           MainWindow partial files split by feature:
+                                    tree, pinned folders, navigation, path bar, pane,
+                                    search, columns, preview, file ops, external actions,
+                                    context menu, view mode, keyboard routing
 
-MainWindow.xaml                     Main window layout
-MainWindow.xaml.cs                  Core: fields, ctor, settings load/save, status helpers
-MainWindow.Tree.cs                  Folder tree (drives, lazy expand, click-to-navigate)
-MainWindow.Pinned.cs                Pinned folders (load, drag-reorder, click)
-MainWindow.Navigation.cs            Navigate / Reload / Back / Forward / Parent
-MainWindow.PathBar.cs               Path bar wiring; environment expansion; window title
-MainWindow.Pane.cs                  Active pane border; split toggle; selection events
-MainWindow.Search.cs                CollectionView search filter
-MainWindow.Columns.cs               Columns popup, ordering, visibility, sorting
-MainWindow.Preview.cs               Preview rendering; preview toggle
-MainWindow.FileOps.cs               Copy / Cut / Paste / Trash / Permanent delete /
-                                    Rename / New folder / Open / Drag / Drop
-MainWindow.External.cs              Terminal, Explorer, Hidden toggle
-MainWindow.ContextMenu.cs           Right-click context menu
-MainWindow.View.cs                  Details / Icons toggle and ListBox handlers
-MainWindow.Keyboard.cs              KeyDown / PreviewKeyDown; Tab focus cycle
+src/Controls/PathBar.xaml           Breadcrumb + edit-mode address bar UserControl
+src/Controls/PathBar.xaml.cs
 
-FileItem.cs                         File / folder model + factory + formatters
-FileItemComparer.cs                 Sort comparer (parent -> dirs -> files, then by column)
-AppSettings.cs                      Persisted settings POCO + ViewMode enum
-FsHelpers.cs                        File system helpers (enumerate, hidden, name conflict,
+src/Models/FileItem.cs              File / folder model + factory + formatters
+src/Models/FileItemComparer.cs      Sort comparer (parent -> dirs -> files, then by column)
+src/Models/AppSettings.cs           Persisted settings POCO + ViewMode enum
+
+src/Services/FsHelpers.cs           File system helpers (enumerate, hidden, name conflict,
                                     image / text detect, .lnk creation via WScript.Shell)
-IconCache.cs                        Shell icon retrieval (small + large), per-extension cache
+src/Services/IconCache.cs           Shell icon retrieval (small + large), per-extension cache
+src/Services/WindowTheme.cs         DWM title-bar color integration
+
+src/Converters/MiddleEllipsisPathConverter.cs
+                                    Middle-ellipsis display for long pinned folder paths
 ```
 
 `MainWindow` is a single class split into partial files by feature. All fields are declared in `MainWindow.xaml.cs` to keep state in one place.
@@ -256,7 +276,7 @@ IconCache.cs                        Shell icon retrieval (small + large), per-ex
 - Delete-like operations move to the Recycle Bin by default. Use `Shift + Delete` for permanent removal.
 - Cross-volume directory moves are handled via `Microsoft.VisualBasic.FileIO.FileSystem.MoveDirectory`, which falls back to copy + delete.
 - PDF and video previews are not implemented.
-- Inline rename (`F2`) is wired only in Details view; from Icons mode use the toolbar Rename button after selecting an item, then F2 still triggers a rename in the underlying DataGrid.
+- Inline rename (`F2`) is wired to the active Details view.
 - The DataGrid header drag-reorder is disabled by default style; use the Columns popup to keep both panes in sync.
 - Network locations work if mounted as drives or by typing UNC paths in the address bar.
 

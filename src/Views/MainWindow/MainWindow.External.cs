@@ -37,6 +37,7 @@ public partial class MainWindow
     private void ToggleHidden()
     {
         ShowHidden = !ShowHidden;
+        HiddenButton.IsChecked = ShowHidden;
         Reload(LeftGrid);
         Reload(RightGrid);
         SetStatus(ShowHidden ? "Hidden files visible" : "Hidden files hidden");
@@ -47,4 +48,23 @@ public partial class MainWindow
     private void Explorer_Click(object sender, RoutedEventArgs e) => RevealInExplorer();
 
     private void Hidden_Click(object sender, RoutedEventArgs e) => ToggleHidden();
+
+    private void SelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings.ViewMode == ViewMode.Icons)
+        {
+            (_activeGrid == LeftGrid ? LeftIconView : RightIconView).SelectAll();
+        }
+        else
+        {
+            _activeGrid.SelectAll();
+        }
+    }
+
+    private void CopyPath_Click(object sender, RoutedEventArgs e)
+    {
+        var text = GetCurrentPath(_activeGrid);
+        Clipboard.SetText(text);
+        SetStatus($"Copied path: {text}");
+    }
 }

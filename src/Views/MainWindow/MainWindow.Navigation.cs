@@ -1,4 +1,5 @@
 using System.IO;
+using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 using Path = System.IO.Path;
@@ -109,11 +110,27 @@ public partial class MainWindow
         Navigate(_activeGrid, path, false);
     }
 
+    private void OpenFolderPicker()
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Open folder",
+            InitialDirectory = GetCurrentPath(_activeGrid)
+        };
+
+        if (dialog.ShowDialog(this) == true && Directory.Exists(dialog.FolderName))
+        {
+            Navigate(_activeGrid, dialog.FolderName, true);
+        }
+    }
+
     private void Back_Click(object sender, RoutedEventArgs e) => NavigateBack();
 
     private void Forward_Click(object sender, RoutedEventArgs e) => NavigateForward();
 
     private void Parent_Click(object sender, RoutedEventArgs e) => NavigateParent();
+
+    private void OpenFolder_Click(object sender, RoutedEventArgs e) => OpenFolderPicker();
 
     private void Reload_Click(object sender, RoutedEventArgs e)
     {

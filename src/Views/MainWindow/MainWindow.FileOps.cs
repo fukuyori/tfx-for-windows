@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -34,7 +35,7 @@ public partial class MainWindow
 
     private void CopySelection(bool cut)
     {
-        var paths = SelectedItems(_activeGrid).Where(i => !i.IsParent).Select(i => i.FullPath).ToArray();
+        var paths = ActiveSelectedItems().Where(i => !i.IsParent).Select(i => i.FullPath).ToArray();
         if (paths.Length == 0)
         {
             return;
@@ -58,10 +59,17 @@ public partial class MainWindow
         var files = Clipboard.GetFileDropList().Cast<string>().ToArray();
         foreach (var source in files)
         {
-            var target = FsHelpers.NextAvailablePath(Path.Combine(destination, Path.GetFileName(source)));
+            var requestedTarget = Path.Combine(destination, Path.GetFileName(source));
+            var isMove = _cutBuffer.Contains(source, StringComparer.OrdinalIgnoreCase);
+            if (isMove && FsHelpers.SamePath(source, requestedTarget))
+            {
+                continue;
+            }
+
+            var target = FsHelpers.NextAvailablePath(requestedTarget);
             if (Directory.Exists(source))
             {
-                if (_cutBuffer.Contains(source, StringComparer.OrdinalIgnoreCase))
+                if (isMove)
                 {
                     Directory.Move(source, target);
                 }
@@ -72,7 +80,7 @@ public partial class MainWindow
             }
             else if (File.Exists(source))
             {
-                if (_cutBuffer.Contains(source, StringComparer.OrdinalIgnoreCase))
+                if (isMove)
                 {
                     File.Move(source, target);
                 }
@@ -91,7 +99,7 @@ public partial class MainWindow
 
     private void MoveSelectionToTrash()
     {
-        var items = SelectedItems(_activeGrid).Where(i => !i.IsParent).ToArray();
+        var items = ActiveSelectedItems().Where(i => !i.IsParent).ToArray();
         if (items.Length == 0)
         {
             return;
@@ -135,6 +143,20 @@ public partial class MainWindow
 
         var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), name.Trim()));
         Directory.CreateDirectory(path);
+        Reload(_activeGrid);
+        SetStatus($"Created {path}");
+    }
+
+    private void NewFile()
+    {
+        var name = Microsoft.VisualBasic.Interaction.InputBox("File name", "tfx", "New File.txt");
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), name.Trim()));
+        File.WriteAllBytes(path, []);
         Reload(_activeGrid);
         SetStatus($"Created {path}");
     }
@@ -236,7 +258,7 @@ public partial class MainWindow
 
     private void DeletePermanently()
     {
-        var items = SelectedItems(_activeGrid).Where(i => !i.IsParent).ToArray();
+        var items = ActiveSelectedItems().Where(i => !i.IsParent).ToArray();
         if (items.Length == 0)
         {
             return;
@@ -272,6 +294,107 @@ public partial class MainWindow
 
         Reload(LeftGrid);
         Reload(RightGrid);
+    }
+
+    private void CompressSelection()
+    {
+        var items = ActiveSelectedItems().Where(i => !i.IsParent).ToArray();
+        if (items.Length == 0)
+        {
+            return;
+        }
+
+        var directory = GetCurrentPath(_activeGrid);
+        var baseName = items.Length == 1
+            ? Path.GetFileNameWithoutExtension(items[0].Name)
+            : "Archive";
+        var zipPath = FsHelpers.NextAvailablePath(Path.Combine(directory, $"{baseName}.zip"));
+
+        try
+        {
+            using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create);
+            foreach (var item in items)
+            {
+                if (item.IsDirectory)
+                {
+                    AddDirectoryToArchive(archive, item.FullPath, item.Name);
+                }
+                else
+                {
+                    archive.CreateEntryFromFile(item.FullPath, item.Name, CompressionLevel.Optimal);
+                }
+            }
+
+            Reload(_activeGrid);
+            SetStatus($"Created {zipPath}");
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Compress failed: {ex.Message}");
+            try
+            {
+                if (File.Exists(zipPath))
+                {
+                    File.Delete(zipPath);
+                }
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private void ExtractSelectedArchives()
+    {
+        var archives = ActiveSelectedItems()
+            .Where(i => !i.IsParent && !i.IsDirectory && Path.GetExtension(i.FullPath).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (archives.Length == 0)
+        {
+            SetStatus("Select one or more .zip files to extract");
+            return;
+        }
+
+        foreach (var archiveItem in archives)
+        {
+            var destination = FsHelpers.NextAvailablePath(Path.Combine(
+                GetCurrentPath(_activeGrid),
+                Path.GetFileNameWithoutExtension(archiveItem.Name)));
+
+            try
+            {
+                Directory.CreateDirectory(destination);
+                ZipFile.ExtractToDirectory(archiveItem.FullPath, destination);
+            }
+            catch (Exception ex)
+            {
+                SetStatus($"Extract failed: {ex.Message}");
+                return;
+            }
+        }
+
+        Reload(_activeGrid);
+        SetStatus($"Extracted {archives.Length} archive(s)");
+    }
+
+    private static void AddDirectoryToArchive(ZipArchive archive, string sourceDirectory, string entryRoot)
+    {
+        var files = Directory.EnumerateFiles(sourceDirectory, "*", System.IO.SearchOption.AllDirectories);
+        var wroteAnyFile = false;
+
+        foreach (var file in files)
+        {
+            var relative = Path.GetRelativePath(sourceDirectory, file);
+            var entryName = Path.Combine(entryRoot, relative).Replace(Path.DirectorySeparatorChar, '/');
+            archive.CreateEntryFromFile(file, entryName, CompressionLevel.Optimal);
+            wroteAnyFile = true;
+        }
+
+        if (!wroteAnyFile)
+        {
+            archive.CreateEntry(entryRoot.TrimEnd('/', '\\') + "/");
+        }
     }
 
     private static T? FindVisualChild<T>(DependencyObject? parent) where T : DependencyObject
@@ -355,7 +478,13 @@ public partial class MainWindow
                 }
                 else
                 {
-                    var target = FsHelpers.NextAvailablePath(Path.Combine(destination, Path.GetFileName(source)));
+                    var requestedTarget = Path.Combine(destination, Path.GetFileName(source));
+                    if (effect == DragDropEffects.Move && FsHelpers.SamePath(source, requestedTarget))
+                    {
+                        continue;
+                    }
+
+                    var target = FsHelpers.NextAvailablePath(requestedTarget);
                     if (Directory.Exists(source))
                     {
                         if (effect == DragDropEffects.Move)
@@ -435,6 +564,14 @@ public partial class MainWindow
 
     private void NewFolder_Click(object sender, RoutedEventArgs e) => NewFolder();
 
+    private void NewFile_Click(object sender, RoutedEventArgs e) => NewFile();
+
+    private void Copy_Click(object sender, RoutedEventArgs e) => CopySelection(false);
+
+    private void Cut_Click(object sender, RoutedEventArgs e) => CopySelection(true);
+
+    private void Paste_Click(object sender, RoutedEventArgs e) => PasteIntoActivePane();
+
     private void Rename_Click(object sender, RoutedEventArgs e)
     {
         if (_activeGrid.SelectedItem is FileItem item && !item.IsParent)
@@ -444,4 +581,8 @@ public partial class MainWindow
     }
 
     private void Trash_Click(object sender, RoutedEventArgs e) => MoveSelectionToTrash();
+
+    private void Compress_Click(object sender, RoutedEventArgs e) => CompressSelection();
+
+    private void Extract_Click(object sender, RoutedEventArgs e) => ExtractSelectedArchives();
 }

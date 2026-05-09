@@ -71,6 +71,7 @@ public partial class MainWindow
         PreviewColumn.MinWidth = visible ? 240 : 0;
         PreviewColumn.Width = visible ? new GridLength(320) : new GridLength(0);
         PreviewHost.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        PreviewButton.IsChecked = visible;
     }
 
     private void Preview_Click(object sender, RoutedEventArgs e)

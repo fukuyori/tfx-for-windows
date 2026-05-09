@@ -130,6 +130,8 @@ public partial class MainWindow
             Background = (Brush)FindResource("TfxPanel"),
             BorderBrush = (Brush)FindResource("TfxBorder"),
             BorderThickness = new Thickness(1),
+            Padding = new Thickness(6),
+            SnapsToDevicePixels = true,
             Child = _columnsPanel
         };
 
@@ -154,6 +156,9 @@ public partial class MainWindow
         _columnsPanel.Children.Clear();
 
         var fg = (Brush)FindResource("TfxForeground");
+        var muted = (Brush)FindResource("TfxMuted");
+        var uiFont = new FontFamily("Yu Gothic UI, Meiryo, Segoe UI");
+        var iconFont = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets");
 
         for (var i = 0; i < _fileColumns.Count; i++)
         {
@@ -170,8 +175,10 @@ public partial class MainWindow
                 Content = col.Title,
                 IsChecked = col.Left.Visibility == Visibility.Visible,
                 Foreground = fg,
+                FontFamily = uiFont,
+                FontSize = 12,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(6, 0, 6, 0)
+                Margin = new Thickness(2, 0, 8, 0)
             };
             check.Click += (_, _) =>
             {
@@ -189,9 +196,16 @@ public partial class MainWindow
 
             var up = new Button
             {
-                Content = "▲",
-                Padding = new Thickness(6, 2, 6, 2),
-                Margin = new Thickness(2, 0, 2, 0),
+                Content = "\uE70E",
+                FontFamily = iconFont,
+                Foreground = muted,
+                Background = Brushes.Transparent,
+                BorderBrush = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0),
+                Width = 24,
+                Height = 24,
+                Margin = new Thickness(1, 0, 1, 0),
                 IsEnabled = index > 0
             };
             up.Click += (_, _) => MoveColumn(col, -1);
@@ -200,9 +214,16 @@ public partial class MainWindow
 
             var down = new Button
             {
-                Content = "▼",
-                Padding = new Thickness(6, 2, 6, 2),
-                Margin = new Thickness(2, 0, 2, 0),
+                Content = "\uE70D",
+                FontFamily = iconFont,
+                Foreground = muted,
+                Background = Brushes.Transparent,
+                BorderBrush = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0),
+                Width = 24,
+                Height = 24,
+                Margin = new Thickness(1, 0, 1, 0),
                 IsEnabled = index < _fileColumns.Count - 1
             };
             down.Click += (_, _) => MoveColumn(col, +1);

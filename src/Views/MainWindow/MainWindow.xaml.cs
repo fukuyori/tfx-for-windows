@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        SourceInitialized += (_, _) => WindowTheme.Apply(this);
         DataContext = this;
         _activeGrid = LeftGrid;
 
@@ -139,6 +140,7 @@ public partial class MainWindow : Window
 
         SetSplitVisible(_settings.ShowSplit);
         SetPreviewVisible(_settings.ShowPreview);
+        HiddenButton.IsChecked = _settings.ShowHidden;
         ApplyColumnVisibility();
         ApplyColumnOrder();
         ApplyViewMode();

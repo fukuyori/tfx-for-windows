@@ -31,6 +31,7 @@ public partial class MainWindow
 
         var prefix = string.IsNullOrEmpty(_appVersion) ? "tfx" : $"tfx {_appVersion}";
         Title = $"{prefix} - {GetCurrentPath(_activeGrid)}";
+        ActiveHeaderPath.Text = GetCurrentPath(_activeGrid);
     }
 
     private PathBar GetActivePathBar() => _activeGrid == LeftGrid ? LeftPathBar : RightPathBar;
