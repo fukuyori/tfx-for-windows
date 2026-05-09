@@ -122,6 +122,17 @@ public partial class PathBar : UserControl
         e.Handled = true;
     }
 
+    private void PathBar_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount < 2 || IsEditing)
+        {
+            return;
+        }
+
+        EnterEditMode();
+        e.Handled = true;
+    }
+
     private void EditBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)

@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.1.3
+Version: 0.1.4
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -126,7 +126,7 @@ After any drag-out (move or copy by external app), tfx refreshes both panes auto
 Each pane has its own.
 
 - **Breadcrumb mode** (default): clickable path segments separated by ` > `. Click any segment to jump there.
-- **Edit mode**: click the empty area of the bar (or press `Ctrl + L` / `F4`). Type a path and press Enter to navigate. Environment variables such as `%USERPROFILE%` and `%TEMP%` are expanded. `Esc` cancels.
+- **Edit mode**: click the active path in the top bar, double-click the breadcrumb bar, click the empty area of the bar, or press `Ctrl + L` / `F4`. Type a path and press Enter to navigate. Environment variables such as `%USERPROFILE%` and `%TEMP%` are expanded. `Esc` cancels.
 
 ---
 

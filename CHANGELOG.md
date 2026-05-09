@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Make folder paths easier to edit from the top active path and breadcrumb bars.
+
 ## 0.1.3
 
 - Restore the previous session on startup, including pane paths, active pane, view/layout state, window placement, and splitter widths.

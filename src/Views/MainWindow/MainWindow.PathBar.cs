@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Path = System.IO.Path;
 
 namespace Tfx;
@@ -35,6 +36,12 @@ public partial class MainWindow
     }
 
     private PathBar GetActivePathBar() => _activeGrid == LeftGrid ? LeftPathBar : RightPathBar;
+
+    private void ActiveHeaderPath_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        GetActivePathBar().EnterEditMode();
+        e.Handled = true;
+    }
 
     private void LeftPathBar_PathRequested(object? sender, string path) => HandlePathRequest(LeftGrid, path);
 

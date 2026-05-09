@@ -43,7 +43,7 @@
                         <ColumnDefinition Width="180" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <Border Background="#0D1013" BorderBrush="{StaticResource TfxBorder}" BorderThickness="1" MinHeight="22" Margin="0,0,8,0">
+                    <Border Background="#0D1013" BorderBrush="{StaticResource TfxBorder}" BorderThickness="1" MinHeight="22" Margin="0,0,8,0" Cursor="IBeam" ToolTip="Edit current path (Ctrl+L)" MouseLeftButtonDown="ActiveHeaderPath_MouseLeftButtonDown">
                         <TextBlock x:Name="ActiveHeaderPath" Foreground="{StaticResource TfxForeground}" FontFamily="Consolas, Yu Gothic UI" VerticalAlignment="Center" Padding="10,0" TextTrimming="CharacterEllipsis" />
                     </Border>
                     <TextBox x:Name="SearchBox" Grid.Column="1" VerticalContentAlignment="Center" TextChanged="SearchBox_TextChanged" KeyDown="SearchBox_KeyDown" />

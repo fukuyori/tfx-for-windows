@@ -26,7 +26,12 @@
             </Setter>
         </Style>
     </UserControl.Resources>
-    <Border Background="#0D1013" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="1" MinHeight="28">
+    <Border Background="#0D1013"
+            BorderBrush="{DynamicResource TfxBorder}"
+            BorderThickness="1"
+            MinHeight="28"
+            ToolTip="Double-click or press Ctrl+L to edit path"
+            PreviewMouseLeftButtonDown="PathBar_PreviewMouseLeftButtonDown">
         <Grid>
             <DockPanel x:Name="CrumbHost" LastChildFill="True">
                 <StackPanel x:Name="CrumbPanel" Orientation="Horizontal" DockPanel.Dock="Left" />
