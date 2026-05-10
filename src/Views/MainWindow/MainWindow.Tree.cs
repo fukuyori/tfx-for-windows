@@ -27,7 +27,7 @@ public partial class MainWindow
             Tag = path
         };
 
-        if (HasSubdirectories(path))
+        if (HasVisibleSubdirectories(path))
         {
             item.Items.Add(null);
         }
@@ -46,11 +46,11 @@ public partial class MainWindow
         return Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
     }
 
-    private static bool HasSubdirectories(string path)
+    private bool HasVisibleSubdirectories(string path)
     {
         try
         {
-            return Directory.EnumerateDirectories(path).Any();
+            return VisibleDirectories(path).Any();
         }
         catch
         {
@@ -180,9 +180,13 @@ public partial class MainWindow
         }
 
         item.Items.Clear();
-        foreach (var directory in FsHelpers.SafeEnumerateDirectories(path).OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase))
+        foreach (var directory in VisibleDirectories(path).OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase))
         {
             item.Items.Add(CreateFolderNode(directory));
         }
     }
+
+    private IEnumerable<string> VisibleDirectories(string path) =>
+        FsHelpers.SafeEnumerateDirectories(path)
+            .Where(directory => ShowHidden || !FsHelpers.IsHidden(directory));
 }

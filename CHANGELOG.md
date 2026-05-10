@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Apply the hidden-folder setting to the folder tree, including Hidden-attribute folders and dot-prefixed folders.
+
 ## 0.2.0
 
 - Focus the selected file-name cell after folder navigation so arrow keys continue moving the file-list selection.

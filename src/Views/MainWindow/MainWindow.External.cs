@@ -40,6 +40,8 @@ public partial class MainWindow
         HiddenButton.IsChecked = ShowHidden;
         Reload(LeftGrid);
         Reload(RightGrid);
+        LoadDrives();
+        QueueFolderTreeSyncToActivePane();
         SetStatus(ShowHidden ? Loc.T("Hidden files visible") : Loc.T("Hidden files hidden"));
     }
 
