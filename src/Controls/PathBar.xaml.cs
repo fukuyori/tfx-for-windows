@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Tfx;
 
@@ -86,6 +87,8 @@ public partial class PathBar : UserControl
                 });
             }
         }
+
+        ShowPathEnd();
     }
 
     private static List<(string Label, string Segment)> SplitPath(string path)
@@ -121,6 +124,18 @@ public partial class PathBar : UserControl
     {
         EnterEditMode();
         e.Handled = true;
+    }
+
+    private void CrumbScroll_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        ShowPathEnd();
+    }
+
+    private void ShowPathEnd()
+    {
+        CrumbScroll.Dispatcher.BeginInvoke(
+            () => CrumbScroll.ScrollToRightEnd(),
+            DispatcherPriority.Loaded);
     }
 
     private void PathBar_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

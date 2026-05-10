@@ -25,10 +25,7 @@ $releaseRoot = Join-Path $artifactsRoot "release"
 $publishDir = Join-Path $releaseRoot $releaseName
 
 New-Item -ItemType Directory -Force -Path $releaseRoot | Out-Null
-
-if (Test-Path -LiteralPath $publishDir) {
-    Remove-Item -LiteralPath $publishDir -Recurse -Force
-}
+New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
 
 dotnet publish $projectPath `
     -c $Configuration `
@@ -38,6 +35,10 @@ dotnet publish $projectPath `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:EnableCompressionInSingleFile=true
+
+if ($LASTEXITCODE -ne 0) {
+    throw "dotnet publish failed with exit code $LASTEXITCODE"
+}
 
 $exePath = Join-Path $publishDir "Tfx.exe"
 if (-not (Test-Path -LiteralPath $exePath)) {

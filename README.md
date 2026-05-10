@@ -129,6 +129,7 @@ After any drag-out (move or copy by external app), tfx refreshes both panes auto
 Each pane has its own.
 
 - **Breadcrumb mode** (default): clickable path segments separated by ` > `. Click any segment to jump there.
+- When a breadcrumb path is too long for the bar, the right end of the path remains visible and the left side is clipped.
 - **Edit mode**: click the active path in the top bar, double-click the breadcrumb bar, click the empty area of the bar, or press `Ctrl + L` / `F4`. Type a path and press Enter to navigate. Environment variables such as `%USERPROFILE%` and `%TEMP%` are expanded. `Esc` cancels.
 
 ---
@@ -237,7 +238,7 @@ Or build the release artifact:
 .\scripts\build-release.ps1
 ```
 
-The script writes `artifacts\release\tfx-for-windows-<version>-win-x64\Tfx.exe`. By default the app is published as a self-contained single executable.
+The script writes `artifacts\release\tfx-for-windows-<version>-win-x64\Tfx.exe`. By default the app is published as a self-contained single executable. Existing files are overwritten in place; the release folder itself is not deleted.
 
 ---
 

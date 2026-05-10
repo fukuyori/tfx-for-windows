@@ -6,6 +6,8 @@
 - Right-align Size values in Details view and add right-side spacing between list columns.
 - Allow direct mouse resizing for the Name column while keeping the other Details columns fixed.
 - Keep DataGrid header mouse handling from interfering with Name-column resizing.
+- Keep the right end of long breadcrumb paths visible when the path bar is narrower than the full path.
+- Update the release build script to overwrite files in place without deleting the release folder first.
 
 ## 0.2.1
 

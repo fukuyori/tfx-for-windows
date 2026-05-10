@@ -34,7 +34,14 @@
             PreviewMouseLeftButtonDown="PathBar_PreviewMouseLeftButtonDown">
         <Grid>
             <DockPanel x:Name="CrumbHost" LastChildFill="True">
-                <StackPanel x:Name="CrumbPanel" Orientation="Horizontal" DockPanel.Dock="Left" />
+                <ScrollViewer x:Name="CrumbScroll"
+                              DockPanel.Dock="Left"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollBarVisibility="Disabled"
+                              Focusable="False"
+                              SizeChanged="CrumbScroll_SizeChanged">
+                    <StackPanel x:Name="CrumbPanel" Orientation="Horizontal" />
+                </ScrollViewer>
                 <Border x:Name="ClickCatcher" Background="Transparent" Cursor="IBeam" MouseLeftButtonDown="ClickCatcher_MouseDown" />
             </DockPanel>
             <TextBox x:Name="EditBox"
