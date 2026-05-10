@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2
+
+- Show the current version at the right edge of the status bar.
+- Right-align Size values in Details view and add right-side spacing between list columns.
+- Allow direct mouse resizing for the Name column while keeping the other Details columns fixed.
+- Keep DataGrid header mouse handling from interfering with Name-column resizing.
+
 ## 0.2.1
 
 - Apply the hidden-folder setting to the folder tree, including Hidden-attribute folders and dot-prefixed folders.

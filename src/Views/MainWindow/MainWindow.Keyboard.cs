@@ -157,6 +157,13 @@ public partial class MainWindow
             return;
         }
 
+        if (!inTextBox && e.Key is Key.Up or Key.Down && IsFocusInActiveListing() && ActiveListingSelectedItem() is null)
+        {
+            MoveActiveListingSelection(e.Key);
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Delete && !inTextBox)
         {
             if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
@@ -177,6 +184,22 @@ public partial class MainWindow
             e.Handled = true;
         }
     }
+
+    private bool IsFocusInActiveListing()
+    {
+        var focused = Keyboard.FocusedElement as DependencyObject;
+        if (_settings.ViewMode == ViewMode.Icons)
+        {
+            return IsInside(focused, _activeGrid == LeftGrid ? LeftIconView : RightIconView);
+        }
+
+        return IsInside(focused, _activeGrid);
+    }
+
+    private object? ActiveListingSelectedItem() =>
+        _settings.ViewMode == ViewMode.Icons
+            ? (_activeGrid == LeftGrid ? LeftIconView : RightIconView).SelectedItem
+            : _activeGrid.SelectedItem;
 
     private bool HandleTabFocusCycle()
     {

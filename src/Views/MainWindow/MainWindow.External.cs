@@ -63,10 +63,14 @@ public partial class MainWindow
         }
     }
 
-    private void CopyPath_Click(object sender, RoutedEventArgs e)
+    private void CopySelectedPath(IReadOnlyList<FileItem> selection)
     {
-        var text = GetCurrentPath(_activeGrid);
-        Clipboard.SetText(text);
-        SetStatus(Loc.F("Copied path: {0}", text));
+        if (selection.Count != 1)
+        {
+            return;
+        }
+
+        Clipboard.SetText(selection[0].FullPath);
+        SetStatus(Loc.F("Copied path: {0}", selection[0].FullPath));
     }
 }

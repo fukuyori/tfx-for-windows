@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.2.1
+Version: 0.2.2
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -24,7 +24,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Zip compression and extraction from the file pane or context menu
 - Right-click context menu, sortable columns, customizable column visibility and order
 - Image / text preview pane
-- Status bar with item counts, selection size, and active drive's free space
+- Status bar with item counts, selection size, active drive's free space, and the current version
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
 
@@ -35,14 +35,14 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 ```text
 +-- Toolbar -----------------------------------------------------------+
 | Back Forward Up Folder Pin | <active path> [Search] | View Hidden   |
-| Terminal Explorer Select Reload Preview Split Columns CopyPath       |
+| Terminal Explorer Select Reload Preview Split Columns                |
 +--------------+----------------+----------------+--------------------+
 | PINNED       | Address bar    | Address bar    | PREVIEW            |
 | folder list  | Left file view | Right file view| info / image / text|
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)         C:\  120 GB free of 476 GB  |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.2.2 |
 +---------------------------------------------------------------------+
 ```
 
@@ -59,7 +59,7 @@ Buttons use **Segoe Fluent Icons** with **Segoe MDL2 Assets** fallback. Hover fo
 | Navigation | Back, Forward, Up, Open folder, Pin / unpin current folder |
 | Path / search | Active path, Search, Focus search |
 | View | View mode (Details / Icons), Toggle hidden files |
-| Utility | Open Terminal here, Reveal in Explorer, Select all, Reload, Preview toggle, Split toggle, Columns, Copy current path |
+| Utility | Open Terminal here, Reveal in Explorer, Select all, Reload, Preview toggle, Split toggle, Columns |
 
 File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste are available from the keyboard and context menu.
 
@@ -101,10 +101,11 @@ File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste 
 - **Single click** on row / icon -> select; **Ctrl** / **Shift** for multi-select
 - **Double-click** on row / icon -> open
 - After entering a folder, the parent row (`..`) is selected and focused. When returning to the parent with `..` or Backspace, the folder you came from is selected and focused.
-- **Right-click** -> context menu (Open, Reveal, Cut, Copy, Paste, Compress, Extract, Rename, Trash, Delete permanently, New folder, New file, Open Terminal)
+- **Right-click** -> context menu (Open, Reveal, Cut, Copy, Paste, Compress, Extract, Rename, Trash, Delete permanently, New folder, New file, Open Terminal, Copy current path for the selected item)
 - **Click** on a breadcrumb segment -> jump to that ancestor
 - **Click** on the empty area of the address bar -> switch to free-text edit mode
 - **Click** column header -> sort by that column (toggle ascending / descending)
+- **Drag** the Name column boundary in the header -> resize the file-name column
 
 ---
 
@@ -134,7 +135,7 @@ Each pane has its own.
 
 ## View modes
 
-- **Details** - DataGrid with sortable columns: Name, Date modified, Type, Size, Date created, Owner, Attribute. Inline rename (`F2`) is available here. Visible columns and order are configured from the **Columns** popup.
+- **Details** - DataGrid with sortable columns: Name, Date modified, Type, Size, Date created, Owner, Attribute. Inline rename (`F2`) is available here. The Size column is right-aligned, text columns keep a small right-side gap, and only the Name column can be resized directly with the mouse. Visible columns and order are configured from the **Columns** popup.
 - **Icons** - WrapPanel of 32x32 shell icons with file names. Same selection / drag-drop / right-click behaviors as Details mode.
 
 Toggle modes from the toolbar's view-mode button. The choice is remembered.
@@ -180,7 +181,7 @@ Default pins on first run: User profile, Desktop, Documents, Downloads.
 | Position | Content |
 | --- | --- |
 | Left | `<path>  N items` (or `<path>  K of N selected (combined size)` when something is selected) |
-| Right | `<drive>  <free> free of <total>` for the active pane's drive |
+| Right | `<drive>  <free> free of <total>` for the active pane's drive, followed by the current version |
 
 The parent (`..`) row is excluded from counts and size sums.
 

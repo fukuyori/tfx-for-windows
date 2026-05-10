@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -108,7 +109,7 @@ public partial class MainWindow
             return;
         }
 
-        if (MessageBox.Show(Loc.F("Move {0} item(s) to Recycle Bin?", items.Length), "tfx", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
+        if (!Confirm(Loc.F("Move {0} item(s) to Recycle Bin?", items.Length), Loc.T("Move to Recycle Bin")))
         {
             return;
         }
@@ -182,6 +183,12 @@ public partial class MainWindow
     {
         var dialog = new NamePromptDialog(title, label, defaultValue);
         return dialog.ShowDialog() == true ? dialog.EnteredText : null;
+    }
+
+    private static bool Confirm(string message, string confirmText)
+    {
+        var dialog = new ConfirmDialog("tfx", message, confirmText);
+        return dialog.ShowDialog() == true;
     }
 
     private bool TryNormalizeNewItemName(string? rawName, out string name)
@@ -310,7 +317,7 @@ public partial class MainWindow
             ? Loc.F("Permanently delete \"{0}\"? This cannot be undone.", items[0].Name)
             : Loc.F("Permanently delete {0} item(s)? This cannot be undone.", items.Length);
 
-        if (MessageBox.Show(msg, "tfx", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
+        if (!Confirm(msg, Loc.T("Delete permanently")))
         {
             return;
         }
@@ -462,11 +469,83 @@ public partial class MainWindow
         return null;
     }
 
+    private static T? FindVisualAncestor<T>(DependencyObject? child) where T : DependencyObject
+    {
+        var node = child;
+        while (node is not null)
+        {
+            if (node is T match)
+            {
+                return match;
+            }
+
+            node = VisualTreeHelper.GetParent(node);
+        }
+
+        return null;
+    }
+
+    private void Grid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStart = e.GetPosition(this);
+        _pendingFileDragItem = null;
+        _pendingFileDragPaths = [];
+
+        if (sender is not DataGrid grid)
+        {
+            return;
+        }
+
+        if (FindVisualAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject) is not null)
+        {
+            return;
+        }
+
+        UpdateActivePane(grid);
+
+        var row = FindVisualAncestor<DataGridRow>(e.OriginalSource as DependencyObject);
+        if (row?.Item is not FileItem item)
+        {
+            BeginRubberBandSelection(grid, null, e);
+            return;
+        }
+
+        if (item.IsParent)
+        {
+            return;
+        }
+
+        _pendingFileDragItem = item;
+        var selectedItems = SelectedItems(grid).Where(i => !i.IsParent).ToArray();
+        var itemAlreadySelected = selectedItems.Contains(item);
+        _pendingFileDragPaths = itemAlreadySelected
+            ? selectedItems.Select(i => i.FullPath).ToArray()
+            : [item.FullPath];
+
+        if (itemAlreadySelected && selectedItems.Length > 1 && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            e.Handled = true;
+        }
+    }
+
     private void Grid_PreviewMouseMove(object sender, MouseEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed || sender is not DataGrid grid)
         {
             _dragStart = e.GetPosition(this);
+            _pendingFileDragItem = null;
+            _pendingFileDragPaths = [];
+            return;
+        }
+
+        if (_isRubberBandSelecting)
+        {
+            UpdateRubberBandSelection(e);
+            return;
+        }
+
+        if (_pendingFileDragItem is null)
+        {
             return;
         }
 
@@ -477,7 +556,7 @@ public partial class MainWindow
             return;
         }
 
-        var paths = SelectedItems(grid).Where(i => !i.IsParent).Select(i => i.FullPath).ToArray();
+        var paths = _pendingFileDragPaths;
         if (paths.Length == 0)
         {
             return;
@@ -494,6 +573,9 @@ public partial class MainWindow
             Reload(LeftGrid);
             Reload(RightGrid);
         }
+
+        _pendingFileDragItem = null;
+        _pendingFileDragPaths = [];
     }
 
     private void Grid_Drop(object sender, DragEventArgs e)
@@ -504,7 +586,7 @@ public partial class MainWindow
         }
 
         var grid = SideOf(view);
-        var destination = GetCurrentPath(grid);
+        var destination = ResolveDropDestination(view, e);
         var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
         var effect = ResolveDropEffect(e, destination);
 
@@ -571,8 +653,38 @@ public partial class MainWindow
             return;
         }
 
-        e.Effects = ResolveDropEffect(e, GetCurrentPath(SideOf(view)));
+        e.Effects = ResolveDropEffect(e, ResolveDropDestination(view, e));
         e.Handled = true;
+    }
+
+    private string ResolveDropDestination(DependencyObject view, DragEventArgs e)
+    {
+        if (TryGetDropFolder(e.OriginalSource as DependencyObject, out var folderPath))
+        {
+            return folderPath;
+        }
+
+        return GetCurrentPath(SideOf(view));
+    }
+
+    private static bool TryGetDropFolder(DependencyObject? source, out string folderPath)
+    {
+        var row = FindVisualAncestor<DataGridRow>(source);
+        if (row?.Item is FileItem rowItem && (rowItem.IsDirectory || rowItem.IsParent))
+        {
+            folderPath = rowItem.FullPath;
+            return true;
+        }
+
+        var listBoxItem = FindVisualAncestor<ListBoxItem>(source);
+        if (listBoxItem?.Content is FileItem iconItem && (iconItem.IsDirectory || iconItem.IsParent))
+        {
+            folderPath = iconItem.FullPath;
+            return true;
+        }
+
+        folderPath = "";
+        return false;
     }
 
     private static DragDropEffects ResolveDropEffect(DragEventArgs e, string destinationPath)

@@ -96,6 +96,46 @@ public partial class MainWindow
         }
 
         UpdateActivePane(SideOf(lb));
+        SyncIconSelectionToGrid(lb);
+        lb.ContextMenu = BuildGridContextMenu(SideOf(lb));
+    }
+
+    private void IconView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStart = e.GetPosition(this);
+        _pendingFileDragItem = null;
+        _pendingFileDragPaths = [];
+
+        if (sender is not ListBox lb)
+        {
+            return;
+        }
+
+        UpdateActivePane(SideOf(lb));
+
+        var itemContainer = FindVisualAncestor<ListBoxItem>(e.OriginalSource as DependencyObject);
+        if (itemContainer?.Content is not FileItem item)
+        {
+            BeginRubberBandSelection(null, lb, e);
+            return;
+        }
+
+        if (item.IsParent)
+        {
+            return;
+        }
+
+        _pendingFileDragItem = item;
+        var selectedItems = lb.SelectedItems.OfType<FileItem>().Where(i => !i.IsParent).ToArray();
+        var itemAlreadySelected = selectedItems.Contains(item);
+        _pendingFileDragPaths = itemAlreadySelected
+            ? selectedItems.Select(i => i.FullPath).ToArray()
+            : [item.FullPath];
+
+        if (itemAlreadySelected && selectedItems.Length > 1 && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            e.Handled = true;
+        }
     }
 
     private void IconView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -106,6 +146,12 @@ public partial class MainWindow
             return;
         }
 
+        SyncIconSelectionToGrid(lb);
+        lb.ContextMenu = BuildGridContextMenu(SideOf(lb));
+    }
+
+    private void SyncIconSelectionToGrid(ListBox lb)
+    {
         var grid = SideOf(lb);
 
         _syncingSelection = true;
@@ -121,8 +167,6 @@ public partial class MainWindow
         {
             _syncingSelection = false;
         }
-
-        lb.ContextMenu = BuildGridContextMenu(grid);
     }
 
     private void IconView_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -130,6 +174,19 @@ public partial class MainWindow
         if (e.LeftButton != MouseButtonState.Pressed || sender is not ListBox lb)
         {
             _dragStart = e.GetPosition(this);
+            _pendingFileDragItem = null;
+            _pendingFileDragPaths = [];
+            return;
+        }
+
+        if (_isRubberBandSelecting)
+        {
+            UpdateRubberBandSelection(e);
+            return;
+        }
+
+        if (_pendingFileDragItem is null)
+        {
             return;
         }
 
@@ -140,7 +197,7 @@ public partial class MainWindow
             return;
         }
 
-        var paths = lb.SelectedItems.OfType<FileItem>().Where(i => !i.IsParent).Select(i => i.FullPath).ToArray();
+        var paths = _pendingFileDragPaths;
         if (paths.Length == 0)
         {
             return;
@@ -157,5 +214,8 @@ public partial class MainWindow
             Reload(LeftGrid);
             Reload(RightGrid);
         }
+
+        _pendingFileDragItem = null;
+        _pendingFileDragPaths = [];
     }
 }

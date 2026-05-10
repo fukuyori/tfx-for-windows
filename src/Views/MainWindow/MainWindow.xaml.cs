@@ -32,6 +32,13 @@ public partial class MainWindow : Window
     private string _rightPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     private string[] _cutBuffer = [];
     private Point _dragStart;
+    private FileItem? _pendingFileDragItem;
+    private string[] _pendingFileDragPaths = [];
+    private bool _isRubberBandSelecting;
+    private Point _rubberBandStart;
+    private FrameworkElement? _rubberBandSource;
+    private DataGrid? _rubberBandGrid;
+    private ListBox? _rubberBandListBox;
     private bool _syncingSelection;
     private bool _suspendSettingsSave;
     private bool _syncingFolderTree;
@@ -104,7 +111,6 @@ public partial class MainWindow : Window
         PreviewButton.ToolTip = Loc.T("Toggle preview");
         SplitButton.ToolTip = Loc.T("Toggle split pane");
         ColumnsButton.ToolTip = Loc.T("Columns");
-        CopyPathButton.ToolTip = Loc.T("Copy current path");
         PinnedHeader.Text = Loc.T("PINNED");
         FoldersHeader.Text = Loc.T("FOLDERS");
         PreviewHeader.Text = Loc.T("PREVIEW");

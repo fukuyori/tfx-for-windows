@@ -19,6 +19,14 @@
         Closing="Window_Closing">
     <Window.Resources>
         <local:MiddleEllipsisPathConverter x:Key="MiddleEllipsisPathConverter" />
+        <Style x:Key="ListingCellText" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,0,12,0" />
+        </Style>
+        <Style x:Key="RightAlignedCellText" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Margin" Value="0,0,12,0" />
+            <Setter Property="TextAlignment" Value="Right" />
+        </Style>
     </Window.Resources>
     <DockPanel>
         <Border DockPanel.Dock="Top" Background="#0B0E10" BorderBrush="{StaticResource TfxBorder}" BorderThickness="0,0,0,1" Padding="5,4">
@@ -105,7 +113,6 @@
                         </Viewbox>
                     </ToggleButton>
                     <Button Style="{StaticResource ToolbarButton}" x:Name="ColumnsButton" Click="Columns_Click" ToolTip="Columns" Content="&#xE713;" />
-                    <Button x:Name="CopyPathButton" Style="{StaticResource ToolbarButton}" Click="CopyPath_Click" ToolTip="Copy current path" Content="&#xE71B;" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -113,14 +120,17 @@
         <StatusBar DockPanel.Dock="Bottom" Background="#0B0E10" Foreground="{StaticResource TfxMuted}" BorderBrush="{StaticResource TfxBorder}" BorderThickness="0,1,0,0">
             <StatusBar.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <DockPanel HorizontalAlignment="Stretch" />
+                    <DockPanel HorizontalAlignment="Stretch" LastChildFill="False" />
                 </ItemsPanelTemplate>
             </StatusBar.ItemsPanel>
             <StatusBarItem DockPanel.Dock="Left">
                 <TextBlock x:Name="StatusText" />
             </StatusBarItem>
             <StatusBarItem DockPanel.Dock="Right">
-                <TextBlock x:Name="FreeSpaceText" Margin="0,0,8,0" />
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="FreeSpaceText" Margin="0,0,12,0" />
+                    <TextBlock x:Name="VersionStatusText" Margin="0,0,8,0" />
+                </StackPanel>
             </StatusBarItem>
         </StatusBar>
 
@@ -163,9 +173,9 @@
                     <DockPanel>
                         <local:PathBar x:Name="LeftPathBar" DockPanel.Dock="Top" Margin="6,6,6,4" PathRequested="LeftPathBar_PathRequested" />
                         <Grid>
-                        <DataGrid x:Name="LeftGrid" ItemsSource="{Binding LeftItems}" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting">
+                        <DataGrid x:Name="LeftGrid" ItemsSource="{Binding LeftItems}" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn x:Name="LeftNameColumn" Header="Name" Width="280" MinWidth="200" SortMemberPath="Name">
+                                <DataGridTemplateColumn x:Name="LeftNameColumn" Header="Name" Width="280" MinWidth="200" SortMemberPath="Name" CanUserResize="True">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
@@ -180,19 +190,19 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn x:Name="LeftDateModifiedColumn" Header="Date modified" Binding="{Binding ModifiedText}" SortMemberPath="Modified" Width="155" />
-                                <DataGridTextColumn x:Name="LeftTypeColumn" Header="Type" Binding="{Binding Kind}" SortMemberPath="Kind" Width="110" />
-                                <DataGridTextColumn x:Name="LeftSizeColumn" Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="95" />
-                                <DataGridTextColumn x:Name="LeftDateCreatedColumn" Header="Date created" Binding="{Binding CreatedText}" SortMemberPath="Created" Width="155" />
-                                <DataGridTextColumn x:Name="LeftOwnerColumn" Header="Owner" Binding="{Binding OwnerText}" SortMemberPath="OwnerText" Width="160" />
-                                <DataGridTextColumn x:Name="LeftAttributeColumn" Header="Attribute" Binding="{Binding AttributeText}" SortMemberPath="AttributeText" Width="140" />
+                                <DataGridTextColumn x:Name="LeftDateModifiedColumn" Header="Date modified" Binding="{Binding ModifiedText}" SortMemberPath="Modified" Width="155" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="LeftTypeColumn" Header="Type" Binding="{Binding Kind}" SortMemberPath="Kind" Width="110" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="LeftSizeColumn" Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="95" ElementStyle="{StaticResource RightAlignedCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="LeftDateCreatedColumn" Header="Date created" Binding="{Binding CreatedText}" SortMemberPath="Created" Width="155" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="LeftOwnerColumn" Header="Owner" Binding="{Binding OwnerText}" SortMemberPath="OwnerText" Width="160" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="LeftAttributeColumn" Header="Attribute" Binding="{Binding AttributeText}" SortMemberPath="AttributeText" Width="140" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
                             </DataGrid.Columns>
                         </DataGrid>
                         <ListBox x:Name="LeftIconView" Visibility="Collapsed" ItemsSource="{Binding LeftItems}"
                                  Background="{StaticResource TfxPanel}" BorderThickness="0" SelectionMode="Extended"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  SelectionChanged="IconView_SelectionChanged" MouseDoubleClick="IconView_MouseDoubleClick"
-                                 GotFocus="IconView_GotFocus" PreviewMouseRightButtonDown="IconView_PreviewMouseRightButtonDown"
+                                 GotFocus="IconView_GotFocus" PreviewMouseLeftButtonDown="IconView_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseRightButtonDown="IconView_PreviewMouseRightButtonDown"
                                  ContextMenuOpening="IconView_ContextMenuOpening" PreviewMouseMove="IconView_PreviewMouseMove"
                                  AllowDrop="True" DragOver="Grid_DragOver" Drop="Grid_Drop">
                             <ListBox.ItemsPanel>
@@ -223,6 +233,9 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+                        <Canvas x:Name="LeftSelectionOverlay" Visibility="Collapsed" IsHitTestVisible="False">
+                            <Border x:Name="LeftSelectionRect" BorderBrush="{StaticResource TfxAccent}" BorderThickness="1" Background="#337DD3FC" />
+                        </Canvas>
                         </Grid>
                     </DockPanel>
                 </Border>
@@ -233,9 +246,9 @@
                     <DockPanel>
                         <local:PathBar x:Name="RightPathBar" DockPanel.Dock="Top" Margin="6,6,6,4" PathRequested="RightPathBar_PathRequested" />
                         <Grid>
-                        <DataGrid x:Name="RightGrid" ItemsSource="{Binding RightItems}" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting">
+                        <DataGrid x:Name="RightGrid" ItemsSource="{Binding RightItems}" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn x:Name="RightNameColumn" Header="Name" Width="280" MinWidth="200" SortMemberPath="Name">
+                                <DataGridTemplateColumn x:Name="RightNameColumn" Header="Name" Width="280" MinWidth="200" SortMemberPath="Name" CanUserResize="True">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
@@ -250,19 +263,19 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn x:Name="RightDateModifiedColumn" Header="Date modified" Binding="{Binding ModifiedText}" SortMemberPath="Modified" Width="155" />
-                                <DataGridTextColumn x:Name="RightTypeColumn" Header="Type" Binding="{Binding Kind}" SortMemberPath="Kind" Width="110" />
-                                <DataGridTextColumn x:Name="RightSizeColumn" Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="95" />
-                                <DataGridTextColumn x:Name="RightDateCreatedColumn" Header="Date created" Binding="{Binding CreatedText}" SortMemberPath="Created" Width="155" />
-                                <DataGridTextColumn x:Name="RightOwnerColumn" Header="Owner" Binding="{Binding OwnerText}" SortMemberPath="OwnerText" Width="160" />
-                                <DataGridTextColumn x:Name="RightAttributeColumn" Header="Attribute" Binding="{Binding AttributeText}" SortMemberPath="AttributeText" Width="140" />
+                                <DataGridTextColumn x:Name="RightDateModifiedColumn" Header="Date modified" Binding="{Binding ModifiedText}" SortMemberPath="Modified" Width="155" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="RightTypeColumn" Header="Type" Binding="{Binding Kind}" SortMemberPath="Kind" Width="110" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="RightSizeColumn" Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="95" ElementStyle="{StaticResource RightAlignedCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="RightDateCreatedColumn" Header="Date created" Binding="{Binding CreatedText}" SortMemberPath="Created" Width="155" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="RightOwnerColumn" Header="Owner" Binding="{Binding OwnerText}" SortMemberPath="OwnerText" Width="160" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="RightAttributeColumn" Header="Attribute" Binding="{Binding AttributeText}" SortMemberPath="AttributeText" Width="140" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
                             </DataGrid.Columns>
                         </DataGrid>
                         <ListBox x:Name="RightIconView" Visibility="Collapsed" ItemsSource="{Binding RightItems}"
                                  Background="{StaticResource TfxPanel}" BorderThickness="0" SelectionMode="Extended"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  SelectionChanged="IconView_SelectionChanged" MouseDoubleClick="IconView_MouseDoubleClick"
-                                 GotFocus="IconView_GotFocus" PreviewMouseRightButtonDown="IconView_PreviewMouseRightButtonDown"
+                                 GotFocus="IconView_GotFocus" PreviewMouseLeftButtonDown="IconView_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseRightButtonDown="IconView_PreviewMouseRightButtonDown"
                                  ContextMenuOpening="IconView_ContextMenuOpening" PreviewMouseMove="IconView_PreviewMouseMove"
                                  AllowDrop="True" DragOver="Grid_DragOver" Drop="Grid_Drop">
                             <ListBox.ItemsPanel>
@@ -293,6 +306,9 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+                        <Canvas x:Name="RightSelectionOverlay" Visibility="Collapsed" IsHitTestVisible="False">
+                            <Border x:Name="RightSelectionRect" BorderBrush="{StaticResource TfxAccent}" BorderThickness="1" Background="#337DD3FC" />
+                        </Canvas>
                         </Grid>
                     </DockPanel>
                 </Border>

@@ -30,6 +30,7 @@ public partial class MainWindow
         }
 
         UpdateActivePane(grid);
+        grid.ContextMenu = BuildGridContextMenu(grid);
     }
 
     private void Grid_ContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -121,6 +122,10 @@ public partial class MainWindow
         var openTerminal = new MenuItem { Header = Loc.T("Open Terminal here"), InputGestureText = "Ctrl+Shift+T" };
         openTerminal.Click += (_, _) => OpenTerminal();
         menu.Items.Add(openTerminal);
+
+        var copyCurrentPath = new MenuItem { Header = Loc.T("Copy current path"), IsEnabled = oneSelected };
+        copyCurrentPath.Click += (_, _) => CopySelectedPath(selection);
+        menu.Items.Add(copyCurrentPath);
 
         return menu;
     }

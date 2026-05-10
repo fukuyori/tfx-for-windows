@@ -286,7 +286,7 @@
             <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Padding" Value="8,5,16,5" />
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="#263845" />
@@ -299,7 +299,8 @@
             <Setter Property="Background" Value="#0D1013" />
             <Setter Property="Foreground" Value="{StaticResource TfxMuted}" />
             <Setter Property="BorderBrush" Value="{StaticResource TfxBorder}" />
-            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="BorderThickness" Value="0,0,1,1" />
+            <Setter Property="Padding" Value="8,4,16,4" />
             <Setter Property="FontFamily" Value="Consolas, Yu Gothic UI" />
         </Style>
 

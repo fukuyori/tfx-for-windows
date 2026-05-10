@@ -32,6 +32,7 @@ public partial class MainWindow
 
         var prefix = string.IsNullOrEmpty(_appVersion) ? "tfx" : $"tfx {_appVersion}";
         Title = $"{prefix} - {GetCurrentPath(_activeGrid)}";
+        VersionStatusText.Text = _appVersion;
         ActiveHeaderPath.Text = GetCurrentPath(_activeGrid);
     }
 
