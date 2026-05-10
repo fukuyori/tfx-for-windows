@@ -23,19 +23,19 @@ public sealed class FileItem
     public ImageSource? Icon { get; init; }
     public ImageSource? LargeIcon { get; init; }
 
-    public static FileItem Parent(string path) => new()
+    public static FileItem Parent(string path, bool loadSmallIcon, bool loadLargeIcon) => new()
     {
         Name = "..",
         FullPath = path,
-        Kind = "Parent folder",
+        Kind = Loc.T("Parent folder"),
         IsDirectory = true,
         IsParent = true,
-        AttributeText = "Directory",
-        Icon = IconCache.GetFolderIcon(),
-        LargeIcon = IconCache.GetFolderIconLarge()
+        AttributeText = Loc.T("Directory"),
+        Icon = loadSmallIcon ? IconCache.GetFolderIcon() : null,
+        LargeIcon = loadLargeIcon ? IconCache.GetFolderIconLarge() : null
     };
 
-    public static FileItem FromDirectory(string path)
+    public static FileItem FromDirectory(string path, bool loadSmallIcon, bool loadLargeIcon, bool includeOwner)
     {
         var info = new DirectoryInfo(path);
         var modified = SafeWriteTime(info);
@@ -44,20 +44,20 @@ public sealed class FileItem
         {
             Name = info.Name,
             FullPath = info.FullName,
-            Kind = "File folder",
+            Kind = Loc.T("File folder"),
             IsDirectory = true,
             Modified = modified,
             Created = created,
             ModifiedText = FormatDate(modified),
             CreatedText = FormatDate(created),
-            OwnerText = SafeOwner(info),
+            OwnerText = includeOwner ? SafeOwner(info) : "",
             AttributeText = FormatAttributes(info.Attributes),
-            Icon = IconCache.GetFolderIcon(),
-            LargeIcon = IconCache.GetFolderIconLarge()
+            Icon = loadSmallIcon ? IconCache.GetFolderIcon() : null,
+            LargeIcon = loadLargeIcon ? IconCache.GetFolderIconLarge() : null
         };
     }
 
-    public static FileItem FromFile(string path)
+    public static FileItem FromFile(string path, bool loadSmallIcon, bool loadLargeIcon, bool includeOwner)
     {
         var info = new FileInfo(path);
         var modified = SafeWriteTime(info);
@@ -66,17 +66,19 @@ public sealed class FileItem
         {
             Name = info.Name,
             FullPath = info.FullName,
-            Kind = string.IsNullOrWhiteSpace(info.Extension) ? "File" : $"{info.Extension.TrimStart('.').ToUpperInvariant()} File",
+            Kind = string.IsNullOrWhiteSpace(info.Extension)
+                ? Loc.T("File")
+                : Loc.F("{0} File", info.Extension.TrimStart('.').ToUpperInvariant()),
             Size = info.Length,
             SizeText = FormatSize(info.Length),
             Modified = modified,
             Created = created,
             ModifiedText = FormatDate(modified),
             CreatedText = FormatDate(created),
-            OwnerText = SafeOwner(info),
+            OwnerText = includeOwner ? SafeOwner(info) : "",
             AttributeText = FormatAttributes(info.Attributes),
-            Icon = IconCache.GetFileIcon(info.FullName),
-            LargeIcon = IconCache.GetFileIconLarge(info.FullName)
+            Icon = loadSmallIcon ? IconCache.GetFileIcon(info.FullName) : null,
+            LargeIcon = loadLargeIcon ? IconCache.GetFileIconLarge(info.FullName) : null
         };
     }
 

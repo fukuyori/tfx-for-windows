@@ -21,6 +21,8 @@ public partial class MainWindow
     {
         _settings.ViewMode = _settings.ViewMode == ViewMode.Details ? ViewMode.Icons : ViewMode.Details;
         ApplyViewMode();
+        Reload(LeftGrid);
+        Reload(RightGrid);
         SaveSettings();
     }
 

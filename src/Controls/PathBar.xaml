@@ -30,7 +30,7 @@
             BorderBrush="{DynamicResource TfxBorder}"
             BorderThickness="1"
             MinHeight="28"
-            ToolTip="Double-click or press Ctrl+L to edit path"
+            ToolTip="{x:Null}"
             PreviewMouseLeftButtonDown="PathBar_PreviewMouseLeftButtonDown">
         <Grid>
             <DockPanel x:Name="CrumbHost" LastChildFill="True">

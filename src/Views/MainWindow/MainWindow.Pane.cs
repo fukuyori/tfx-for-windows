@@ -28,6 +28,7 @@ public partial class MainWindow
         LeftPaneBorder.BorderThickness = new Thickness(grid == LeftGrid ? 2 : 1);
         RightPaneBorder.BorderThickness = new Thickness(grid == RightGrid ? 2 : 1);
         UpdatePathText();
+        QueueFolderTreeSyncToActivePane();
     }
 
     private void Grid_SelectionChanged(object sender, SelectionChangedEventArgs e)

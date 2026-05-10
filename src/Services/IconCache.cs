@@ -11,17 +11,24 @@ internal static class IconCache
 {
     private static readonly Dictionary<string, ImageSource?> _extensionCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, ImageSource?> _extensionCacheLarge = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object _cacheLock = new();
     private static ImageSource? _folderIcon;
     private static ImageSource? _folderIconLarge;
 
     public static ImageSource? GetFolderIcon()
     {
-        return _folderIcon ??= LoadShellIcon("folder", isDirectory: true, large: false);
+        lock (_cacheLock)
+        {
+            return _folderIcon ??= LoadShellIcon("folder", isDirectory: true, large: false);
+        }
     }
 
     public static ImageSource? GetFolderIconLarge()
     {
-        return _folderIconLarge ??= LoadShellIcon("folder", isDirectory: true, large: true);
+        lock (_cacheLock)
+        {
+            return _folderIconLarge ??= LoadShellIcon("folder", isDirectory: true, large: true);
+        }
     }
 
     public static ImageSource? GetFileIcon(string path) => GetFileIconCached(path, _extensionCache, large: false);
@@ -33,15 +40,18 @@ internal static class IconCache
         var ext = Path.GetExtension(path);
         var key = string.IsNullOrEmpty(ext) ? "__default__" : ext.ToLowerInvariant();
 
-        if (cache.TryGetValue(key, out var cached))
+        lock (_cacheLock)
         {
-            return cached;
-        }
+            if (cache.TryGetValue(key, out var cached))
+            {
+                return cached;
+            }
 
-        var hint = key == "__default__" ? "file" : "file" + key;
-        var icon = LoadShellIcon(hint, isDirectory: false, large: large);
-        cache[key] = icon;
-        return icon;
+            var hint = key == "__default__" ? "file" : "file" + key;
+            var icon = LoadShellIcon(hint, isDirectory: false, large: large);
+            cache[key] = icon;
+            return icon;
+        }
     }
 
     private const uint SHGFI_ICON = 0x100;

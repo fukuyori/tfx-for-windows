@@ -52,7 +52,7 @@ public partial class MainWindow
         var hasZipSelection = selection.Any(i => !i.IsDirectory && System.IO.Path.GetExtension(i.FullPath).Equals(".zip", StringComparison.OrdinalIgnoreCase));
         var hasClipboard = Clipboard.ContainsFileDropList();
 
-        var open = new MenuItem { Header = "Open", InputGestureText = "Enter", IsEnabled = oneSelected };
+        var open = new MenuItem { Header = Loc.T("Open"), InputGestureText = "Enter", IsEnabled = oneSelected };
         open.Click += (_, _) =>
         {
             if (grid.SelectedItem is FileItem item)
@@ -62,35 +62,35 @@ public partial class MainWindow
         };
         menu.Items.Add(open);
 
-        var reveal = new MenuItem { Header = "Reveal in Explorer" };
+        var reveal = new MenuItem { Header = Loc.T("Reveal in Explorer") };
         reveal.Click += (_, _) => RevealInExplorer();
         menu.Items.Add(reveal);
 
         menu.Items.Add(new Separator());
 
-        var cut = new MenuItem { Header = "Cut", InputGestureText = "Ctrl+X", IsEnabled = hasSelection };
+        var cut = new MenuItem { Header = Loc.T("Cut"), InputGestureText = "Ctrl+X", IsEnabled = hasSelection };
         cut.Click += (_, _) => CopySelection(true);
         menu.Items.Add(cut);
 
-        var copy = new MenuItem { Header = "Copy", InputGestureText = "Ctrl+C", IsEnabled = hasSelection };
+        var copy = new MenuItem { Header = Loc.T("Copy"), InputGestureText = "Ctrl+C", IsEnabled = hasSelection };
         copy.Click += (_, _) => CopySelection(false);
         menu.Items.Add(copy);
 
-        var paste = new MenuItem { Header = "Paste", InputGestureText = "Ctrl+V", IsEnabled = hasClipboard };
+        var paste = new MenuItem { Header = Loc.T("Paste"), InputGestureText = "Ctrl+V", IsEnabled = hasClipboard };
         paste.Click += (_, _) => PasteIntoActivePane();
         menu.Items.Add(paste);
 
-        var compress = new MenuItem { Header = "Compress to Zip", InputGestureText = "Ctrl+K", IsEnabled = hasSelection };
+        var compress = new MenuItem { Header = Loc.T("Compress to Zip"), InputGestureText = "Ctrl+K", IsEnabled = hasSelection };
         compress.Click += (_, _) => CompressSelection();
         menu.Items.Add(compress);
 
-        var extract = new MenuItem { Header = "Extract Zip", InputGestureText = "Ctrl+Shift+E", IsEnabled = hasZipSelection };
+        var extract = new MenuItem { Header = Loc.T("Extract Zip"), InputGestureText = "Ctrl+Shift+E", IsEnabled = hasZipSelection };
         extract.Click += (_, _) => ExtractSelectedArchives();
         menu.Items.Add(extract);
 
         menu.Items.Add(new Separator());
 
-        var rename = new MenuItem { Header = "Rename", InputGestureText = "F2", IsEnabled = oneSelected };
+        var rename = new MenuItem { Header = Loc.T("Rename"), InputGestureText = "F2", IsEnabled = oneSelected };
         rename.Click += (_, _) =>
         {
             if (grid.SelectedItem is FileItem item && !item.IsParent)
@@ -100,25 +100,25 @@ public partial class MainWindow
         };
         menu.Items.Add(rename);
 
-        var trash = new MenuItem { Header = "Move to Recycle Bin", InputGestureText = "Del", IsEnabled = hasSelection };
+        var trash = new MenuItem { Header = Loc.T("Move to Recycle Bin"), InputGestureText = "Del", IsEnabled = hasSelection };
         trash.Click += (_, _) => MoveSelectionToTrash();
         menu.Items.Add(trash);
 
-        var perm = new MenuItem { Header = "Delete permanently", InputGestureText = "Shift+Del", IsEnabled = hasSelection };
+        var perm = new MenuItem { Header = Loc.T("Delete permanently"), InputGestureText = "Shift+Del", IsEnabled = hasSelection };
         perm.Click += (_, _) => DeletePermanently();
         menu.Items.Add(perm);
 
         menu.Items.Add(new Separator());
 
-        var newFolder = new MenuItem { Header = "New Folder", InputGestureText = "Ctrl+N" };
+        var newFolder = new MenuItem { Header = Loc.T("New Folder"), InputGestureText = "Ctrl+N" };
         newFolder.Click += (_, _) => NewFolder();
         menu.Items.Add(newFolder);
 
-        var newFile = new MenuItem { Header = "New File", InputGestureText = "Ctrl+Shift+N" };
+        var newFile = new MenuItem { Header = Loc.T("New File"), InputGestureText = "Ctrl+Shift+N" };
         newFile.Click += (_, _) => NewFile();
         menu.Items.Add(newFile);
 
-        var openTerminal = new MenuItem { Header = "Open Terminal here", InputGestureText = "Ctrl+Shift+T" };
+        var openTerminal = new MenuItem { Header = Loc.T("Open Terminal here"), InputGestureText = "Ctrl+Shift+T" };
         openTerminal.Click += (_, _) => OpenTerminal();
         menu.Items.Add(openTerminal);
 

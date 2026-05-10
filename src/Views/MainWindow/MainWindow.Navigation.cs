@@ -2,17 +2,20 @@ using System.IO;
 using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Threading;
 using Path = System.IO.Path;
 
 namespace Tfx;
 
 public partial class MainWindow
 {
-    private void Navigate(DataGrid grid, string path, bool pushHistory)
+    private void Navigate(DataGrid grid, string path, bool pushHistory, string? selectName = "..")
     {
         if (!Directory.Exists(path))
         {
-            SetStatus($"Folder not found: {path}");
+            SetStatus(Loc.F("Folder not found: {0}", path));
             return;
         }
 
@@ -32,53 +35,304 @@ public partial class MainWindow
             _rightPath = path;
         }
 
-        Reload(grid);
+        Reload(grid, selectName);
         UpdatePathText();
+        if (grid == _activeGrid)
+        {
+            QueueFolderTreeSyncToActivePane();
+        }
         SaveSettings();
     }
 
-    private void Reload(DataGrid grid)
+    private async void Reload(DataGrid grid, string? selectName = null)
     {
+        var isLeft = grid == LeftGrid;
         var path = GetCurrentPath(grid);
-        var target = grid == LeftGrid ? LeftItems : RightItems;
+        var target = isLeft ? LeftItems : RightItems;
         target.Clear();
+        var loadLargeIcons = _settings.ViewMode == ViewMode.Icons;
+        var loadSmallIcons = !loadLargeIcons;
+        var options = new DirectoryLoadOptions(
+            ShowHidden,
+            loadSmallIcons,
+            loadLargeIcons,
+            IsFileColumnVisible("Owner"));
+        SetPendingSelectionName(isLeft, selectName);
+        var cts = ReplaceReloadToken(isLeft);
 
-        var parent = Directory.GetParent(path);
-        if (parent is not null)
+        try
         {
-            target.Add(FileItem.Parent(parent.FullName));
-        }
-
-        foreach (var directory in FsHelpers.SafeEnumerateDirectories(path).OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase))
-        {
-            if (!ShowHidden && FsHelpers.IsHidden(directory))
+            var items = await Task.Run(() => DirectoryLoader.Load(path, options, cts.Token), cts.Token);
+            if (cts.IsCancellationRequested || !string.Equals(GetCurrentPath(grid), path, StringComparison.OrdinalIgnoreCase))
             {
-                continue;
+                return;
             }
 
-            target.Add(FileItem.FromDirectory(directory));
-        }
-
-        foreach (var file in FsHelpers.SafeEnumerateFiles(path).OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase))
-        {
-            if (!ShowHidden && FsHelpers.IsHidden(file))
+            target.Clear();
+            foreach (var item in items)
             {
-                continue;
+                target.Add(item);
             }
 
-            target.Add(FileItem.FromFile(file));
+            ApplySearchFilter();
+            ApplyPendingSelection(grid, isLeft);
+            UpdateStatus();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            SetStatus(ex.Message);
+        }
+    }
+
+    private CancellationTokenSource ReplaceReloadToken(bool isLeft)
+    {
+        var next = new CancellationTokenSource();
+        var previous = isLeft ? _leftReloadCts : _rightReloadCts;
+        previous?.Cancel();
+        previous?.Dispose();
+
+        if (isLeft)
+        {
+            _leftReloadCts = next;
+        }
+        else
+        {
+            _rightReloadCts = next;
         }
 
-        ApplySearchFilter();
+        return next;
+    }
+
+    private bool IsFileColumnVisible(string id) =>
+        _settings.VisibleFileColumns.Any(column => string.Equals(column, id, StringComparison.OrdinalIgnoreCase));
+
+    private void SetPendingSelectionName(bool isLeft, string? name)
+    {
+        if (isLeft)
+        {
+            _leftPendingSelectionName = name;
+        }
+        else
+        {
+            _rightPendingSelectionName = name;
+        }
+    }
+
+    private string? TakePendingSelectionName(bool isLeft)
+    {
+        if (isLeft)
+        {
+            var value = _leftPendingSelectionName;
+            _leftPendingSelectionName = null;
+            return value;
+        }
+
+        var rightValue = _rightPendingSelectionName;
+        _rightPendingSelectionName = null;
+        return rightValue;
+    }
+
+    private void ApplyPendingSelection(DataGrid grid, bool isLeft)
+    {
+        var name = TakePendingSelectionName(isLeft);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        var source = isLeft ? LeftItems : RightItems;
+        var item = source.FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.CurrentCultureIgnoreCase));
+        if (item is null)
+        {
+            return;
+        }
+
+        var iconView = isLeft ? LeftIconView : RightIconView;
+        _syncingSelection = true;
+        try
+        {
+            grid.SelectedItems.Clear();
+            grid.SelectedItem = item;
+            grid.ScrollIntoView(item);
+
+            iconView.SelectedItems.Clear();
+            iconView.SelectedItem = item;
+            iconView.ScrollIntoView(item);
+        }
+        finally
+        {
+            _syncingSelection = false;
+        }
+
+        if (grid == _activeGrid)
+        {
+            FocusSelectedListingItem(grid, iconView, item);
+            UpdatePreview(item);
+        }
+    }
+
+    private void FocusSelectedListingItem(DataGrid grid, ListBox iconView, FileItem item)
+    {
+        var listing = _settings.ViewMode == ViewMode.Icons ? (Control)iconView : grid;
+        listing.Focus();
+
+        QueueSelectedListingItemFocus(grid, iconView, item, DispatcherPriority.Input);
+        QueueSelectedListingItemFocus(grid, iconView, item, DispatcherPriority.ContextIdle);
+        QueueSelectedListingItemFocus(grid, iconView, item, DispatcherPriority.ApplicationIdle);
+    }
+
+    private void QueueSelectedListingItemFocus(DataGrid grid, ListBox iconView, FileItem item, DispatcherPriority priority)
+    {
+        Dispatcher.BeginInvoke(() => FocusSelectedListingItemNow(grid, iconView, item), priority);
+    }
+
+    private void FocusSelectedListingItemNow(DataGrid grid, ListBox iconView, FileItem item)
+    {
+        if (grid != _activeGrid)
+        {
+            return;
+        }
+
+        if (_settings.ViewMode == ViewMode.Icons)
+        {
+            iconView.UpdateLayout();
+            if (iconView.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem listBoxItem)
+            {
+                FocusElement(listBoxItem);
+                return;
+            }
+
+            FocusElement(iconView);
+            return;
+        }
+
+        grid.UpdateLayout();
+        if (grid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
+        {
+            if (FocusFileNameCell(grid, row, item))
+            {
+                return;
+            }
+
+            FocusElement(row);
+            return;
+        }
+
+        FocusElement(grid);
+    }
+
+    private bool FocusFileNameCell(DataGrid grid, DataGridRow row, FileItem item)
+    {
+        var nameColumn = grid == LeftGrid ? LeftNameColumn : RightNameColumn;
+        grid.CurrentCell = new DataGridCellInfo(item, nameColumn);
+        grid.ScrollIntoView(item, nameColumn);
+        row.ApplyTemplate();
+
+        var presenter = FindVisualChild<DataGridCellsPresenter>(row);
+        if (presenter is null)
+        {
+            grid.UpdateLayout();
+            presenter = FindVisualChild<DataGridCellsPresenter>(row);
+        }
+
+        if (presenter?.ItemContainerGenerator.ContainerFromIndex(nameColumn.DisplayIndex) is not DataGridCell cell)
+        {
+            return false;
+        }
+
+        cell.IsSelected = true;
+        FocusElement(cell);
+        return Keyboard.FocusedElement == cell;
+    }
+
+    private void FocusActiveListing()
+    {
+        var iconView = _activeGrid == LeftGrid ? LeftIconView : RightIconView;
+        var selected = _settings.ViewMode == ViewMode.Icons
+            ? iconView.SelectedItem as FileItem
+            : _activeGrid.SelectedItem as FileItem;
+        if (selected is not null)
+        {
+            FocusSelectedListingItemNow(_activeGrid, iconView, selected);
+            return;
+        }
+
+        FocusElement(_settings.ViewMode == ViewMode.Icons ? iconView : _activeGrid);
+    }
+
+    private void MoveActiveListingSelection(Key key)
+    {
+        var iconView = _activeGrid == LeftGrid ? LeftIconView : RightIconView;
+        var items = _settings.ViewMode == ViewMode.Icons ? iconView.Items : _activeGrid.Items;
+        if (items.Count == 0)
+        {
+            FocusActiveListing();
+            return;
+        }
+
+        var current = _settings.ViewMode == ViewMode.Icons
+            ? iconView.SelectedItem
+            : _activeGrid.SelectedItem;
+        var currentIndex = current is null ? -1 : items.IndexOf(current);
+        var step = key switch
+        {
+            Key.Up => -1,
+            Key.PageUp => -10,
+            Key.PageDown => 10,
+            _ => 1
+        };
+        var nextIndex = currentIndex < 0
+            ? 0
+            : Math.Clamp(currentIndex + step, 0, items.Count - 1);
+
+        if (items[nextIndex] is not FileItem item)
+        {
+            FocusActiveListing();
+            return;
+        }
+
+        _syncingSelection = true;
+        try
+        {
+            _activeGrid.SelectedItems.Clear();
+            _activeGrid.SelectedItem = item;
+            _activeGrid.ScrollIntoView(item);
+
+            iconView.SelectedItems.Clear();
+            iconView.SelectedItem = item;
+            iconView.ScrollIntoView(item);
+        }
+        finally
+        {
+            _syncingSelection = false;
+        }
+
+        FocusSelectedListingItemNow(_activeGrid, iconView, item);
+        UpdatePreview(item);
         UpdateStatus();
+    }
+
+    private static void FocusElement(IInputElement element)
+    {
+        if (element is Control control)
+        {
+            control.Focus();
+            FocusManager.SetFocusedElement(FocusManager.GetFocusScope(control), control);
+        }
+
+        Keyboard.Focus(element);
     }
 
     private void NavigateParent()
     {
-        var parent = Directory.GetParent(GetCurrentPath(_activeGrid));
+        var current = GetCurrentPath(_activeGrid);
+        var parent = Directory.GetParent(current);
         if (parent is not null)
         {
-            Navigate(_activeGrid, parent.FullName, true);
+            Navigate(_activeGrid, parent.FullName, true, Path.GetFileName(current.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
         }
     }
 
@@ -114,7 +368,7 @@ public partial class MainWindow
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "Open folder",
+            Title = Loc.T("Open folder"),
             InitialDirectory = GetCurrentPath(_activeGrid)
         };
 

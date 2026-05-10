@@ -19,7 +19,10 @@ public partial class MainWindow
     {
         if (item.IsDirectory || item.IsParent)
         {
-            Navigate(grid, item.FullPath, true);
+            var selectName = item.IsParent
+                ? Path.GetFileName(GetCurrentPath(grid).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+                : "..";
+            Navigate(grid, item.FullPath, true, selectName);
             return;
         }
 
@@ -45,7 +48,7 @@ public partial class MainWindow
         collection.AddRange(paths);
         Clipboard.SetFileDropList(collection);
         _cutBuffer = cut ? paths : [];
-        SetStatus(cut ? $"Cut {paths.Length} item(s)" : $"Copied {paths.Length} item(s)");
+        SetStatus(cut ? Loc.F("Cut {0} item(s)", paths.Length) : Loc.F("Copied {0} item(s)", paths.Length));
     }
 
     private void PasteIntoActivePane()
@@ -94,7 +97,7 @@ public partial class MainWindow
         _cutBuffer = [];
         Reload(LeftGrid);
         Reload(RightGrid);
-        SetStatus($"Pasted {files.Length} item(s)");
+        SetStatus(Loc.F("Pasted {0} item(s)", files.Length));
     }
 
     private void MoveSelectionToTrash()
@@ -105,7 +108,7 @@ public partial class MainWindow
             return;
         }
 
-        if (MessageBox.Show($"Move {items.Length} item(s) to Recycle Bin?", "tfx", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
+        if (MessageBox.Show(Loc.F("Move {0} item(s) to Recycle Bin?", items.Length), "tfx", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
         {
             return;
         }
@@ -135,30 +138,69 @@ public partial class MainWindow
 
     private void NewFolder()
     {
-        var name = Microsoft.VisualBasic.Interaction.InputBox("Folder name", "tfx", "New Folder");
-        if (string.IsNullOrWhiteSpace(name))
+        var name = PromptForName(Loc.T("New Folder"), Loc.T("Folder name"), Loc.T("New Folder"));
+        if (!TryNormalizeNewItemName(name, out var itemName))
         {
             return;
         }
 
-        var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), name.Trim()));
-        Directory.CreateDirectory(path);
-        Reload(_activeGrid);
-        SetStatus($"Created {path}");
+        try
+        {
+            var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), itemName));
+            Directory.CreateDirectory(path);
+            Reload(_activeGrid);
+            SetStatus(Loc.F("Created {0}", path));
+        }
+        catch (Exception ex)
+        {
+            SetStatus(Loc.F("New folder failed: {0}", ex.Message));
+        }
     }
 
     private void NewFile()
     {
-        var name = Microsoft.VisualBasic.Interaction.InputBox("File name", "tfx", "New File.txt");
-        if (string.IsNullOrWhiteSpace(name))
+        var name = PromptForName(Loc.T("New File"), Loc.T("File name"), Loc.T("New File.txt"));
+        if (!TryNormalizeNewItemName(name, out var itemName))
         {
             return;
         }
 
-        var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), name.Trim()));
-        File.WriteAllBytes(path, []);
-        Reload(_activeGrid);
-        SetStatus($"Created {path}");
+        try
+        {
+            var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), itemName));
+            File.WriteAllBytes(path, []);
+            Reload(_activeGrid);
+            SetStatus(Loc.F("Created {0}", path));
+        }
+        catch (Exception ex)
+        {
+            SetStatus(Loc.F("New file failed: {0}", ex.Message));
+        }
+    }
+
+    private string? PromptForName(string title, string label, string defaultValue)
+    {
+        var dialog = new NamePromptDialog(title, label, defaultValue);
+        return dialog.ShowDialog() == true ? dialog.EnteredText : null;
+    }
+
+    private bool TryNormalizeNewItemName(string? rawName, out string name)
+    {
+        name = (rawName ?? "").Trim();
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+            name.Contains(Path.DirectorySeparatorChar) ||
+            name.Contains(Path.AltDirectorySeparatorChar))
+        {
+            SetStatus(Loc.F("Invalid name: {0}", name));
+            return false;
+        }
+
+        return true;
     }
 
     private void StartRename(DataGrid grid, FileItem item)
@@ -222,7 +264,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            SetStatus($"Rename failed: {ex.Message}");
+            SetStatus(Loc.F("Rename failed: {0}", ex.Message));
             return;
         }
 
@@ -265,8 +307,8 @@ public partial class MainWindow
         }
 
         var msg = items.Length == 1
-            ? $"Permanently delete \"{items[0].Name}\"? This cannot be undone."
-            : $"Permanently delete {items.Length} item(s)? This cannot be undone.";
+            ? Loc.F("Permanently delete \"{0}\"? This cannot be undone.", items[0].Name)
+            : Loc.F("Permanently delete {0} item(s)? This cannot be undone.", items.Length);
 
         if (MessageBox.Show(msg, "tfx", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
         {
@@ -307,7 +349,7 @@ public partial class MainWindow
         var directory = GetCurrentPath(_activeGrid);
         var baseName = items.Length == 1
             ? Path.GetFileNameWithoutExtension(items[0].Name)
-            : "Archive";
+            : Loc.T("Archive");
         var zipPath = FsHelpers.NextAvailablePath(Path.Combine(directory, $"{baseName}.zip"));
 
         try
@@ -326,11 +368,11 @@ public partial class MainWindow
             }
 
             Reload(_activeGrid);
-            SetStatus($"Created {zipPath}");
+            SetStatus(Loc.F("Created {0}", zipPath));
         }
         catch (Exception ex)
         {
-            SetStatus($"Compress failed: {ex.Message}");
+            SetStatus(Loc.F("Compress failed: {0}", ex.Message));
             try
             {
                 if (File.Exists(zipPath))
@@ -352,7 +394,7 @@ public partial class MainWindow
 
         if (archives.Length == 0)
         {
-            SetStatus("Select one or more .zip files to extract");
+            SetStatus(Loc.T("Select one or more .zip files to extract"));
             return;
         }
 
@@ -369,13 +411,13 @@ public partial class MainWindow
             }
             catch (Exception ex)
             {
-                SetStatus($"Extract failed: {ex.Message}");
+                SetStatus(Loc.F("Extract failed: {0}", ex.Message));
                 return;
             }
         }
 
         Reload(_activeGrid);
-        SetStatus($"Extracted {archives.Length} archive(s)");
+        SetStatus(Loc.F("Extracted {0} archive(s)", archives.Length));
     }
 
     private static void AddDirectoryToArchive(ZipArchive archive, string sourceDirectory, string entryRoot)
@@ -472,7 +514,7 @@ public partial class MainWindow
             {
                 if (effect == DragDropEffects.Link)
                 {
-                    var lnkName = $"{Path.GetFileName(source)} - Shortcut.lnk";
+                    var lnkName = Loc.F("{0} - Shortcut.lnk", Path.GetFileName(source));
                     var lnkPath = FsHelpers.NextAvailablePath(Path.Combine(destination, lnkName));
                     FsHelpers.CreateShortcut(source, lnkPath);
                 }

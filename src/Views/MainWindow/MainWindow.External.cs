@@ -40,7 +40,7 @@ public partial class MainWindow
         HiddenButton.IsChecked = ShowHidden;
         Reload(LeftGrid);
         Reload(RightGrid);
-        SetStatus(ShowHidden ? "Hidden files visible" : "Hidden files hidden");
+        SetStatus(ShowHidden ? Loc.T("Hidden files visible") : Loc.T("Hidden files hidden"));
     }
 
     private void Terminal_Click(object sender, RoutedEventArgs e) => OpenTerminal();
@@ -65,6 +65,6 @@ public partial class MainWindow
     {
         var text = GetCurrentPath(_activeGrid);
         Clipboard.SetText(text);
-        SetStatus($"Copied path: {text}");
+        SetStatus(Loc.F("Copied path: {0}", text));
     }
 }

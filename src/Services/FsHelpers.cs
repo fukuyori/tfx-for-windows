@@ -115,6 +115,8 @@ internal static class FsHelpers
     public static bool IsImage(string extension) =>
         extension is ".png" or ".jpg" or ".jpeg" or ".gif" or ".bmp" or ".webp" or ".tif" or ".tiff";
 
+    public static bool IsPdf(string extension) => extension is ".pdf";
+
     public static bool IsText(string extension, string path)
     {
         if (extension is ".txt" or ".md" or ".json" or ".xml" or ".xaml" or ".cs" or ".ps1" or ".bat" or ".cmd" or ".log" or ".csv" or ".tsv" or ".html" or ".css" or ".js")

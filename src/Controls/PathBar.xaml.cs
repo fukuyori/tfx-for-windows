@@ -15,6 +15,7 @@ public partial class PathBar : UserControl
     public PathBar()
     {
         InitializeComponent();
+        ToolTip = Loc.T("Double-click or press Ctrl+L to edit path");
     }
 
     public string Path

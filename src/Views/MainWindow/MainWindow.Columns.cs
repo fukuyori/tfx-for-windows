@@ -13,14 +13,19 @@ public partial class MainWindow
     {
         var defs = new List<FileColumnDefinition>
         {
-            new("Name", "Name", LeftNameColumn, RightNameColumn),
-            new("DateModified", "Date modified", LeftDateModifiedColumn, RightDateModifiedColumn),
-            new("Type", "Type", LeftTypeColumn, RightTypeColumn),
-            new("Size", "Size", LeftSizeColumn, RightSizeColumn),
-            new("DateCreated", "Date created", LeftDateCreatedColumn, RightDateCreatedColumn),
-            new("Owner", "Owner", LeftOwnerColumn, RightOwnerColumn),
-            new("Attribute", "Attribute", LeftAttributeColumn, RightAttributeColumn)
+            new("Name", Loc.T("Name"), LeftNameColumn, RightNameColumn),
+            new("DateModified", Loc.T("Date modified"), LeftDateModifiedColumn, RightDateModifiedColumn),
+            new("Type", Loc.T("Type"), LeftTypeColumn, RightTypeColumn),
+            new("Size", Loc.T("Size"), LeftSizeColumn, RightSizeColumn),
+            new("DateCreated", Loc.T("Date created"), LeftDateCreatedColumn, RightDateCreatedColumn),
+            new("Owner", Loc.T("Owner"), LeftOwnerColumn, RightOwnerColumn),
+            new("Attribute", Loc.T("Attribute"), LeftAttributeColumn, RightAttributeColumn)
         };
+        foreach (var def in defs)
+        {
+            def.Left.Header = def.Title;
+            def.Right.Header = def.Title;
+        }
 
         _fileColumns.Clear();
 
@@ -186,7 +191,7 @@ public partial class MainWindow
                 if (!willBeVisible && _fileColumns.Count(c => c.Left.Visibility == Visibility.Visible) <= 1)
                 {
                     check.IsChecked = true;
-                    SetStatus("At least one file column must be visible");
+                    SetStatus(Loc.T("At least one file column must be visible"));
                     return;
                 }
                 SetColumnVisibleInternal(col, willBeVisible);

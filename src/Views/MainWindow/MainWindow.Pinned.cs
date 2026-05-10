@@ -44,7 +44,7 @@ public partial class MainWindow
         SaveSettings();
     }
 
-    private void PinnedList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    private void PinnedList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (PinnedList.SelectedItem is string path && Directory.Exists(path))
         {
@@ -96,13 +96,33 @@ public partial class MainWindow
         _pinned.Insert(Math.Clamp(index, 0, _pinned.Count), path);
     }
 
-    private void Pin_Click(object sender, RoutedEventArgs e)
+    private void PinnedList_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        var path = GetCurrentPath(_activeGrid);
-        if (!_pinned.Contains(path))
+        var node = e.OriginalSource as DependencyObject;
+        while (node != null && node is not ListBoxItem && node is not ListBox)
         {
-            _pinned.Add(path);
+            node = VisualTreeHelper.GetParent(node);
         }
+
+        if (node is ListBoxItem item && item.Content is string path)
+        {
+            PinnedList.SelectedItem = path;
+        }
+    }
+
+    private void PinnedList_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (PinnedList.SelectedItem is not string path)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var menu = new ContextMenu();
+        var unpin = new MenuItem { Header = Loc.T("Unpin") };
+        unpin.Click += (_, _) => UnpinPinnedFolder(path);
+        menu.Items.Add(unpin);
+        PinnedList.ContextMenu = menu;
     }
 
     private void TogglePin_Click(object sender, RoutedEventArgs e)
@@ -110,21 +130,20 @@ public partial class MainWindow
         var path = GetCurrentPath(_activeGrid);
         if (_pinned.Contains(path))
         {
-            _pinned.Remove(path);
-            SetStatus($"Unpinned {path}");
+            UnpinPinnedFolder(path);
         }
         else
         {
             _pinned.Add(path);
-            SetStatus($"Pinned {path}");
+            SetStatus(Loc.F("Pinned {0}", path));
         }
     }
 
-    private void Unpin_Click(object sender, RoutedEventArgs e)
+    private void UnpinPinnedFolder(string path)
     {
-        if (PinnedList.SelectedItem is string path)
+        if (_pinned.Remove(path))
         {
-            _pinned.Remove(path);
+            SetStatus(Loc.F("Unpinned {0}", path));
         }
     }
 }

@@ -65,18 +65,16 @@ public partial class MainWindow
             return;
         }
 
-        if (item.Items.Count == 1 && item.Items[0] is null)
-        {
-            item.Items.Clear();
-            foreach (var directory in FsHelpers.SafeEnumerateDirectories(path).OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase))
-            {
-                item.Items.Add(CreateFolderNode(directory));
-            }
-        }
+        EnsureFolderNodeChildren(item);
     }
 
     private void FolderTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
+        if (_syncingFolderTree)
+        {
+            return;
+        }
+
         if (FolderTree.SelectedItem is TreeViewItem item && item.Tag is string path && Directory.Exists(path))
         {
             Navigate(_activeGrid, path, true);
@@ -103,6 +101,88 @@ public partial class MainWindow
             }
 
             node = VisualTreeHelper.GetParent(node);
+        }
+    }
+
+    private void SyncFolderTreeToActivePane()
+    {
+        SyncFolderTreeToPath(GetCurrentPath(_activeGrid));
+    }
+
+    private void QueueFolderTreeSyncToActivePane()
+    {
+        Dispatcher.BeginInvoke(() => SyncFolderTreeToActivePane(), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    private void SyncFolderTreeToPath(string path)
+    {
+        var root = Path.GetPathRoot(path);
+        if (string.IsNullOrEmpty(root))
+        {
+            return;
+        }
+
+        var current = FolderTree.Items
+            .OfType<TreeViewItem>()
+            .FirstOrDefault(item => item.Tag is string itemPath &&
+                                    string.Equals(itemPath, root, StringComparison.OrdinalIgnoreCase));
+        if (current is null)
+        {
+            return;
+        }
+
+        _syncingFolderTree = true;
+        try
+        {
+            current.IsExpanded = true;
+            var accumulated = root;
+            var rest = path.Length > root.Length ? path[root.Length..] : "";
+            var parts = rest.Split(
+                new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var part in parts)
+            {
+                EnsureFolderNodeChildren(current);
+                accumulated = Path.Combine(accumulated, part);
+                var next = current.Items
+                    .OfType<TreeViewItem>()
+                    .FirstOrDefault(item => item.Tag is string itemPath &&
+                                            string.Equals(itemPath, accumulated, StringComparison.OrdinalIgnoreCase));
+                if (next is null)
+                {
+                    break;
+                }
+
+                current = next;
+                current.IsExpanded = true;
+            }
+
+            current.IsSelected = true;
+            current.BringIntoView();
+        }
+        finally
+        {
+            _syncingFolderTree = false;
+        }
+    }
+
+    private void EnsureFolderNodeChildren(TreeViewItem item)
+    {
+        if (item.Tag is not string path)
+        {
+            return;
+        }
+
+        if (item.Items.Count > 0 && (item.Items.Count != 1 || item.Items[0] is not null))
+        {
+            return;
+        }
+
+        item.Items.Clear();
+        foreach (var directory in FsHelpers.SafeEnumerateDirectories(path).OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase))
+        {
+            item.Items.Add(CreateFolderNode(directory));
         }
     }
 }

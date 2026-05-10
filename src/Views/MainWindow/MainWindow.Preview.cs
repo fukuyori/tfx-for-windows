@@ -1,15 +1,13 @@
 using System.IO;
-using System.Text;
 using System.Windows;
-using System.Windows.Media.Imaging;
-using Path = System.IO.Path;
 
 namespace Tfx;
 
 public partial class MainWindow
 {
-    private void UpdatePreview(FileItem? item)
+    private async void UpdatePreview(FileItem? item)
     {
+        var cts = ReplacePreviewToken();
         ImagePreview.Visibility = Visibility.Collapsed;
         TextPreview.Visibility = Visibility.Collapsed;
         TextPreview.Text = "";
@@ -21,48 +19,54 @@ public partial class MainWindow
             return;
         }
 
-        InfoPreview.Text = $"{item.Name}\n{item.FullPath}\n{item.Kind}\n{item.SizeText}\nModified: {item.ModifiedText}\nCreated: {item.CreatedText}\nOwner: {item.OwnerText}\nAttributes: {item.AttributeText}";
+        InfoPreview.Text = $"{item.Name}\n{item.FullPath}\n{item.Kind}\n{item.SizeText}\n{Loc.F("Modified: {0}", item.ModifiedText)}\n{Loc.F("Created: {0}", item.CreatedText)}\n{Loc.F("Owner: {0}", item.OwnerText)}\n{Loc.F("Attributes: {0}", item.AttributeText)}";
 
         if (item.IsDirectory || item.IsParent || !File.Exists(item.FullPath))
         {
             return;
         }
 
-        var extension = Path.GetExtension(item.FullPath).ToLowerInvariant();
-        if (FsHelpers.IsImage(extension))
+        try
         {
-            try
+            var path = item.FullPath;
+            var preview = await Task.Run(() => PreviewLoader.Load(path, cts.Token), cts.Token);
+            if (cts.IsCancellationRequested)
             {
-                var image = new BitmapImage();
-                image.BeginInit();
-                image.CacheOption = BitmapCacheOption.OnLoad;
-                image.UriSource = new Uri(item.FullPath);
-                image.DecodePixelWidth = 900;
-                image.EndInit();
-                ImagePreview.Source = image;
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(preview.ExtraInfo))
+            {
+                InfoPreview.Text += $"\n{preview.ExtraInfo}";
+            }
+
+            if (preview.Kind == PreviewKind.Image && preview.Image is not null)
+            {
+                ImagePreview.Source = preview.Image;
                 ImagePreview.Visibility = Visibility.Visible;
             }
-            catch (Exception ex)
+            else if (preview.Kind == PreviewKind.Text)
             {
-                InfoPreview.Text += $"\nPreview error: {ex.Message}";
-            }
-        }
-        else if (FsHelpers.IsText(extension, item.FullPath))
-        {
-            try
-            {
-                using var stream = File.OpenRead(item.FullPath);
-                using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-                var buffer = new char[Math.Min(stream.Length, 64 * 1024)];
-                var count = reader.Read(buffer, 0, buffer.Length);
-                TextPreview.Text = new string(buffer, 0, count);
+                TextPreview.Text = preview.Text ?? "";
                 TextPreview.Visibility = Visibility.Visible;
             }
-            catch (Exception ex)
-            {
-                InfoPreview.Text += $"\nPreview error: {ex.Message}";
-            }
         }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            InfoPreview.Text += $"\n{Loc.F("Preview error: {0}", ex.Message)}";
+        }
+    }
+
+    private CancellationTokenSource ReplacePreviewToken()
+    {
+        var next = new CancellationTokenSource();
+        _previewCts?.Cancel();
+        _previewCts?.Dispose();
+        _previewCts = next;
+        return next;
     }
 
     private void SetPreviewVisible(bool visible)

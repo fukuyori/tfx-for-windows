@@ -50,7 +50,21 @@ public partial class MainWindow
         if (e.Key == Key.Escape)
         {
             SearchBox.Text = "";
-            _activeGrid.Focus();
+            FocusActiveListing();
+            e.Handled = true;
+        }
+    }
+
+    private void SearchBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(SearchBox.Text) || Keyboard.Modifiers != ModifierKeys.None)
+        {
+            return;
+        }
+
+        if (e.Key is Key.Down or Key.Up or Key.PageDown or Key.PageUp)
+        {
+            MoveActiveListingSelection(e.Key);
             e.Handled = true;
         }
     }

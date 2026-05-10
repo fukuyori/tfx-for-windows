@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Focus the selected file-name cell after folder navigation so arrow keys continue moving the file-list selection.
+- Select `..` after entering a folder, and select the folder you came from after returning to the parent with `..` or Backspace.
+- Navigate pinned folders with one click and remove pins from the pinned-folder context menu.
+
 ## 0.1.4
 
 - Make folder paths easier to edit from the top active path and breadcrumb bars.

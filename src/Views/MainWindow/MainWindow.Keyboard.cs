@@ -157,6 +157,20 @@ public partial class MainWindow
             return;
         }
 
+        if (e.Key == Key.Delete && !inTextBox)
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                DeletePermanently();
+            }
+            else
+            {
+                MoveSelectionToTrash();
+            }
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Enter && !inTextBox && _activeGrid.SelectedItem is FileItem item)
         {
             OpenItem(_activeGrid, item);

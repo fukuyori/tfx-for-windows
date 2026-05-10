@@ -34,6 +34,12 @@ public partial class MainWindow : Window
     private Point _dragStart;
     private bool _syncingSelection;
     private bool _suspendSettingsSave;
+    private bool _syncingFolderTree;
+    private string? _leftPendingSelectionName;
+    private string? _rightPendingSelectionName;
+    private CancellationTokenSource? _leftReloadCts;
+    private CancellationTokenSource? _rightReloadCts;
+    private CancellationTokenSource? _previewCts;
 
     public MainWindow()
     {
@@ -41,6 +47,7 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) => WindowTheme.Apply(this);
         DataContext = this;
         _activeGrid = LeftGrid;
+        ApplyLocalization();
 
         var appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "tfx");
         Directory.CreateDirectory(appData);
@@ -58,6 +65,7 @@ public partial class MainWindow : Window
         Navigate(RightGrid, _settings.RightPath, false);
         ApplyLayoutSettings();
         UpdateActivePane(string.Equals(_settings.ActivePane, "Right", StringComparison.OrdinalIgnoreCase) && _settings.ShowSplit ? RightGrid : LeftGrid);
+        QueueFolderTreeSyncToActivePane();
         _suspendSettingsSave = false;
     }
 
@@ -76,6 +84,30 @@ public partial class MainWindow : Window
         }
 
         return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    }
+
+    private void ApplyLocalization()
+    {
+        BackButton.ToolTip = Loc.T("Back (Ctrl+[)");
+        ForwardButton.ToolTip = Loc.T("Forward (Ctrl+])");
+        ParentButton.ToolTip = Loc.T("Up (Ctrl+Up / Backspace)");
+        OpenFolderButton.ToolTip = Loc.T("Open folder");
+        TogglePinButton.ToolTip = Loc.T("Pin / unpin current folder");
+        ActiveHeaderPathBorder.ToolTip = Loc.T("Edit current path (Ctrl+L)");
+        FocusSearchButton.ToolTip = Loc.T("Focus search (Ctrl+F)");
+        ViewModeButton.ToolTip = Loc.T("Switch view mode");
+        HiddenButton.ToolTip = Loc.T("Toggle hidden files (Ctrl+Shift+.)");
+        TerminalButton.ToolTip = Loc.T("Open Terminal here (Ctrl+Shift+T)");
+        ExplorerButton.ToolTip = Loc.T("Reveal in Explorer");
+        SelectAllButton.ToolTip = Loc.T("Select all (Ctrl+A)");
+        ReloadButton.ToolTip = Loc.T("Reload (Ctrl+R)");
+        PreviewButton.ToolTip = Loc.T("Toggle preview");
+        SplitButton.ToolTip = Loc.T("Toggle split pane");
+        ColumnsButton.ToolTip = Loc.T("Columns");
+        CopyPathButton.ToolTip = Loc.T("Copy current path");
+        PinnedHeader.Text = Loc.T("PINNED");
+        FoldersHeader.Text = Loc.T("FOLDERS");
+        PreviewHeader.Text = Loc.T("PREVIEW");
     }
 
     private void LoadSettings()
@@ -198,13 +230,13 @@ public partial class MainWindow : Window
 
         if (selected.Count == 0)
         {
-            SetStatus($"{path}  {totalCount} items");
+            SetStatus(Loc.F("{0}  {1} items", path, totalCount));
         }
         else
         {
             var totalSize = selected.Where(i => !i.IsDirectory).Sum(i => i.Size);
             var sizeText = totalSize > 0 ? $" ({FileItem.FormatSize(totalSize)})" : "";
-            SetStatus($"{path}  {selected.Count} of {totalCount} selected{sizeText}");
+            SetStatus(Loc.F("{0}  {1} of {2} selected{3}", path, selected.Count, totalCount, sizeText));
         }
 
         FreeSpaceText.Text = GetFreeSpaceText(path);
@@ -226,7 +258,7 @@ public partial class MainWindow : Window
                 return "";
             }
 
-            return $"{drive.Name}  {FileItem.FormatSize(drive.AvailableFreeSpace)} free of {FileItem.FormatSize(drive.TotalSize)}";
+            return Loc.F("{0}  {1} free of {2}", drive.Name, FileItem.FormatSize(drive.AvailableFreeSpace), FileItem.FormatSize(drive.TotalSize));
         }
         catch
         {

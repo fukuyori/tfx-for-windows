@@ -57,13 +57,13 @@ public partial class MainWindow
         }
         catch
         {
-            SetStatus($"Invalid path: {requested}");
+            SetStatus(Loc.F("Invalid path: {0}", requested));
             return;
         }
 
         if (!Directory.Exists(expanded))
         {
-            SetStatus($"Folder not found: {expanded}");
+            SetStatus(Loc.F("Folder not found: {0}", expanded));
             return;
         }
 

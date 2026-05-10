@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.1.4
+Version: 0.2.0
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -25,6 +25,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Right-click context menu, sortable columns, customizable column visibility and order
 - Image / text preview pane
 - Status bar with item counts, selection size, and active drive's free space
+- Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
 
 ---
@@ -38,7 +39,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 +--------------+----------------+----------------+--------------------+
 | PINNED       | Address bar    | Address bar    | PREVIEW            |
 | folder list  | Left file view | Right file view| info / image / text|
-| Pin+ Pin-    |                |                |                    |
+| pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
 | <path>  K of N selected (size)         C:\  120 GB free of 476 GB  |
@@ -99,6 +100,7 @@ File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste 
 - **Click** on the expander triangle -> expand/collapse only (no navigate)
 - **Single click** on row / icon -> select; **Ctrl** / **Shift** for multi-select
 - **Double-click** on row / icon -> open
+- After entering a folder, the parent row (`..`) is selected and focused. When returning to the parent with `..` or Backspace, the folder you came from is selected and focused.
 - **Right-click** -> context menu (Open, Reveal, Cut, Copy, Paste, Compress, Extract, Rename, Trash, Delete permanently, New folder, New file, Open Terminal)
 - **Click** on a breadcrumb segment -> jump to that ancestor
 - **Click** on the empty area of the address bar -> switch to free-text edit mode
@@ -155,10 +157,10 @@ Open via the Columns button. The popup stays open while you toggle items.
 
 Sidebar `PINNED` section.
 
-- **Pin +** adds the current folder of the active pane
-- **Pin -** removes the selected entry
+- **Pin / unpin current folder** adds or removes the current folder of the active pane
+- **Right-click > Unpin** removes a pinned entry
 - Drag a pinned entry to reorder
-- Double-click an entry to navigate the active pane
+- Click an entry to navigate the active pane
 - Long paths are shown with a middle ellipsis, such as `C: ... \Downloads`, while the full path remains available as a tooltip.
 
 Default pins on first run: User profile, Desktop, Documents, Downloads.
@@ -279,7 +281,9 @@ src/Converters/MiddleEllipsisPathConverter.cs
 
 - Delete-like operations move to the Recycle Bin by default. Use `Shift + Delete` for permanent removal.
 - Cross-volume directory moves are handled via `Microsoft.VisualBasic.FileIO.FileSystem.MoveDirectory`, which falls back to copy + delete.
-- PDF and video previews are not implemented.
+- PDF preview renders the first page with `pdftoppm` when available, then falls back to the Windows shell thumbnail provider. If neither is available, tfx shows file information only.
+- Text preview detects UTF-8 with/without BOM, UTF-16 with BOM, EUC-JP, ISO-2022-JP (JIS), and Shift_JIS, and shows the detected encoding and newline style.
+- Video previews are not implemented.
 - Inline rename (`F2`) is wired to the active Details view.
 - The DataGrid header drag-reorder is disabled by default style; use the Columns popup to keep both panes in sync.
 - Network locations work if mounted as drives or by typing UNC paths in the address bar.

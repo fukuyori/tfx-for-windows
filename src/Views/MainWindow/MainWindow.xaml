@@ -31,11 +31,11 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
-                    <Button Style="{StaticResource ToolbarButton}" Click="Back_Click" ToolTip="Back (Ctrl+[)" Content="&#xE72B;" />
-                    <Button Style="{StaticResource ToolbarButton}" Click="Forward_Click" ToolTip="Forward (Ctrl+])" Content="&#xE72A;" />
-                    <Button Style="{StaticResource ToolbarButton}" Click="Parent_Click" ToolTip="Up (Ctrl+Up / Backspace)" Content="&#xE74A;" />
-                    <Button Style="{StaticResource ToolbarButton}" Click="OpenFolder_Click" ToolTip="Open folder" Content="&#xE838;" />
-                    <Button Style="{StaticResource ToolbarButton}" Click="TogglePin_Click" ToolTip="Pin / unpin current folder" Content="&#xE718;" />
+                    <Button x:Name="BackButton" Style="{StaticResource ToolbarButton}" Click="Back_Click" ToolTip="Back (Ctrl+[)" Content="&#xE72B;" />
+                    <Button x:Name="ForwardButton" Style="{StaticResource ToolbarButton}" Click="Forward_Click" ToolTip="Forward (Ctrl+])" Content="&#xE72A;" />
+                    <Button x:Name="ParentButton" Style="{StaticResource ToolbarButton}" Click="Parent_Click" ToolTip="Up (Ctrl+Up / Backspace)" Content="&#xE74A;" />
+                    <Button x:Name="OpenFolderButton" Style="{StaticResource ToolbarButton}" Click="OpenFolder_Click" ToolTip="Open folder" Content="&#xE838;" />
+                    <Button x:Name="TogglePinButton" Style="{StaticResource ToolbarButton}" Click="TogglePin_Click" ToolTip="Pin / unpin current folder" Content="&#xE718;" />
                 </StackPanel>
                 <Grid Grid.Column="1" Margin="8,0">
                     <Grid.ColumnDefinitions>
@@ -43,21 +43,21 @@
                         <ColumnDefinition Width="180" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <Border Background="#0D1013" BorderBrush="{StaticResource TfxBorder}" BorderThickness="1" MinHeight="22" Margin="0,0,8,0" Cursor="IBeam" ToolTip="Edit current path (Ctrl+L)" MouseLeftButtonDown="ActiveHeaderPath_MouseLeftButtonDown">
+                    <Border x:Name="ActiveHeaderPathBorder" Background="#0D1013" BorderBrush="{StaticResource TfxBorder}" BorderThickness="1" MinHeight="22" Margin="0,0,8,0" Cursor="IBeam" ToolTip="Edit current path (Ctrl+L)" MouseLeftButtonDown="ActiveHeaderPath_MouseLeftButtonDown">
                         <TextBlock x:Name="ActiveHeaderPath" Foreground="{StaticResource TfxForeground}" FontFamily="Consolas, Yu Gothic UI" VerticalAlignment="Center" Padding="10,0" TextTrimming="CharacterEllipsis" />
                     </Border>
-                    <TextBox x:Name="SearchBox" Grid.Column="1" VerticalContentAlignment="Center" TextChanged="SearchBox_TextChanged" KeyDown="SearchBox_KeyDown" />
-                    <Button Grid.Column="2" Style="{StaticResource ToolbarButton}" Click="FocusSearch_Click" ToolTip="Focus search (Ctrl+F)" Content="&#xE721;" />
+                    <TextBox x:Name="SearchBox" Grid.Column="1" VerticalContentAlignment="Center" TextChanged="SearchBox_TextChanged" KeyDown="SearchBox_KeyDown" PreviewKeyDown="SearchBox_PreviewKeyDown" />
+                    <Button x:Name="FocusSearchButton" Grid.Column="2" Style="{StaticResource ToolbarButton}" Click="FocusSearch_Click" ToolTip="Focus search (Ctrl+F)" Content="&#xE721;" />
                 </Grid>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button Style="{StaticResource ToolbarButton}" Click="ViewMode_Click" ToolTip="Switch view mode" Content="&#xE8A9;" />
+                    <Button x:Name="ViewModeButton" Style="{StaticResource ToolbarButton}" Click="ViewMode_Click" ToolTip="Switch view mode" Content="&#xE8A9;" />
                     <ToggleButton x:Name="HiddenButton" Style="{StaticResource ToolbarToggleButton}" Click="Hidden_Click" ToolTip="Toggle hidden files (Ctrl+Shift+.)" Content="&#xE890;" />
                 </StackPanel>
                 <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="8,0,0,0">
-                    <Button Style="{StaticResource ToolbarButton}" Click="Terminal_Click" ToolTip="Open Terminal here (Ctrl+Shift+T)" Content="&#xE756;" />
-                    <Button Style="{StaticResource ToolbarButton}" Click="Explorer_Click" ToolTip="Reveal in Explorer" Content="&#xE838;" />
-                    <Button Style="{StaticResource ToolbarButton}" Click="SelectAll_Click" ToolTip="Select all (Ctrl+A)" Content="&#xE762;" />
-                    <Button Style="{StaticResource ToolbarButton}" Click="Reload_Click" ToolTip="Reload (Ctrl+R)" Content="&#xE72C;" />
+                    <Button x:Name="TerminalButton" Style="{StaticResource ToolbarButton}" Click="Terminal_Click" ToolTip="Open Terminal here (Ctrl+Shift+T)" Content="&#xE756;" />
+                    <Button x:Name="ExplorerButton" Style="{StaticResource ToolbarButton}" Click="Explorer_Click" ToolTip="Reveal in Explorer" Content="&#xE838;" />
+                    <Button x:Name="SelectAllButton" Style="{StaticResource ToolbarButton}" Click="SelectAll_Click" ToolTip="Select all (Ctrl+A)" Content="&#xE762;" />
+                    <Button x:Name="ReloadButton" Style="{StaticResource ToolbarButton}" Click="Reload_Click" ToolTip="Reload (Ctrl+R)" Content="&#xE72C;" />
                     <ToggleButton x:Name="PreviewButton" Style="{StaticResource ToolbarToggleButton}" Click="Preview_Click" ToolTip="Toggle preview">
                         <Viewbox Width="15" Height="11" Stretch="Uniform">
                             <Grid Width="15" Height="11">
@@ -105,7 +105,7 @@
                         </Viewbox>
                     </ToggleButton>
                     <Button Style="{StaticResource ToolbarButton}" x:Name="ColumnsButton" Click="Columns_Click" ToolTip="Columns" Content="&#xE713;" />
-                    <Button Style="{StaticResource ToolbarButton}" Click="CopyPath_Click" ToolTip="Copy current path" Content="&#xE71B;" />
+                    <Button x:Name="CopyPathButton" Style="{StaticResource ToolbarButton}" Click="CopyPath_Click" ToolTip="Copy current path" Content="&#xE71B;" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -135,8 +135,8 @@
 
             <Border Grid.Column="0" Background="{StaticResource TfxPanel}" BorderBrush="{StaticResource TfxBorder}" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="PINNED" Foreground="{StaticResource TfxMuted}" Margin="10,10,10,4" />
-                    <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Height="118" Background="{StaticResource TfxPanel}" Foreground="{StaticResource TfxForeground}" BorderThickness="0" MouseDoubleClick="PinnedList_MouseDoubleClick" PreviewMouseMove="PinnedList_PreviewMouseMove" Drop="PinnedList_Drop" AllowDrop="True">
+                    <TextBlock x:Name="PinnedHeader" DockPanel.Dock="Top" Text="PINNED" Foreground="{StaticResource TfxMuted}" Margin="10,10,10,4" />
+                    <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Height="118" Background="{StaticResource TfxPanel}" Foreground="{StaticResource TfxForeground}" BorderThickness="0" SelectionChanged="PinnedList_SelectionChanged" PreviewMouseMove="PinnedList_PreviewMouseMove" PreviewMouseRightButtonDown="PinnedList_PreviewMouseRightButtonDown" ContextMenuOpening="PinnedList_ContextMenuOpening" Drop="PinnedList_Drop" AllowDrop="True">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Converter={StaticResource MiddleEllipsisPathConverter}, ConverterParameter=20}"
@@ -145,11 +145,7 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,0,8,8">
-                        <Button Content="Pin +" Click="Pin_Click" />
-                        <Button Content="Pin -" Click="Unpin_Click" />
-                    </StackPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="FOLDERS" Foreground="{StaticResource TfxMuted}" Margin="10,4,10,4" />
+                    <TextBlock x:Name="FoldersHeader" DockPanel.Dock="Top" Text="FOLDERS" Foreground="{StaticResource TfxMuted}" Margin="10,4,10,4" />
                     <TreeView x:Name="FolderTree" Background="{StaticResource TfxPanel}" Foreground="{StaticResource TfxForeground}" BorderThickness="0" SelectedItemChanged="FolderTree_SelectedItemChanged" PreviewMouseLeftButtonUp="FolderTree_PreviewMouseLeftButtonUp" />
                 </DockPanel>
             </Border>
@@ -306,12 +302,12 @@
 
             <Border x:Name="PreviewHost" Grid.Column="4" Margin="0,8,8,8" Background="{StaticResource TfxPanel}" BorderBrush="{StaticResource TfxBorder}" BorderThickness="1">
                 <DockPanel>
-                    <TextBlock Text="PREVIEW" DockPanel.Dock="Top" Foreground="{StaticResource TfxMuted}" Margin="10,8" />
+                    <TextBlock x:Name="PreviewHeader" Text="PREVIEW" DockPanel.Dock="Top" Foreground="{StaticResource TfxMuted}" Margin="10,8" />
                     <ScrollViewer>
                         <StackPanel Margin="10">
-                            <Image x:Name="ImagePreview" Stretch="Uniform" Visibility="Collapsed" />
-                            <TextBox x:Name="TextPreview" Background="#0D1013" Foreground="{StaticResource TfxForeground}" BorderThickness="0" FontFamily="Consolas, Yu Gothic UI" TextWrapping="NoWrap" AcceptsReturn="True" IsReadOnly="True" Visibility="Collapsed" />
                             <TextBlock x:Name="InfoPreview" Foreground="{StaticResource TfxForeground}" TextWrapping="Wrap" />
+                            <Image x:Name="ImagePreview" Stretch="Uniform" Visibility="Collapsed" Margin="0,8,0,0" />
+                            <TextBox x:Name="TextPreview" Background="#0D1013" Foreground="{StaticResource TfxForeground}" BorderThickness="0" FontFamily="Consolas, Yu Gothic UI" TextWrapping="NoWrap" AcceptsReturn="True" IsReadOnly="True" Visibility="Collapsed" Margin="0,8,0,0" />
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>
