@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Tfx"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
         Title="tfx"
         Icon="/Assets/AppIcon.ico"
@@ -18,7 +19,6 @@
         PreviewKeyDown="Window_PreviewKeyDown"
         Closing="Window_Closing">
     <Window.Resources>
-        <local:MiddleEllipsisPathConverter x:Key="MiddleEllipsisPathConverter" />
         <Style x:Key="ListingCellText" TargetType="TextBlock">
             <Setter Property="Margin" Value="0,0,12,0" />
         </Style>
@@ -146,12 +146,11 @@
             <Border Grid.Column="0" Background="{StaticResource TfxPanel}" BorderBrush="{StaticResource TfxBorder}" BorderThickness="0,0,1,0">
                 <DockPanel>
                     <TextBlock x:Name="PinnedHeader" DockPanel.Dock="Top" Text="PINNED" Foreground="{StaticResource TfxMuted}" Margin="10,10,10,4" />
-                    <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Height="118" Background="{StaticResource TfxPanel}" Foreground="{StaticResource TfxForeground}" BorderThickness="0" SelectionChanged="PinnedList_SelectionChanged" PreviewMouseMove="PinnedList_PreviewMouseMove" PreviewMouseRightButtonDown="PinnedList_PreviewMouseRightButtonDown" ContextMenuOpening="PinnedList_ContextMenuOpening" Drop="PinnedList_Drop" AllowDrop="True">
+                    <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Padding="0,0,0,12" Background="{StaticResource TfxPanel}" Foreground="{StaticResource TfxForeground}" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="PinnedList_SelectionChanged" PreviewMouseMove="PinnedList_PreviewMouseMove" PreviewMouseRightButtonDown="PinnedList_PreviewMouseRightButtonDown" ContextMenuOpening="PinnedList_ContextMenuOpening" DragOver="PinnedList_DragOver" Drop="PinnedList_Drop" AllowDrop="True">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Converter={StaticResource MiddleEllipsisPathConverter}, ConverterParameter=20}"
-                                           ToolTip="{Binding}"
-                                           TextTrimming="CharacterEllipsis" />
+                                <local:MiddleEllipsisTextBlock FullText="{Binding}"
+                                                               ToolTip="{Binding}" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -318,14 +317,20 @@
 
             <Border x:Name="PreviewHost" Grid.Column="4" Margin="0,8,8,8" Background="{StaticResource TfxPanel}" BorderBrush="{StaticResource TfxBorder}" BorderThickness="1">
                 <DockPanel>
-                    <TextBlock x:Name="PreviewHeader" Text="PREVIEW" DockPanel.Dock="Top" Foreground="{StaticResource TfxMuted}" Margin="10,8" />
-                    <ScrollViewer>
-                        <StackPanel Margin="10">
-                            <TextBlock x:Name="InfoPreview" Foreground="{StaticResource TfxForeground}" TextWrapping="Wrap" />
-                            <Image x:Name="ImagePreview" Stretch="Uniform" Visibility="Collapsed" Margin="0,8,0,0" />
-                            <TextBox x:Name="TextPreview" Background="#0D1013" Foreground="{StaticResource TfxForeground}" BorderThickness="0" FontFamily="Consolas, Yu Gothic UI" TextWrapping="NoWrap" AcceptsReturn="True" IsReadOnly="True" Visibility="Collapsed" Margin="0,8,0,0" />
-                        </StackPanel>
-                    </ScrollViewer>
+                    <DockPanel DockPanel.Dock="Top" Margin="10,8,8,4">
+                        <ToggleButton x:Name="RenderedToggle" DockPanel.Dock="Right" Style="{StaticResource ToolbarToggleButton}" Click="RenderedToggle_Click" Content="&#xE7B3;" Visibility="Collapsed" />
+                        <TextBlock x:Name="PreviewHeader" Text="PREVIEW" Foreground="{StaticResource TfxMuted}" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <Grid>
+                        <ScrollViewer x:Name="PreviewScroll">
+                            <StackPanel Margin="10,0,10,10">
+                                <TextBlock x:Name="InfoPreview" Foreground="{StaticResource TfxForeground}" TextWrapping="Wrap" />
+                                <Image x:Name="ImagePreview" Stretch="Uniform" Visibility="Collapsed" Margin="0,8,0,0" />
+                                <TextBox x:Name="TextPreview" Background="#0D1013" Foreground="{StaticResource TfxForeground}" BorderThickness="0" FontFamily="Consolas, Yu Gothic UI" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" Visibility="Collapsed" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </ScrollViewer>
+                        <wv2:WebView2 x:Name="HtmlPreview" Visibility="Collapsed" />
+                    </Grid>
                 </DockPanel>
             </Border>
         </Grid>

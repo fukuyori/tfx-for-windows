@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- Add Pin / Unpin to the file-grid context menu for a selected folder.
+- Auto-size the pinned-folder list to its content and remove its scrollbars, with extra bottom space reserved as a drop zone for new pins.
+- Drag a folder from the file list, folder tree, or Explorer onto the pinned list to pin it at the dropped position; existing pins reorder on drop.
+- Switch pinned folder name truncation to width-based middle ellipsis that follows sidebar resizing.
+- Wrap long lines in the text preview so content no longer gets clipped on the right.
+- Render Markdown (`.md`) and HTML (`.html`, `.htm`) previews via WebView2, with a toggle in the preview header to switch between rendered view and source.
+
 ## 0.2.2
 
 - Show the current version at the right edge of the status bar.

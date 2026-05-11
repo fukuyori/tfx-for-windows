@@ -109,6 +109,7 @@ public partial class MainWindow : Window
         SelectAllButton.ToolTip = Loc.T("Select all (Ctrl+A)");
         ReloadButton.ToolTip = Loc.T("Reload (Ctrl+R)");
         PreviewButton.ToolTip = Loc.T("Toggle preview");
+        RenderedToggle.ToolTip = Loc.T("Show rendered Markdown / HTML");
         SplitButton.ToolTip = Loc.T("Toggle split pane");
         ColumnsButton.ToolTip = Loc.T("Columns");
         PinnedHeader.Text = Loc.T("PINNED");

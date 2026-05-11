@@ -67,6 +67,32 @@ public partial class MainWindow
         reveal.Click += (_, _) => RevealInExplorer();
         menu.Items.Add(reveal);
 
+        var pinTargetIsDir = oneSelected && selection[0].IsDirectory;
+        var pinTargetPath = pinTargetIsDir ? selection[0].FullPath : null;
+        var pinAlreadyPinned = pinTargetPath != null && _pinned.Contains(pinTargetPath);
+        var pin = new MenuItem
+        {
+            Header = Loc.T(pinAlreadyPinned ? "Unpin" : "Pin"),
+            IsEnabled = pinTargetIsDir,
+        };
+        pin.Click += (_, _) =>
+        {
+            if (pinTargetPath == null)
+            {
+                return;
+            }
+            if (pinAlreadyPinned)
+            {
+                UnpinPinnedFolder(pinTargetPath);
+            }
+            else
+            {
+                _pinned.Add(pinTargetPath);
+                SetStatus(Loc.F("Pinned {0}", pinTargetPath));
+            }
+        };
+        menu.Items.Add(pin);
+
         menu.Items.Add(new Separator());
 
         var cut = new MenuItem { Header = Loc.T("Cut"), InputGestureText = "Ctrl+X", IsEnabled = hasSelection };

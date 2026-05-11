@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.2.2
+Version: 0.3.0
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -23,7 +23,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - New File / New Folder, inline rename, drag-and-drop with full Windows modifier-key conventions, shortcut (`.lnk`) creation
 - Zip compression and extraction from the file pane or context menu
 - Right-click context menu, sortable columns, customizable column visibility and order
-- Image / text preview pane
+- Image / text preview pane with rendered Markdown and HTML (toggle between rendered view and source)
 - Status bar with item counts, selection size, active drive's free space, and the current version
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
@@ -42,7 +42,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.2.2 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.3.0 |
 +---------------------------------------------------------------------+
 ```
 
@@ -101,7 +101,7 @@ File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste 
 - **Single click** on row / icon -> select; **Ctrl** / **Shift** for multi-select
 - **Double-click** on row / icon -> open
 - After entering a folder, the parent row (`..`) is selected and focused. When returning to the parent with `..` or Backspace, the folder you came from is selected and focused.
-- **Right-click** -> context menu (Open, Reveal, Cut, Copy, Paste, Compress, Extract, Rename, Trash, Delete permanently, New folder, New file, Open Terminal, Copy current path for the selected item)
+- **Right-click** -> context menu (Open, Reveal, Pin / Unpin, Cut, Copy, Paste, Compress, Extract, Rename, Trash, Delete permanently, New folder, New file, Open Terminal, Copy current path for the selected item)
 - **Click** on a breadcrumb segment -> jump to that ancestor
 - **Click** on the empty area of the address bar -> switch to free-text edit mode
 - **Click** column header -> sort by that column (toggle ascending / descending)
@@ -197,6 +197,7 @@ Saved automatically to `%APPDATA%\tfx\settings.json` on every change and on clos
 | `LeftPath`, `RightPath` | Current folder of each pane |
 | `ActivePane` | Last active pane |
 | `ShowSplit`, `ShowPreview`, `ShowHidden` | View toggles |
+| `RenderMarkdownHtml` | Render Markdown / HTML in preview (toggle in preview header) |
 | `Left`, `Top`, `Width`, `Height`, `IsMaximized` | Window placement |
 | `SidebarWidth`, `PreviewWidth`, `LeftPaneRatio` | Pane layout |
 | `PinnedFolders` | Pinned entries in display order |
@@ -271,8 +272,8 @@ src/Services/FsHelpers.cs           File system helpers (enumerate, hidden, name
 src/Services/IconCache.cs           Shell icon retrieval (small + large), per-extension cache
 src/Services/WindowTheme.cs         DWM title-bar color integration
 
-src/Converters/MiddleEllipsisPathConverter.cs
-                                    Middle-ellipsis display for long pinned folder paths
+src/Controls/MiddleEllipsisTextBlock.cs
+                                    Width-based middle-ellipsis TextBlock for pinned folder paths
 ```
 
 `MainWindow` is a single class split into partial files by feature. All fields are declared in `MainWindow.xaml.cs` to keep state in one place.
@@ -285,6 +286,7 @@ src/Converters/MiddleEllipsisPathConverter.cs
 - Cross-volume directory moves are handled via `Microsoft.VisualBasic.FileIO.FileSystem.MoveDirectory`, which falls back to copy + delete.
 - PDF preview renders the first page with `pdftoppm` when available, then falls back to the Windows shell thumbnail provider. If neither is available, tfx shows file information only.
 - Text preview detects UTF-8 with/without BOM, UTF-16 with BOM, EUC-JP, ISO-2022-JP (JIS), and Shift_JIS, and shows the detected encoding and newline style.
+- Markdown (`.md`) and HTML (`.html`, `.htm`) previews render via the embedded WebView2 control; a toggle button in the preview header switches between rendered view and source. Requires the Microsoft Edge WebView2 runtime (preinstalled on Windows 11).
 - Video previews are not implemented.
 - Inline rename (`F2`) is wired to the active Details view.
 - The DataGrid header drag-reorder is disabled by default style; use the Columns popup to keep both panes in sync.

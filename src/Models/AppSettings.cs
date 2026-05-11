@@ -16,6 +16,7 @@ public sealed class AppSettings
     public bool ShowSplit { get; set; } = true;
     public bool ShowPreview { get; set; } = true;
     public bool ShowHidden { get; set; }
+    public bool RenderMarkdownHtml { get; set; } = true;
     public double Left { get; set; } = double.NaN;
     public double Top { get; set; } = double.NaN;
     public double Width { get; set; } = 1280;

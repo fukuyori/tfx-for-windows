@@ -60,15 +60,78 @@ public partial class MainWindow
         }
     }
 
+    private void PinnedList_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetData(typeof(string)) is string)
+        {
+            e.Effects = DragDropEffects.Move;
+        }
+        else if (GetPinnableDirectories(e.Data).Length > 0)
+        {
+            e.Effects = DragDropEffects.Link;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+        e.Handled = true;
+    }
+
     private void PinnedList_Drop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(typeof(string)) is not string path)
+        var index = ComputePinnedDropIndex(e.GetPosition(PinnedList));
+
+        if (e.Data.GetData(typeof(string)) is string reorderPath)
+        {
+            MovePinnedTo(reorderPath, ref index);
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+            return;
+        }
+
+        var directories = GetPinnableDirectories(e.Data);
+        if (directories.Length == 0)
         {
             return;
         }
 
-        var point = e.GetPosition(PinnedList);
-        var index = _pinned.Count;
+        string? lastAdded = null;
+        var addedCount = 0;
+        foreach (var dir in directories)
+        {
+            if (!_pinned.Contains(dir))
+            {
+                addedCount++;
+                lastAdded = dir;
+            }
+            MovePinnedTo(dir, ref index);
+            index++;
+        }
+
+        if (addedCount == 1 && lastAdded != null)
+        {
+            SetStatus(Loc.F("Pinned {0}", lastAdded));
+        }
+
+        e.Effects = DragDropEffects.Link;
+        e.Handled = true;
+    }
+
+    private static string[] GetPinnableDirectories(IDataObject data)
+    {
+        if (!data.GetDataPresent(DataFormats.FileDrop))
+        {
+            return [];
+        }
+        if (data.GetData(DataFormats.FileDrop) is not string[] paths)
+        {
+            return [];
+        }
+        return paths.Where(Directory.Exists).ToArray();
+    }
+
+    private int ComputePinnedDropIndex(Point point)
+    {
         for (var i = 0; i < PinnedList.Items.Count; i++)
         {
             if (PinnedList.ItemContainerGenerator.ContainerFromIndex(i) is ListBoxItem item)
@@ -77,12 +140,15 @@ public partial class MainWindow
                 var topLeft = item.TranslatePoint(new Point(), PinnedList);
                 if (point.Y < topLeft.Y + bounds.Height / 2)
                 {
-                    index = i;
-                    break;
+                    return i;
                 }
             }
         }
+        return _pinned.Count;
+    }
 
+    private void MovePinnedTo(string path, ref int index)
+    {
         var oldIndex = _pinned.IndexOf(path);
         if (oldIndex >= 0)
         {
@@ -92,7 +158,6 @@ public partial class MainWindow
                 index--;
             }
         }
-
         _pinned.Insert(Math.Clamp(index, 0, _pinned.Count), path);
     }
 
