@@ -13,6 +13,11 @@ internal static class DirectoryLoader
 {
     public static List<FileItem> Load(string path, DirectoryLoadOptions options, CancellationToken cancellationToken)
     {
+        if (ArchivePath.TryParse(path, out var archiveFile, out var innerPath))
+        {
+            return ArchiveBrowser.Load(archiveFile, innerPath, options, cancellationToken);
+        }
+
         var items = new List<FileItem>();
 
         var parent = Directory.GetParent(path);

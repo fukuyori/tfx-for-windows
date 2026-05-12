@@ -18,12 +18,47 @@ public partial class MainWindow
 {
     private void OpenItem(DataGrid grid, FileItem item)
     {
-        if (item.IsDirectory || item.IsParent)
+        if (item.IsParent)
         {
-            var selectName = item.IsParent
-                ? Path.GetFileName(GetCurrentPath(grid).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-                : "..";
+            var current = GetCurrentPath(grid);
+            string selectName;
+            if (ArchivePath.TryParse(current, out var archive, out var inner))
+            {
+                selectName = string.IsNullOrEmpty(inner)
+                    ? Path.GetFileName(archive)
+                    : (inner.TrimEnd('/').Split('/').LastOrDefault() ?? "");
+            }
+            else
+            {
+                selectName = Path.GetFileName(current.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            }
             Navigate(grid, item.FullPath, true, selectName);
+            return;
+        }
+
+        if (item.IsDirectory)
+        {
+            Navigate(grid, item.FullPath, true, "..");
+            return;
+        }
+
+        if (ArchivePath.TryParse(item.FullPath, out var archiveFile, out var entryPath))
+        {
+            try
+            {
+                var realPath = ArchiveBrowser.ExtractEntryToTemp(archiveFile, entryPath, EnsureArchiveTempRoot(), CancellationToken.None);
+                Process.Start(new ProcessStartInfo(realPath) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                SetStatus(ex.Message);
+            }
+            return;
+        }
+
+        if (ArchivePath.IsZipFile(item.FullPath) && File.Exists(item.FullPath))
+        {
+            Navigate(grid, ArchivePath.Combine(item.FullPath, ""), true, "..");
             return;
         }
 
@@ -35,6 +70,56 @@ public partial class MainWindow
         {
             SetStatus(ex.Message);
         }
+    }
+
+    private string EnsureArchiveTempRoot()
+    {
+        if (!string.IsNullOrEmpty(_archiveTempRoot))
+        {
+            return _archiveTempRoot!;
+        }
+        var root = Path.Combine(Path.GetTempPath(), "tfx", "archive-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(root);
+        _archiveTempRoot = root;
+        return root;
+    }
+
+    private string[] ResolveDragPaths(string[] paths)
+    {
+        if (!paths.Any(ArchivePath.Contains))
+        {
+            return paths;
+        }
+
+        var result = new List<string>();
+        var groups = paths
+            .Where(ArchivePath.Contains)
+            .Select(p =>
+            {
+                ArchivePath.TryParse(p, out var a, out var i);
+                return (Archive: a, Inner: i);
+            })
+            .GroupBy(t => t.Archive, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in groups)
+        {
+            try
+            {
+                var extracted = ArchiveBrowser.ExtractEntriesToTemp(
+                    group.Key,
+                    group.Select(t => t.Inner),
+                    EnsureArchiveTempRoot(),
+                    CancellationToken.None);
+                result.AddRange(extracted);
+            }
+            catch (Exception ex)
+            {
+                SetStatus(ex.Message);
+            }
+        }
+
+        result.AddRange(paths.Where(p => !ArchivePath.Contains(p)));
+        return result.ToArray();
     }
 
     private void CopySelection(bool cut)
@@ -562,11 +647,23 @@ public partial class MainWindow
             return;
         }
 
+        var hasArchive = paths.Any(ArchivePath.Contains);
+        var realPaths = ResolveDragPaths(paths);
+        if (realPaths.Length == 0)
+        {
+            _pendingFileDragItem = null;
+            _pendingFileDragPaths = [];
+            return;
+        }
+
         var data = new DataObject();
         var collection = new StringCollection();
-        collection.AddRange(paths);
+        collection.AddRange(realPaths);
         data.SetFileDropList(collection);
-        var effect = DragDrop.DoDragDrop(grid, data, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link);
+        var allowedEffects = hasArchive
+            ? DragDropEffects.Copy
+            : DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link;
+        var effect = DragDrop.DoDragDrop(grid, data, allowedEffects);
 
         if (effect != DragDropEffects.None)
         {
@@ -587,6 +684,11 @@ public partial class MainWindow
 
         var grid = SideOf(view);
         var destination = ResolveDropDestination(view, e);
+        if (ArchivePath.Contains(destination))
+        {
+            e.Handled = true;
+            return;
+        }
         var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
         var effect = ResolveDropEffect(e, destination);
 
@@ -653,7 +755,15 @@ public partial class MainWindow
             return;
         }
 
-        e.Effects = ResolveDropEffect(e, ResolveDropDestination(view, e));
+        var destination = ResolveDropDestination(view, e);
+        if (ArchivePath.Contains(destination))
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        e.Effects = ResolveDropEffect(e, destination);
         e.Handled = true;
     }
 

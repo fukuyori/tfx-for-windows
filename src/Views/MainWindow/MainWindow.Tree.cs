@@ -116,6 +116,10 @@ public partial class MainWindow
 
     private void SyncFolderTreeToPath(string path)
     {
+        if (ArchivePath.TryParse(path, out var archive, out _))
+        {
+            path = Path.GetDirectoryName(archive) ?? archive;
+        }
         var root = Path.GetPathRoot(path);
         if (string.IsNullOrEmpty(root))
         {

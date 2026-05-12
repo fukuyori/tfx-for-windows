@@ -30,7 +30,26 @@ public partial class MainWindow
     private void RevealInExplorer()
     {
         var selected = SelectedItems(_activeGrid).FirstOrDefault(i => !i.IsParent);
-        var argument = selected is null ? GetCurrentPath(_activeGrid) : $"/select,\"{selected.FullPath}\"";
+        var currentPath = GetCurrentPath(_activeGrid);
+
+        string argument;
+        if (selected is not null && ArchivePath.TryParse(selected.FullPath, out var selArchive, out _))
+        {
+            argument = $"/select,\"{selArchive}\"";
+        }
+        else if (selected is not null)
+        {
+            argument = $"/select,\"{selected.FullPath}\"";
+        }
+        else if (ArchivePath.TryParse(currentPath, out var curArchive, out _))
+        {
+            argument = $"/select,\"{curArchive}\"";
+        }
+        else
+        {
+            argument = currentPath;
+        }
+
         Process.Start(new ProcessStartInfo("explorer.exe", argument) { UseShellExecute = true });
     }
 

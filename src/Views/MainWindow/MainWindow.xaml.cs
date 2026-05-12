@@ -47,6 +47,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _leftReloadCts;
     private CancellationTokenSource? _rightReloadCts;
     private CancellationTokenSource? _previewCts;
+    private string? _archiveTempRoot;
 
     public MainWindow()
     {
@@ -85,13 +86,60 @@ public partial class MainWindow : Window
             return Path.GetFullPath(firstDirectoryArg);
         }
 
-        if (Directory.Exists(_settings.LeftPath))
+        if (TryGetMeaningfulWorkingDirectory(out var cwd))
+        {
+            return cwd;
+        }
+
+        if (IsPathRestorable(_settings.LeftPath))
         {
             return _settings.LeftPath;
         }
 
         return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     }
+
+    private static bool TryGetMeaningfulWorkingDirectory(out string path)
+    {
+        path = "";
+        try
+        {
+            var cwd = Environment.CurrentDirectory;
+            if (string.IsNullOrWhiteSpace(cwd) || !Directory.Exists(cwd))
+            {
+                return false;
+            }
+
+            var normalizedCwd = NormalizeDirectory(cwd);
+            var exePath = Environment.ProcessPath;
+            var exeDir = !string.IsNullOrWhiteSpace(exePath)
+                ? Path.GetDirectoryName(exePath)
+                : AppContext.BaseDirectory;
+            if (!string.IsNullOrWhiteSpace(exeDir) &&
+                string.Equals(normalizedCwd, NormalizeDirectory(exeDir), StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var systemDir = NormalizeDirectory(Environment.GetFolderPath(Environment.SpecialFolder.System));
+            var windowsDir = NormalizeDirectory(Environment.GetFolderPath(Environment.SpecialFolder.Windows));
+            if (string.Equals(normalizedCwd, systemDir, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(normalizedCwd, windowsDir, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            path = Path.GetFullPath(cwd);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string NormalizeDirectory(string path) =>
+        Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
     private void ApplyLocalization()
     {
@@ -131,15 +179,24 @@ public partial class MainWindow : Window
             _settings = new AppSettings();
         }
 
-        if (!Directory.Exists(_settings.LeftPath))
+        if (!IsPathRestorable(_settings.LeftPath))
         {
             _settings.LeftPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         }
 
-        if (!Directory.Exists(_settings.RightPath))
+        if (!IsPathRestorable(_settings.RightPath))
         {
             _settings.RightPath = _settings.LeftPath;
         }
+    }
+
+    private static bool IsPathRestorable(string path)
+    {
+        if (ArchivePath.TryParse(path, out var archive, out _))
+        {
+            return File.Exists(archive);
+        }
+        return Directory.Exists(path);
     }
 
     private void SaveSettings()
@@ -253,6 +310,11 @@ public partial class MainWindow : Window
     {
         try
         {
+            if (ArchivePath.TryParse(path, out var archive, out _))
+            {
+                path = archive;
+            }
+
             var root = Path.GetPathRoot(path);
             if (string.IsNullOrEmpty(root))
             {
@@ -288,5 +350,24 @@ public partial class MainWindow : Window
 
     private void SetStatus(string text) => StatusText.Text = text;
 
-    private void Window_Closing(object? sender, CancelEventArgs e) => SaveSettings();
+    private void Window_Closing(object? sender, CancelEventArgs e)
+    {
+        SaveSettings();
+        CleanupArchiveTemp();
+    }
+
+    private void CleanupArchiveTemp()
+    {
+        if (string.IsNullOrEmpty(_archiveTempRoot))
+        {
+            return;
+        }
+        try
+        {
+            Directory.Delete(_archiveTempRoot, recursive: true);
+        }
+        catch
+        {
+        }
+    }
 }

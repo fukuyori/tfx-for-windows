@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- Add "Open with..." to the file-grid context menu. Invokes the standard Windows "Open with" dialog (`SHOpenWithDialog`) for the selected file.
+- Reorder the file-grid context menu closer to Windows 11 conventions: open / locate / pin, clipboard + copy path, archive (compress / extract), current folder actions (new folder / file / terminal), then destructive operations (rename / recycle bin / delete) at the bottom.
+- Resolve the initial folder from the current working directory at launch when it is meaningful (ignored when launched from the executable's own directory, `System32`, or `Windows`), so launching `Tfx.exe` from a terminal opens the terminal's current folder.
+- Browse inside `.zip` files like folders. Open a zip with Enter or double-click to navigate into it; subfolders inside the archive are navigable; files inside open with the system default app via on-demand extraction to a temp folder; entries can be dragged out to Explorer or other apps. Zip-internal editing (rename, delete, paste, new file/folder) is not supported and is disabled when the current path is inside an archive. The breadcrumb bar shows zip levels as clickable segments and the temp extraction folder is cleaned up on close.
+
 ## 0.3.0
 
 - Add Pin / Unpin to the file-grid context menu for a selected folder.

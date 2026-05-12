@@ -57,16 +57,10 @@ public partial class PathBar : UserControl
         var crumbStyle = (Style)Resources["CrumbButtonStyle"];
         var mutedBrush = (Brush)Application.Current.Resources["TfxMuted"];
 
-        var segments = SplitPath(_path);
-        var accumulated = "";
+        var segments = BuildSegments(_path);
         for (var i = 0; i < segments.Count; i++)
         {
-            var (label, segment) = segments[i];
-            accumulated = i == 0
-                ? segment
-                : System.IO.Path.Combine(accumulated, segment);
-
-            var fullPath = accumulated;
+            var (label, fullPath) = segments[i];
             var button = new Button
             {
                 Content = label,
@@ -91,7 +85,38 @@ public partial class PathBar : UserControl
         ShowPathEnd();
     }
 
-    private static List<(string Label, string Segment)> SplitPath(string path)
+    private static List<(string Label, string FullPath)> BuildSegments(string path)
+    {
+        var idx = path.IndexOf("::", StringComparison.Ordinal);
+        var filePart = idx < 0 ? path : path[..idx];
+        var fileSegments = BuildFileSegments(filePart);
+
+        if (idx < 0)
+        {
+            return fileSegments;
+        }
+
+        var inner = path[(idx + 2)..].Replace('\\', '/');
+        var result = new List<(string Label, string FullPath)>(fileSegments);
+        // The zip file itself becomes the entry point into the archive.
+        if (result.Count > 0)
+        {
+            var lastLabel = result[^1].Label;
+            result[^1] = (lastLabel, filePart + "::");
+        }
+
+        var parts = inner.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var accumulatedInner = "";
+        foreach (var part in parts)
+        {
+            accumulatedInner = string.IsNullOrEmpty(accumulatedInner) ? part : accumulatedInner + "/" + part;
+            result.Add((part, filePart + "::" + accumulatedInner + "/"));
+        }
+
+        return result;
+    }
+
+    private static List<(string Label, string FullPath)> BuildFileSegments(string path)
     {
         var result = new List<(string, string)>();
         var root = System.IO.Path.GetPathRoot(path);
@@ -107,14 +132,16 @@ public partial class PathBar : UserControl
         }
         result.Add((rootLabel, root));
 
-        var rest = path.Length > root.Length ? path.Substring(root.Length) : "";
+        var rest = path.Length > root.Length ? path[root.Length..] : "";
         var parts = rest.Split(
             new[] { System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar },
             StringSplitOptions.RemoveEmptyEntries);
 
+        var accumulated = root;
         foreach (var part in parts)
         {
-            result.Add((part, part));
+            accumulated = System.IO.Path.Combine(accumulated, part);
+            result.Add((part, accumulated));
         }
 
         return result;

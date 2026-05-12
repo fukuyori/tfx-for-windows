@@ -49,6 +49,8 @@ internal static class Loc
         ["Owner"] = "所有者",
         ["Attribute"] = "属性",
         ["Open"] = "開く",
+        ["Open with..."] = "アプリケーションで開く...",
+        ["Open with failed: {0}"] = "アプリケーションで開く処理に失敗しました: {0}",
         ["Cut"] = "切り取り",
         ["Copy"] = "コピー",
         ["Paste"] = "貼り付け",

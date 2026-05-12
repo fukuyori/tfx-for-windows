@@ -13,14 +13,14 @@ public partial class MainWindow
 {
     private void Navigate(DataGrid grid, string path, bool pushHistory, string? selectName = "..")
     {
-        if (!Directory.Exists(path))
+        if (!IsNavigablePath(path))
         {
             SetStatus(Loc.F("Folder not found: {0}", path));
             return;
         }
 
         var current = GetCurrentPath(grid);
-        if (pushHistory && Directory.Exists(current) && !string.Equals(current, path, StringComparison.OrdinalIgnoreCase))
+        if (pushHistory && IsNavigablePath(current) && !string.Equals(current, path, StringComparison.OrdinalIgnoreCase))
         {
             _back.Add(current);
             _forward.Clear();
@@ -329,11 +329,34 @@ public partial class MainWindow
     private void NavigateParent()
     {
         var current = GetCurrentPath(_activeGrid);
-        var parent = Directory.GetParent(current);
-        if (parent is not null)
+        if (ArchivePath.TryParse(current, out var archive, out var inner))
         {
-            Navigate(_activeGrid, parent.FullName, true, Path.GetFileName(current.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
+            var parent = ArchivePath.GetParent(current);
+            if (string.IsNullOrEmpty(parent))
+            {
+                return;
+            }
+            var selectName = string.IsNullOrEmpty(inner)
+                ? Path.GetFileName(archive)
+                : (inner.TrimEnd('/').Split('/').LastOrDefault() ?? "");
+            Navigate(_activeGrid, parent, true, selectName);
+            return;
         }
+
+        var parentDir = Directory.GetParent(current);
+        if (parentDir is not null)
+        {
+            Navigate(_activeGrid, parentDir.FullName, true, Path.GetFileName(current.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
+        }
+    }
+
+    private static bool IsNavigablePath(string path)
+    {
+        if (ArchivePath.TryParse(path, out var archive, out _))
+        {
+            return File.Exists(archive);
+        }
+        return Directory.Exists(path);
     }
 
     private void NavigateBack()

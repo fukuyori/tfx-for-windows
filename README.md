@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.3.0
+Version: 0.3.1
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -21,8 +21,8 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Editable address bar with clickable breadcrumb segments and free-text input
 - Two view modes: **Details** (multi-column metadata) and **Icons** (large-icon grid)
 - New File / New Folder, inline rename, drag-and-drop with full Windows modifier-key conventions, shortcut (`.lnk`) creation
-- Zip compression and extraction from the file pane or context menu
-- Right-click context menu, sortable columns, customizable column visibility and order
+- Zip compression and extraction from the file pane or context menu, plus read-only browsing inside `.zip` files (open, drag out to other apps)
+- Right-click context menu (Windows 11–style ordering), "Open with..." dialog, sortable columns, customizable column visibility and order
 - Image / text preview pane with rendered Markdown and HTML (toggle between rendered view and source)
 - Status bar with item counts, selection size, active drive's free space, and the current version
 - Japanese / English UI based on the OS UI language
@@ -42,7 +42,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.3.0 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.3.1 |
 +---------------------------------------------------------------------+
 ```
 
@@ -101,7 +101,7 @@ File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste 
 - **Single click** on row / icon -> select; **Ctrl** / **Shift** for multi-select
 - **Double-click** on row / icon -> open
 - After entering a folder, the parent row (`..`) is selected and focused. When returning to the parent with `..` or Backspace, the folder you came from is selected and focused.
-- **Right-click** -> context menu (Open, Reveal, Pin / Unpin, Cut, Copy, Paste, Compress, Extract, Rename, Trash, Delete permanently, New folder, New file, Open Terminal, Copy current path for the selected item)
+- **Right-click** -> context menu (Open, Open with..., Reveal, Pin / Unpin, Cut, Copy, Paste, Copy current path, Compress, Extract, New folder, New file, Open Terminal, Rename, Trash, Delete permanently for the selected item)
 - **Click** on a breadcrumb segment -> jump to that ancestor
 - **Click** on the empty area of the address bar -> switch to free-text edit mode
 - **Click** column header -> sort by that column (toggle ascending / descending)
@@ -171,9 +171,12 @@ Default pins on first run: User profile, Desktop, Documents, Downloads.
 
 ## Zip archives
 
-- **Compress to Zip** creates `<selected-name>.zip` for one item, or `Archive.zip` for multiple items.
-- Name conflicts are resolved with `(2)`, `(3)`, and so on.
+- **Compress to Zip** creates `<selected-name>.zip` for one item, or `Archive.zip` for multiple items. Name conflicts are resolved with `(2)`, `(3)`, and so on.
 - **Extract Zip** extracts each selected `.zip` into a same-named folder in the current pane.
+- **Browse inside zip**: open a `.zip` with Enter or double-click to navigate into it like a folder. Subfolders inside the archive are also navigable, the breadcrumb bar shows each zip level as a clickable segment, and the parent (`..`) row at the zip root returns to the filesystem.
+- **Open / drag out** of zip entries: opening a file inside the archive extracts it on demand to `%TEMP%\tfx\archive-<id>\…` and launches it with the system default app. Dragging entries out to Explorer or another app sets a `FileDrop` payload with the extracted temp paths (Copy effect only).
+- The temp extraction folder is created lazily on first use and removed when the window is closed.
+- **Zip-internal editing is not supported.** While the current path is inside a zip, the destructive context-menu items and shortcuts (Cut / Paste / Rename / Recycle Bin / Delete / Compress / Extract / New File / New Folder / Open Terminal here) are disabled, drops into the pane are rejected, and pinning the current archive folder is a no-op.
 
 ---
 
@@ -225,7 +228,7 @@ Run:
 dotnet run -- "C:\path\to\folder"
 ```
 
-The first command-line argument, if it is a valid directory, becomes the initial folder for the left pane. Otherwise the previously saved path is restored.
+The initial folder for the left pane is resolved in this order: (1) the first command-line argument if it is a valid directory, (2) the current working directory at startup when it is meaningful (not the executable's own folder, `System32`, or `Windows`), so launching `Tfx.exe` from a terminal opens the terminal's current folder, and (3) the previously saved path. If none apply, the user profile folder is used.
 
 Publish a self-contained single-file Windows executable:
 
@@ -271,6 +274,9 @@ src/Services/FsHelpers.cs           File system helpers (enumerate, hidden, name
                                     image / text detect, .lnk creation via WScript.Shell)
 src/Services/IconCache.cs           Shell icon retrieval (small + large), per-extension cache
 src/Services/WindowTheme.cs         DWM title-bar color integration
+src/Services/ShellOpenWith.cs       `SHOpenWithDialog` P/Invoke wrapper
+src/Services/ArchivePath.cs         Virtual archive path parser (`<zip>::<inner>` form)
+src/Services/ArchiveBrowser.cs      Zip listing and on-demand temp extraction
 
 src/Controls/MiddleEllipsisTextBlock.cs
                                     Width-based middle-ellipsis TextBlock for pinned folder paths
@@ -291,6 +297,7 @@ src/Controls/MiddleEllipsisTextBlock.cs
 - Inline rename (`F2`) is wired to the active Details view.
 - The DataGrid header drag-reorder is disabled by default style; use the Columns popup to keep both panes in sync.
 - Network locations work if mounted as drives or by typing UNC paths in the address bar.
+- Zip browsing is read-only. Entries previewed or opened are extracted on demand to `%TEMP%\tfx\archive-<id>\…` and the folder is cleaned up when the window closes. Nested zips are not auto-mounted; opening a `.zip` inside an archive extracts it first.
 
 ---
 

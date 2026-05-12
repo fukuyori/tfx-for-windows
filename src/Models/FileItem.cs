@@ -57,6 +57,46 @@ public sealed class FileItem
         };
     }
 
+    public static FileItem FromArchiveEntry(
+        string archiveFile,
+        string entryPath,
+        string name,
+        bool isDirectory,
+        long size,
+        DateTime modified,
+        bool loadSmallIcon,
+        bool loadLargeIcon)
+    {
+        var fullPath = ArchivePath.Combine(archiveFile, entryPath);
+        var ext = isDirectory ? "" : Path.GetExtension(name);
+        var kind = isDirectory
+            ? Loc.T("File folder")
+            : string.IsNullOrWhiteSpace(ext)
+                ? Loc.T("File")
+                : Loc.F("{0} File", ext.TrimStart('.').ToUpperInvariant());
+        return new FileItem
+        {
+            Name = name,
+            FullPath = fullPath,
+            Kind = kind,
+            IsDirectory = isDirectory,
+            Size = size,
+            SizeText = isDirectory ? "" : FormatSize(size),
+            Modified = modified,
+            Created = DateTime.MinValue,
+            ModifiedText = FormatDate(modified),
+            CreatedText = "",
+            OwnerText = "",
+            AttributeText = isDirectory ? Loc.T("Directory") : "",
+            Icon = isDirectory
+                ? (loadSmallIcon ? IconCache.GetFolderIcon() : null)
+                : (loadSmallIcon ? IconCache.GetFileIcon(name) : null),
+            LargeIcon = isDirectory
+                ? (loadLargeIcon ? IconCache.GetFolderIconLarge() : null)
+                : (loadLargeIcon ? IconCache.GetFileIconLarge(name) : null)
+        };
+    }
+
     public static FileItem FromFile(string path, bool loadSmallIcon, bool loadLargeIcon, bool includeOwner)
     {
         var info = new FileInfo(path);

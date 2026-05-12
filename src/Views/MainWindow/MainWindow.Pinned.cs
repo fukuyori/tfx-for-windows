@@ -193,6 +193,10 @@ public partial class MainWindow
     private void TogglePin_Click(object sender, RoutedEventArgs e)
     {
         var path = GetCurrentPath(_activeGrid);
+        if (ArchivePath.Contains(path))
+        {
+            return;
+        }
         if (_pinned.Contains(path))
         {
             UnpinPinnedFolder(path);

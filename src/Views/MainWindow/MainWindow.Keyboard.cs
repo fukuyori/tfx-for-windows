@@ -7,6 +7,8 @@ namespace Tfx;
 
 public partial class MainWindow
 {
+    private bool InArchiveContext => ArchivePath.Contains(GetCurrentPath(_activeGrid));
+
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
@@ -25,22 +27,22 @@ public partial class MainWindow
         }
         else if (ctrl && shift && e.Key == Key.N)
         {
-            NewFile();
+            if (!InArchiveContext) NewFile();
             e.Handled = true;
         }
         else if (ctrl && e.Key == Key.N)
         {
-            NewFolder();
+            if (!InArchiveContext) NewFolder();
             e.Handled = true;
         }
         else if (ctrl && e.Key == Key.K)
         {
-            CompressSelection();
+            if (!InArchiveContext) CompressSelection();
             e.Handled = true;
         }
         else if (ctrl && shift && e.Key == Key.E)
         {
-            ExtractSelectedArchives();
+            if (!InArchiveContext) ExtractSelectedArchives();
             e.Handled = true;
         }
         else if (ctrl && e.Key == Key.R)
@@ -55,12 +57,12 @@ public partial class MainWindow
         }
         else if (ctrl && e.Key == Key.X)
         {
-            CopySelection(true);
+            if (!InArchiveContext) CopySelection(true);
             e.Handled = true;
         }
         else if (ctrl && e.Key == Key.V)
         {
-            PasteIntoActivePane();
+            if (!InArchiveContext) PasteIntoActivePane();
             e.Handled = true;
         }
         else if (ctrl && e.Key == Key.A)
@@ -92,7 +94,7 @@ public partial class MainWindow
         }
         else if (ctrl && shift && e.Key == Key.T)
         {
-            OpenTerminal();
+            if (!InArchiveContext) OpenTerminal();
             e.Handled = true;
         }
         else if (ctrl && shift && e.Key == Key.OemPeriod)
@@ -102,19 +104,22 @@ public partial class MainWindow
         }
         else if (e.Key == Key.Delete)
         {
-            if (shift)
+            if (!InArchiveContext)
             {
-                DeletePermanently();
-            }
-            else
-            {
-                MoveSelectionToTrash();
+                if (shift)
+                {
+                    DeletePermanently();
+                }
+                else
+                {
+                    MoveSelectionToTrash();
+                }
             }
             e.Handled = true;
         }
         else if (e.Key == Key.F2 && _activeGrid.SelectedItem is FileItem renameItem && !renameItem.IsParent)
         {
-            StartRename(_activeGrid, renameItem);
+            if (!InArchiveContext) StartRename(_activeGrid, renameItem);
             e.Handled = true;
         }
         else if (e.Key == Key.Back)
@@ -166,13 +171,16 @@ public partial class MainWindow
 
         if (e.Key == Key.Delete && !inTextBox)
         {
-            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            if (!InArchiveContext)
             {
-                DeletePermanently();
-            }
-            else
-            {
-                MoveSelectionToTrash();
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+                {
+                    DeletePermanently();
+                }
+                else
+                {
+                    MoveSelectionToTrash();
+                }
             }
             e.Handled = true;
             return;

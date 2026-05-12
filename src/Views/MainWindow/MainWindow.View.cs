@@ -203,11 +203,23 @@ public partial class MainWindow
             return;
         }
 
+        var hasArchive = paths.Any(ArchivePath.Contains);
+        var realPaths = ResolveDragPaths(paths);
+        if (realPaths.Length == 0)
+        {
+            _pendingFileDragItem = null;
+            _pendingFileDragPaths = [];
+            return;
+        }
+
         var data = new DataObject();
         var collection = new StringCollection();
-        collection.AddRange(paths);
+        collection.AddRange(realPaths);
         data.SetFileDropList(collection);
-        var effect = DragDrop.DoDragDrop(lb, data, DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link);
+        var allowedEffects = hasArchive
+            ? DragDropEffects.Copy
+            : DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link;
+        var effect = DragDrop.DoDragDrop(lb, data, allowedEffects);
 
         if (effect != DragDropEffects.None)
         {
