@@ -61,7 +61,7 @@ public partial class MainWindow
         }
 
         UpdateActivePane(grid);
-        UpdatePreview(lb.SelectedItem as FileItem);
+        SchedulePreviewUpdate(lb.SelectedItem as FileItem);
         UpdateStatus();
     }
 

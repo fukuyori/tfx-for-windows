@@ -41,7 +41,7 @@ public partial class MainWindow
         if (sender is DataGrid grid)
         {
             UpdateActivePane(grid);
-            UpdatePreview(SelectedItems(grid).FirstOrDefault());
+            SchedulePreviewUpdate(SelectedItems(grid).FirstOrDefault());
             UpdateStatus();
         }
     }

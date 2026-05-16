@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.3.1
+Version: 0.3.2
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -27,6 +27,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Status bar with item counts, selection size, active drive's free space, and the current version
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
+- File panes auto-refresh on external changes via `FileSystemWatcher` (with a low-frequency periodic fallback) and apply a diff so scroll position and selection are preserved
 
 ---
 
@@ -42,7 +43,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.3.1 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.3.2 |
 +---------------------------------------------------------------------+
 ```
 
@@ -261,7 +262,7 @@ src/Views/MainWindow/MainWindow.xaml.cs
 src/Views/MainWindow/*.cs           MainWindow partial files split by feature:
                                     tree, pinned folders, navigation, path bar, pane,
                                     search, columns, preview, file ops, external actions,
-                                    context menu, view mode, keyboard routing
+                                    context menu, view mode, keyboard routing, auto-refresh
 
 src/Controls/PathBar.xaml           Breadcrumb + edit-mode address bar UserControl
 src/Controls/PathBar.xaml.cs

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Threading;
 using Markdig;
 using Path = System.IO.Path;
 
@@ -9,9 +10,28 @@ public partial class MainWindow
 {
     private static readonly MarkdownPipeline MarkdownPipeline =
         new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+    private static readonly TimeSpan PreviewDebounce = TimeSpan.FromMilliseconds(120);
 
     private FileItem? _previewItem;
     private Task<bool>? _webViewInitTask;
+    private DispatcherTimer? _previewDebounceTimer;
+    private FileItem? _pendingPreviewItem;
+
+    private void SchedulePreviewUpdate(FileItem? item)
+    {
+        _pendingPreviewItem = item;
+        if (_previewDebounceTimer is null)
+        {
+            _previewDebounceTimer = new DispatcherTimer { Interval = PreviewDebounce };
+            _previewDebounceTimer.Tick += (_, _) =>
+            {
+                _previewDebounceTimer!.Stop();
+                UpdatePreview(_pendingPreviewItem);
+            };
+        }
+        _previewDebounceTimer.Stop();
+        _previewDebounceTimer.Start();
+    }
 
     private async void UpdatePreview(FileItem? item)
     {

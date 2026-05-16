@@ -1,7 +1,14 @@
 # Changelog
 
+## 0.3.2
+
+- Debounce preview updates (~120ms) so rapid arrow-key navigation no longer spawns a preview task per row.
+- Batch the initial directory load (200 items per batch with a `Dispatcher.Yield`) so opening large folders no longer freezes the UI thread.
+- Shorten the auto-refresh debounce from 250ms to 150ms for a snappier reflection of external file changes.
+
 ## 0.3.1
 
+- Auto-refresh the file panes: each pane subscribes to a `FileSystemWatcher` on its current folder so external changes show up almost immediately. A 10-second fallback poll runs alongside to catch missed events. Auto-refresh is skipped while renaming, drag-in-progress, rubber-band selecting, the context menu is open, or the current path is inside a zip. Reloads use a diff (add / remove / move) against the existing list so scroll position and selection are preserved.
 - Add "Open with..." to the file-grid context menu. Invokes the standard Windows "Open with" dialog (`SHOpenWithDialog`) for the selected file.
 - Reorder the file-grid context menu closer to Windows 11 conventions: open / locate / pin, clipboard + copy path, archive (compress / extract), current folder actions (new folder / file / terminal), then destructive operations (rename / recycle bin / delete) at the bottom.
 - Resolve the initial folder from the current working directory at launch when it is meaningful (ignored when launched from the executable's own directory, `System32`, or `Windows`), so launching `Tfx.exe` from a terminal opens the terminal's current folder.

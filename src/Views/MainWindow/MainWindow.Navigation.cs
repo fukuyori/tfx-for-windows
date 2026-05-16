@@ -41,6 +41,7 @@ public partial class MainWindow
         {
             QueueFolderTreeSyncToActivePane();
         }
+        UpdateWatcherForPane(grid == LeftGrid);
         SaveSettings();
     }
 
@@ -69,9 +70,18 @@ public partial class MainWindow
             }
 
             target.Clear();
-            foreach (var item in items)
+            const int batchSize = 200;
+            for (var i = 0; i < items.Count; i++)
             {
-                target.Add(item);
+                target.Add(items[i]);
+                if ((i + 1) % batchSize == 0 && i + 1 < items.Count)
+                {
+                    await Dispatcher.Yield(DispatcherPriority.Background);
+                    if (cts.IsCancellationRequested || !string.Equals(GetCurrentPath(grid), path, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return;
+                    }
+                }
             }
 
             ApplySearchFilter();
@@ -170,7 +180,7 @@ public partial class MainWindow
         if (grid == _activeGrid)
         {
             FocusSelectedListingItem(grid, iconView, item);
-            UpdatePreview(item);
+            SchedulePreviewUpdate(item);
         }
     }
 
@@ -311,7 +321,7 @@ public partial class MainWindow
         }
 
         FocusSelectedListingItemNow(_activeGrid, iconView, item);
-        UpdatePreview(item);
+        SchedulePreviewUpdate(item);
         UpdateStatus();
     }
 

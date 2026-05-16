@@ -75,6 +75,8 @@ public partial class MainWindow : Window
         UpdateActivePane(string.Equals(_settings.ActivePane, "Right", StringComparison.OrdinalIgnoreCase) && _settings.ShowSplit ? RightGrid : LeftGrid);
         QueueFolderTreeSyncToActivePane();
         _suspendSettingsSave = false;
+
+        InitializeAutoRefresh();
     }
 
     private string ResolveInitialPath()
@@ -353,6 +355,7 @@ public partial class MainWindow : Window
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
         SaveSettings();
+        DisposeAutoRefresh();
         CleanupArchiveTemp();
     }
 

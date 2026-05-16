@@ -127,7 +127,7 @@ public partial class MainWindow
         }
 
         UpdateActivePane(grid);
-        UpdatePreview(item);
+        SchedulePreviewUpdate(item);
         UpdateStatus();
     }
 
@@ -182,7 +182,7 @@ public partial class MainWindow
             _syncingSelection = false;
         }
 
-        UpdatePreview(grid.SelectedItems.OfType<FileItem>().FirstOrDefault());
+        SchedulePreviewUpdate(grid.SelectedItems.OfType<FileItem>().FirstOrDefault());
     }
 
     private void SelectIconItemsInRect(ListBox listBox, Rect selectionRect)
@@ -217,7 +217,7 @@ public partial class MainWindow
             _syncingSelection = false;
         }
 
-        UpdatePreview(listBox.SelectedItems.OfType<FileItem>().FirstOrDefault());
+        SchedulePreviewUpdate(listBox.SelectedItems.OfType<FileItem>().FirstOrDefault());
     }
 
     private static bool ElementIntersects(FrameworkElement element, Visual relativeTo, Rect selectionRect)
