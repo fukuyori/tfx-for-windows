@@ -9,14 +9,57 @@ namespace Tfx;
 
 public partial class MainWindow
 {
-    private void LoadDrives()
+    private async void LoadDrives()
     {
         FolderTree.Items.Clear();
-        foreach (var drive in DriveInfo.GetDrives().Where(d => d.IsReady))
+
+        List<(string Path, bool HasChildren)> entries;
+        try
         {
-            var item = CreateFolderNode(drive.RootDirectory.FullName);
+            var showHidden = ShowHidden;
+            entries = await Task.Run(() =>
+                DriveInfo.GetDrives()
+                    .Where(d => d.IsReady)
+                    .AsParallel()
+                    .Select(d =>
+                    {
+                        var path = d.RootDirectory.FullName;
+                        bool hasChildren;
+                        try
+                        {
+                            hasChildren = FsHelpers.SafeEnumerateDirectories(path)
+                                .Any(directory => showHidden || !FsHelpers.IsHidden(directory));
+                        }
+                        catch
+                        {
+                            hasChildren = false;
+                        }
+                        return (Path: path, HasChildren: hasChildren);
+                    })
+                    .OrderBy(t => t.Path, StringComparer.OrdinalIgnoreCase)
+                    .ToList());
+        }
+        catch
+        {
+            return;
+        }
+
+        FolderTree.Items.Clear();
+        foreach (var (path, hasChildren) in entries)
+        {
+            var item = new TreeViewItem
+            {
+                Header = FormatTreeHeader(path),
+                Tag = path
+            };
+            if (hasChildren)
+            {
+                item.Items.Add(null);
+            }
             FolderTree.Items.Add(item);
         }
+
+        QueueFolderTreeSyncToActivePane();
     }
 
     private TreeViewItem CreateFolderNode(string path)

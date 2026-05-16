@@ -290,7 +290,7 @@ public partial class MainWindow : Window
     {
         var grid = _activeGrid;
         var path = GetCurrentPath(grid);
-        var source = grid == LeftGrid ? LeftItems : RightItems;
+        var source = ItemsOf(PaneOf(grid));
         var totalCount = source.Count(i => !i.IsParent);
         var selected = ActiveSelectedItems().Where(i => !i.IsParent).ToList();
 
@@ -340,13 +340,12 @@ public partial class MainWindow : Window
     private IEnumerable<FileItem> ActiveSelectedItems()
     {
         var icons = _settings.ViewMode == ViewMode.Icons;
-        var listBox = _activeGrid == LeftGrid ? LeftIconView : RightIconView;
         return icons
-            ? listBox.SelectedItems.OfType<FileItem>()
+            ? IconViewOf(ActivePane).SelectedItems.OfType<FileItem>()
             : SelectedItems(_activeGrid);
     }
 
-    private string GetCurrentPath(DataGrid grid) => grid == LeftGrid ? _leftPath : _rightPath;
+    private string GetCurrentPath(DataGrid grid) => PathOf(PaneOf(grid));
 
     private IEnumerable<FileItem> SelectedItems(DataGrid grid) => grid.SelectedItems.Cast<FileItem>();
 

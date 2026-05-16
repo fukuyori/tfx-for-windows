@@ -1,10 +1,17 @@
 # Changelog
 
+## 0.4.0
+
+- Split drag-and-drop logic (~310 lines) out of `MainWindow.FileOps.cs` into a new `MainWindow.DragDrop.cs` partial and remove unused click-handler stubs; `MainWindow.FileOps.cs` drops from 852 lines to 535.
+- Introduce a `Pane` enum and helpers (`PaneOf`, `GridOf`, `IconViewOf`, `ItemsOf`, `PathOf`, `ActivePane`) in `MainWindow.Pane.cs` and refactor Reload / AutoRefresh / Navigation / Keyboard / External / RubberBand / status updates to use them, eliminating the `isLeft` booleans and most `LeftGrid / RightGrid` ternaries.
+
 ## 0.3.2
 
 - Debounce preview updates (~120ms) so rapid arrow-key navigation no longer spawns a preview task per row.
 - Batch the initial directory load (200 items per batch with a `Dispatcher.Yield`) so opening large folders no longer freezes the UI thread.
 - Shorten the auto-refresh debounce from 250ms to 150ms for a snappier reflection of external file changes.
+- Debounce the search box (~150ms) so each keystroke no longer triggers a `CollectionView` refresh on both panes. Esc / Enter still apply / clear the filter immediately.
+- Enumerate the folder-tree drives on a background thread (with `AsParallel` per-drive subdirectory probing), so a slow or unresponsive network drive no longer blocks startup or the "Toggle hidden files" action.
 
 ## 0.3.1
 

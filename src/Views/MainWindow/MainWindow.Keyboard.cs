@@ -69,7 +69,7 @@ public partial class MainWindow
         {
             if (_settings.ViewMode == ViewMode.Icons)
             {
-                (_activeGrid == LeftGrid ? LeftIconView : RightIconView).SelectAll();
+                IconViewOf(ActivePane).SelectAll();
             }
             else
             {
@@ -198,7 +198,7 @@ public partial class MainWindow
         var focused = Keyboard.FocusedElement as DependencyObject;
         if (_settings.ViewMode == ViewMode.Icons)
         {
-            return IsInside(focused, _activeGrid == LeftGrid ? LeftIconView : RightIconView);
+            return IsInside(focused, IconViewOf(ActivePane));
         }
 
         return IsInside(focused, _activeGrid);
@@ -206,7 +206,7 @@ public partial class MainWindow
 
     private object? ActiveListingSelectedItem() =>
         _settings.ViewMode == ViewMode.Icons
-            ? (_activeGrid == LeftGrid ? LeftIconView : RightIconView).SelectedItem
+            ? IconViewOf(ActivePane).SelectedItem
             : _activeGrid.SelectedItem;
 
     private bool HandleTabFocusCycle()

@@ -108,7 +108,7 @@ public partial class MainWindow
 
     private void SelectSingleListingItem(DataGrid grid, FileItem item)
     {
-        var iconView = grid == LeftGrid ? LeftIconView : RightIconView;
+        var iconView = IconViewOf(PaneOf(grid));
 
         _syncingSelection = true;
         try

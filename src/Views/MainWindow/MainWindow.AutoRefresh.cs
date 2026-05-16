@@ -53,20 +53,13 @@ public partial class MainWindow
         _rightWatcher?.Dispose();
     }
 
-    private void UpdateWatcherForPane(bool isLeft)
+    private void UpdateWatcherForPane(Pane pane)
     {
-        var existing = isLeft ? _leftWatcher : _rightWatcher;
+        var existing = pane == Pane.Left ? _leftWatcher : _rightWatcher;
         existing?.Dispose();
-        if (isLeft)
-        {
-            _leftWatcher = null;
-        }
-        else
-        {
-            _rightWatcher = null;
-        }
+        SetWatcher(pane, null);
 
-        var path = isLeft ? _leftPath : _rightPath;
+        var path = PathOf(pane);
         if (string.IsNullOrEmpty(path) || ArchivePath.Contains(path) || !Directory.Exists(path))
         {
             return;
@@ -90,9 +83,9 @@ public partial class MainWindow
             return;
         }
 
-        FileSystemEventHandler change = (_, _) => Dispatcher.BeginInvoke(() => KickDebounce(isLeft));
-        RenamedEventHandler rename = (_, _) => Dispatcher.BeginInvoke(() => KickDebounce(isLeft));
-        ErrorEventHandler error = (_, _) => Dispatcher.BeginInvoke(() => UpdateWatcherForPane(isLeft));
+        FileSystemEventHandler change = (_, _) => Dispatcher.BeginInvoke(() => KickDebounce(pane));
+        RenamedEventHandler rename = (_, _) => Dispatcher.BeginInvoke(() => KickDebounce(pane));
+        ErrorEventHandler error = (_, _) => Dispatcher.BeginInvoke(() => UpdateWatcherForPane(pane));
 
         watcher.Changed += change;
         watcher.Created += change;
@@ -110,7 +103,12 @@ public partial class MainWindow
             return;
         }
 
-        if (isLeft)
+        SetWatcher(pane, watcher);
+    }
+
+    private void SetWatcher(Pane pane, FileSystemWatcher? watcher)
+    {
+        if (pane == Pane.Left)
         {
             _leftWatcher = watcher;
         }
@@ -120,9 +118,9 @@ public partial class MainWindow
         }
     }
 
-    private void KickDebounce(bool isLeft)
+    private void KickDebounce(Pane pane)
     {
-        var timer = isLeft ? _leftDebounceTimer : _rightDebounceTimer;
+        var timer = pane == Pane.Left ? _leftDebounceTimer : _rightDebounceTimer;
         if (timer is null)
         {
             return;
@@ -138,7 +136,7 @@ public partial class MainWindow
             return;
         }
 
-        var isLeft = grid == LeftGrid;
+        var pane = PaneOf(grid);
         var path = GetCurrentPath(grid);
         if (string.IsNullOrEmpty(path) || ArchivePath.Contains(path))
         {
@@ -150,7 +148,7 @@ public partial class MainWindow
             return;
         }
 
-        var target = isLeft ? LeftItems : RightItems;
+        var target = ItemsOf(pane);
         var loadLarge = _settings.ViewMode == ViewMode.Icons;
         var options = new DirectoryLoadOptions(
             ShowHidden,

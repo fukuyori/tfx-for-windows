@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.3.2
+Version: 0.4.0
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -43,7 +43,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.3.2 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.4.0 |
 +---------------------------------------------------------------------+
 ```
 
@@ -261,8 +261,12 @@ src/Views/MainWindow/MainWindow.xaml.cs
                                     Core: fields, ctor, settings load/save, status helpers
 src/Views/MainWindow/*.cs           MainWindow partial files split by feature:
                                     tree, pinned folders, navigation, path bar, pane,
-                                    search, columns, preview, file ops, external actions,
-                                    context menu, view mode, keyboard routing, auto-refresh
+                                    search, columns, preview, file ops, drag and drop,
+                                    external actions, context menu, view mode, keyboard
+                                    routing, auto-refresh. `MainWindow.Pane.cs` defines a
+                                    `Pane` enum + helpers (`PaneOf`, `GridOf`, `IconViewOf`,
+                                    `ItemsOf`, `PathOf`, `ActivePane`) used across the
+                                    partials to avoid `LeftGrid` / `RightGrid` ternaries.
 
 src/Controls/PathBar.xaml           Breadcrumb + edit-mode address bar UserControl
 src/Controls/PathBar.xaml.cs

@@ -93,6 +93,7 @@ src/Views/MainWindow/
  MainWindow.AutoRefresh.cs
  MainWindow.Columns.cs
  MainWindow.ContextMenu.cs
+ MainWindow.DragDrop.cs
  MainWindow.External.cs
  MainWindow.FileOps.cs
  MainWindow.Keyboard.cs
@@ -334,6 +335,9 @@ src/Views/MainWindow/
 <DOTNET>/sdk/10.0.204/Sdks/Microsoft.NET.Sdk/analyzers/
  Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll
  Microsoft.CodeAnalysis.NetAnalyzers.dll
+<NUGET>/microsoft.net.illink.tasks/10.0.8/analyzers/dotnet/cs/
+ ILLink.CodeFixProvider.dll
+ ILLink.RoslynAnalyzer.dll
 
 [analyzerConfigFiles]
 <DOTNET>/sdk/10.0.204/Sdks/Microsoft.NET.Sdk/analyzers/build/config/analysislevel_10_default.globalconfig

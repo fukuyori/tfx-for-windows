@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -5,8 +6,38 @@ using System.Windows.Media;
 
 namespace Tfx;
 
+internal enum Pane
+{
+    Left,
+    Right
+}
+
 public partial class MainWindow
 {
+    private Pane PaneOf(DataGrid grid) => grid == LeftGrid ? Pane.Left : Pane.Right;
+
+    private DataGrid GridOf(Pane pane) => pane == Pane.Left ? LeftGrid : RightGrid;
+
+    private ListBox IconViewOf(Pane pane) => pane == Pane.Left ? LeftIconView : RightIconView;
+
+    private ObservableCollection<FileItem> ItemsOf(Pane pane) => pane == Pane.Left ? LeftItems : RightItems;
+
+    private string PathOf(Pane pane) => pane == Pane.Left ? _leftPath : _rightPath;
+
+    private void SetPathOf(Pane pane, string value)
+    {
+        if (pane == Pane.Left)
+        {
+            _leftPath = value;
+        }
+        else
+        {
+            _rightPath = value;
+        }
+    }
+
+    private Pane ActivePane => _activeGrid == LeftGrid ? Pane.Left : Pane.Right;
+
     private void Grid_GotFocus(object sender, RoutedEventArgs e)
     {
         if (sender is DataGrid grid)

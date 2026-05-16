@@ -74,7 +74,7 @@ public partial class MainWindow
     {
         if (_settings.ViewMode == ViewMode.Icons)
         {
-            (_activeGrid == LeftGrid ? LeftIconView : RightIconView).SelectAll();
+            IconViewOf(ActivePane).SelectAll();
         }
         else
         {

@@ -41,15 +41,15 @@ public partial class MainWindow
         {
             QueueFolderTreeSyncToActivePane();
         }
-        UpdateWatcherForPane(grid == LeftGrid);
+        UpdateWatcherForPane(PaneOf(grid));
         SaveSettings();
     }
 
     private async void Reload(DataGrid grid, string? selectName = null)
     {
-        var isLeft = grid == LeftGrid;
+        var pane = PaneOf(grid);
         var path = GetCurrentPath(grid);
-        var target = isLeft ? LeftItems : RightItems;
+        var target = ItemsOf(pane);
         target.Clear();
         var loadLargeIcons = _settings.ViewMode == ViewMode.Icons;
         var loadSmallIcons = !loadLargeIcons;
@@ -58,8 +58,8 @@ public partial class MainWindow
             loadSmallIcons,
             loadLargeIcons,
             IsFileColumnVisible("Owner"));
-        SetPendingSelectionName(isLeft, selectName);
-        var cts = ReplaceReloadToken(isLeft);
+        SetPendingSelectionName(pane, selectName);
+        var cts = ReplaceReloadToken(pane);
 
         try
         {
@@ -85,7 +85,7 @@ public partial class MainWindow
             }
 
             ApplySearchFilter();
-            ApplyPendingSelection(grid, isLeft);
+            ApplyPendingSelection(grid, pane);
             UpdateStatus();
         }
         catch (OperationCanceledException)
@@ -97,14 +97,14 @@ public partial class MainWindow
         }
     }
 
-    private CancellationTokenSource ReplaceReloadToken(bool isLeft)
+    private CancellationTokenSource ReplaceReloadToken(Pane pane)
     {
         var next = new CancellationTokenSource();
-        var previous = isLeft ? _leftReloadCts : _rightReloadCts;
+        var previous = pane == Pane.Left ? _leftReloadCts : _rightReloadCts;
         previous?.Cancel();
         previous?.Dispose();
 
-        if (isLeft)
+        if (pane == Pane.Left)
         {
             _leftReloadCts = next;
         }
@@ -119,9 +119,9 @@ public partial class MainWindow
     private bool IsFileColumnVisible(string id) =>
         _settings.VisibleFileColumns.Any(column => string.Equals(column, id, StringComparison.OrdinalIgnoreCase));
 
-    private void SetPendingSelectionName(bool isLeft, string? name)
+    private void SetPendingSelectionName(Pane pane, string? name)
     {
-        if (isLeft)
+        if (pane == Pane.Left)
         {
             _leftPendingSelectionName = name;
         }
@@ -131,9 +131,9 @@ public partial class MainWindow
         }
     }
 
-    private string? TakePendingSelectionName(bool isLeft)
+    private string? TakePendingSelectionName(Pane pane)
     {
-        if (isLeft)
+        if (pane == Pane.Left)
         {
             var value = _leftPendingSelectionName;
             _leftPendingSelectionName = null;
@@ -145,22 +145,22 @@ public partial class MainWindow
         return rightValue;
     }
 
-    private void ApplyPendingSelection(DataGrid grid, bool isLeft)
+    private void ApplyPendingSelection(DataGrid grid, Pane pane)
     {
-        var name = TakePendingSelectionName(isLeft);
+        var name = TakePendingSelectionName(pane);
         if (string.IsNullOrWhiteSpace(name))
         {
             return;
         }
 
-        var source = isLeft ? LeftItems : RightItems;
+        var source = ItemsOf(pane);
         var item = source.FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.CurrentCultureIgnoreCase));
         if (item is null)
         {
             return;
         }
 
-        var iconView = isLeft ? LeftIconView : RightIconView;
+        var iconView = IconViewOf(pane);
         _syncingSelection = true;
         try
         {
@@ -260,7 +260,7 @@ public partial class MainWindow
 
     private void FocusActiveListing()
     {
-        var iconView = _activeGrid == LeftGrid ? LeftIconView : RightIconView;
+        var iconView = IconViewOf(ActivePane);
         var selected = _settings.ViewMode == ViewMode.Icons
             ? iconView.SelectedItem as FileItem
             : _activeGrid.SelectedItem as FileItem;
@@ -275,7 +275,7 @@ public partial class MainWindow
 
     private void MoveActiveListingSelection(Key key)
     {
-        var iconView = _activeGrid == LeftGrid ? LeftIconView : RightIconView;
+        var iconView = IconViewOf(ActivePane);
         var items = _settings.ViewMode == ViewMode.Icons ? iconView.Items : _activeGrid.Items;
         if (items.Count == 0)
         {

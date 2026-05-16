@@ -1,16 +1,41 @@
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace Tfx;
 
 public partial class MainWindow
 {
+    private static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(150);
+    private DispatcherTimer? _searchDebounceTimer;
+
     private void ApplySearchFilter()
     {
         var filter = SearchBox.Text.Trim();
         ApplyGridFilter(LeftGrid, filter);
         ApplyGridFilter(RightGrid, filter);
+    }
+
+    private void ScheduleSearchFilter()
+    {
+        if (_searchDebounceTimer is null)
+        {
+            _searchDebounceTimer = new DispatcherTimer { Interval = SearchDebounce };
+            _searchDebounceTimer.Tick += (_, _) =>
+            {
+                _searchDebounceTimer!.Stop();
+                ApplySearchFilter();
+            };
+        }
+        _searchDebounceTimer.Stop();
+        _searchDebounceTimer.Start();
+    }
+
+    private void ApplySearchFilterImmediate()
+    {
+        _searchDebounceTimer?.Stop();
+        ApplySearchFilter();
     }
 
     private static void ApplyGridFilter(DataGrid grid, string filter)
@@ -37,7 +62,7 @@ public partial class MainWindow
         }
     }
 
-    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => ApplySearchFilter();
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => ScheduleSearchFilter();
 
     private void FocusSearch_Click(object sender, System.Windows.RoutedEventArgs e)
     {
@@ -50,7 +75,13 @@ public partial class MainWindow
         if (e.Key == Key.Escape)
         {
             SearchBox.Text = "";
+            ApplySearchFilterImmediate();
             FocusActiveListing();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Enter)
+        {
+            ApplySearchFilterImmediate();
             e.Handled = true;
         }
     }
