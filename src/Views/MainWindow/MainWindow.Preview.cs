@@ -1,5 +1,7 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Threading;
 using Markdig;
 using Path = System.IO.Path;
@@ -42,6 +44,7 @@ public partial class MainWindow
         TextPreview.Text = "";
         ImagePreview.Source = null;
         HideHtmlPreview();
+        HideCsvPreview();
         UpdateRenderedToggleVisibility(item);
 
         if (item is null)
@@ -100,7 +103,13 @@ public partial class MainWindow
     }
 
     private static bool IsRenderable(string extension) =>
+        extension is ".md" or ".html" or ".htm" or ".csv" or ".tsv" or ".json";
+
+    private static bool IsHtmlLike(string extension) =>
         extension is ".md" or ".html" or ".htm";
+
+    private static bool IsCsvLike(string extension) =>
+        extension is ".csv" or ".tsv";
 
     private void UpdateRenderedToggleVisibility(FileItem? item)
     {
@@ -113,6 +122,32 @@ public partial class MainWindow
 
     private async Task ShowRenderedAsync(string path, string extension, string text, CancellationTokenSource cts)
     {
+        if (IsCsvLike(extension))
+        {
+            await ShowCsvPreviewAsync(text, extension, cts);
+            return;
+        }
+
+        if (extension == ".json")
+        {
+            string? pretty;
+            try
+            {
+                pretty = await Task.Run(() => JsonPrettyPrinter.TryPrettyPrint(text), cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            if (cts.IsCancellationRequested)
+            {
+                return;
+            }
+            TextPreview.Text = pretty ?? text;
+            TextPreview.Visibility = Visibility.Visible;
+            return;
+        }
+
         if (!await EnsureWebViewAsync())
         {
             if (cts.IsCancellationRequested)
@@ -149,6 +184,99 @@ public partial class MainWindow
             TextPreview.Text = text;
             TextPreview.Visibility = Visibility.Visible;
             InfoPreview.Text += $"\n{Loc.F("Preview error: {0}", ex.Message)}";
+        }
+    }
+
+    private const int CsvPreviewRowCap = 2000;
+    private const int CsvPreviewColumnCap = 64;
+
+    private async Task ShowCsvPreviewAsync(string text, string extension, CancellationTokenSource cts)
+    {
+        try
+        {
+            var delimiter = CsvParser.DetectDelimiter(extension);
+            var (header, dataRows, totalDataRows) = await Task.Run(() =>
+            {
+                var rows = CsvParser.Parse(text, delimiter);
+                if (rows.Count == 0)
+                {
+                    return (Header: (IReadOnlyList<string>)Array.Empty<string>(),
+                            Rows: (IReadOnlyList<string[]>)Array.Empty<string[]>(),
+                            Total: 0);
+                }
+                var headerRow = rows[0];
+                var take = Math.Min(rows.Count - 1, CsvPreviewRowCap);
+                var sampled = new string[take][];
+                for (var i = 0; i < take; i++)
+                {
+                    sampled[i] = rows[i + 1].ToArray();
+                }
+                return (Header: (IReadOnlyList<string>)headerRow,
+                        Rows: (IReadOnlyList<string[]>)sampled,
+                        Total: rows.Count - 1);
+            }, cts.Token);
+
+            if (cts.IsCancellationRequested)
+            {
+                return;
+            }
+
+            CsvPreview.Columns.Clear();
+            if (header.Count == 0)
+            {
+                CsvPreview.ItemsSource = null;
+                PreviewScroll.Visibility = Visibility.Collapsed;
+                CsvPreview.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var columnCount = Math.Min(header.Count, CsvPreviewColumnCap);
+            for (var i = 0; i < columnCount; i++)
+            {
+                CsvPreview.Columns.Add(new DataGridTextColumn
+                {
+                    Header = header[i],
+                    Binding = new Binding($"[{i}]"),
+                });
+            }
+
+            CsvPreview.ItemsSource = dataRows;
+            PreviewScroll.Visibility = Visibility.Collapsed;
+            CsvPreview.Visibility = Visibility.Visible;
+
+            if (totalDataRows > dataRows.Count || header.Count > columnCount)
+            {
+                var msg = totalDataRows > dataRows.Count
+                    ? Loc.F("Showing {0} of {1} rows", dataRows.Count, totalDataRows)
+                    : "";
+                if (header.Count > columnCount)
+                {
+                    msg = string.IsNullOrEmpty(msg)
+                        ? Loc.F("Showing {0} of {1} columns", columnCount, header.Count)
+                        : msg + " / " + Loc.F("Showing {0} of {1} columns", columnCount, header.Count);
+                }
+                InfoPreview.Text += $"\n{msg}";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            TextPreview.Text = text;
+            TextPreview.Visibility = Visibility.Visible;
+            InfoPreview.Text += $"\n{Loc.F("Preview error: {0}", ex.Message)}";
+        }
+    }
+
+    private void HideCsvPreview()
+    {
+        CsvPreview.Visibility = Visibility.Collapsed;
+        CsvPreview.ItemsSource = null;
+        CsvPreview.Columns.Clear();
+        if (HtmlPreview.Visibility == Visibility.Collapsed)
+        {
+            PreviewScroll.Visibility = Visibility.Visible;
         }
     }
 

@@ -159,7 +159,7 @@ public partial class MainWindow : Window
         SelectAllButton.ToolTip = Loc.T("Select all (Ctrl+A)");
         ReloadButton.ToolTip = Loc.T("Reload (Ctrl+R)");
         PreviewButton.ToolTip = Loc.T("Toggle preview");
-        RenderedToggle.ToolTip = Loc.T("Show rendered Markdown / HTML");
+        RenderedToggle.ToolTip = Loc.T("Show rendered preview");
         SplitButton.ToolTip = Loc.T("Toggle split pane");
         ColumnsButton.ToolTip = Loc.T("Columns");
         PinnedHeader.Text = Loc.T("PINNED");
@@ -354,7 +354,32 @@ public partial class MainWindow : Window
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
         SaveSettings();
+
+        _previewCts?.Cancel();
+        _previewCts?.Dispose();
+        _previewCts = null;
+        _leftReloadCts?.Cancel();
+        _leftReloadCts?.Dispose();
+        _leftReloadCts = null;
+        _rightReloadCts?.Cancel();
+        _rightReloadCts?.Dispose();
+        _rightReloadCts = null;
+
         DisposeAutoRefresh();
+
+        // Best-effort: cancel any in-flight navigation but do NOT call WebView2.Dispose()
+        // synchronously here — the WPF wrapper sometimes blocks waiting for the underlying
+        // CoreWebView2Controller to settle when a navigation is mid-flight, which produces
+        // a "not responding" stall on close. Windows reclaims msedgewebview2.exe when the
+        // Tfx process exits, so explicit teardown is not required for correctness.
+        try
+        {
+            HtmlPreview?.CoreWebView2?.Stop();
+        }
+        catch
+        {
+        }
+
         CleanupArchiveTemp();
     }
 
@@ -364,12 +389,17 @@ public partial class MainWindow : Window
         {
             return;
         }
-        try
+        var path = _archiveTempRoot;
+        _archiveTempRoot = null;
+        _ = Task.Run(() =>
         {
-            Directory.Delete(_archiveTempRoot, recursive: true);
-        }
-        catch
-        {
-        }
+            try
+            {
+                Directory.Delete(path, recursive: true);
+            }
+            catch
+            {
+            }
+        });
     }
 }

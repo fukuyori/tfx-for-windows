@@ -119,7 +119,10 @@ internal static class FsHelpers
 
     public static bool IsText(string extension, string path)
     {
-        if (extension is ".txt" or ".md" or ".json" or ".xml" or ".xaml" or ".cs" or ".ps1" or ".bat" or ".cmd" or ".log" or ".csv" or ".tsv" or ".html" or ".css" or ".js")
+        if (extension is ".txt" or ".md" or ".json" or ".xml" or ".xaml" or ".cs" or ".ps1" or ".bat" or ".cmd" or ".log"
+            or ".csv" or ".tsv" or ".html" or ".htm" or ".css" or ".js" or ".ts" or ".tsx" or ".jsx"
+            or ".toml" or ".yaml" or ".yml" or ".ini" or ".cfg" or ".conf" or ".env"
+            or ".py" or ".rb" or ".go" or ".rs" or ".java" or ".kt" or ".swift" or ".sql" or ".sh" or ".gitignore")
         {
             return true;
         }

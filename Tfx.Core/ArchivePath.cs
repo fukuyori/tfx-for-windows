@@ -2,7 +2,7 @@ using Path = System.IO.Path;
 
 namespace Tfx;
 
-internal static class ArchivePath
+public static class ArchivePath
 {
     public const string Separator = "::";
 

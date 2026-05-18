@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.1
+
+- Add a `Tfx.Tests` xUnit project and a new `Tfx.Core` library that holds the pure-logic types (`ArchivePath`, `CsvParser`, `JsonPrettyPrinter`) so they can be tested without WPF. CI runs `dotnet restore` / `build` / `test` on `windows-latest` via `.github/workflows/build.yml`.
+- Render CSV / TSV files as a `DataGrid` table preview, and JSON files as pretty-printed monospaced text, both via the existing Source / Rendered toggle. CSV parsing and JSON pretty-printing run on a background thread with a 2000-row / 64-column cap to keep the UI responsive on large files.
+- Extend `FsHelpers.IsText` to cover `.toml` / `.yaml` / `.yml` / `.ini` / `.cfg` / `.conf` / `.env` and several developer-text extensions so they no longer fall through to "no preview".
+- Skip the periodic auto-refresh poll while the window is deactivated or minimized, and skip it entirely for panes whose `FileSystemWatcher` is active (FSW already covers external changes). Periodic interval extended from 10 s to 30 s.
+- Add a per-pane in-flight guard so concurrent `FileSystemWatcher` events cannot spawn overlapping refresh tasks.
+- Default `IsReadOnly="True"` on both file `DataGrid`s so accidental clicks no longer flip the grid into edit mode and so the rename-detection check in `IsBusyForRefresh` works correctly.
+- Cancel preview / reload `CancellationTokenSource`s and stop `FileSystemWatcher` raising before disposal during `Window_Closing`, then fire-and-forget the archive temp folder cleanup. Skip the synchronous WebView2 `Dispose()` (which occasionally blocked on close); call `CoreWebView2.Stop()` instead and let the OS reclaim `msedgewebview2.exe`.
+- New `Tfx.Core/Tfx.Core.csproj` + `Tfx.Tests/Tfx.Tests.csproj` are wired into `tfx.sln`. `Tfx.csproj` now references `Tfx.Core` and excludes `Tfx.Core\**` / `Tfx.Tests\**` / `artifacts\**` from default item globbing.
+- Add `docs/contributing.md` covering prerequisites, build/test commands, the repo layout, the CI workflow, code style, and the (placeholder) release process.
+
 ## 0.4.0
 
 - Split drag-and-drop logic (~310 lines) out of `MainWindow.FileOps.cs` into a new `MainWindow.DragDrop.cs` partial and remove unused click-handler stubs; `MainWindow.FileOps.cs` drops from 852 lines to 535.

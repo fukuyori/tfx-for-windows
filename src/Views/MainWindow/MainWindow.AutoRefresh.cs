@@ -8,7 +8,11 @@ namespace Tfx;
 public partial class MainWindow
 {
     private static readonly TimeSpan AutoRefreshDebounce = TimeSpan.FromMilliseconds(150);
-    private static readonly TimeSpan AutoRefreshPeriodic = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan AutoRefreshPeriodic = TimeSpan.FromSeconds(30);
+
+    private bool _windowActive = true;
+    private bool _leftRefreshInFlight;
+    private bool _rightRefreshInFlight;
 
     private FileSystemWatcher? _leftWatcher;
     private FileSystemWatcher? _rightWatcher;
@@ -35,13 +39,30 @@ public partial class MainWindow
         _periodicTimer = new DispatcherTimer { Interval = AutoRefreshPeriodic };
         _periodicTimer.Tick += (_, _) =>
         {
-            _ = ReloadDiffAsync(LeftGrid);
-            if (RightPaneColumn.Width.Value > 0)
+            if (!_windowActive)
+            {
+                return;
+            }
+            // Only run periodic refresh when the FileSystemWatcher is not available
+            // for that pane (network share, archive, FSW failure). When FSW is healthy
+            // it already covers external changes, and polling is redundant.
+            if (_leftWatcher is null)
+            {
+                _ = ReloadDiffAsync(LeftGrid);
+            }
+            if (_rightWatcher is null && RightPaneColumn.Width.Value > 0)
             {
                 _ = ReloadDiffAsync(RightGrid);
             }
         };
         _periodicTimer.Start();
+
+        Activated += (_, _) => _windowActive = true;
+        Deactivated += (_, _) => _windowActive = false;
+        StateChanged += (_, _) =>
+        {
+            _windowActive = WindowState != System.Windows.WindowState.Minimized;
+        };
     }
 
     private void DisposeAutoRefresh()
@@ -49,8 +70,18 @@ public partial class MainWindow
         _periodicTimer?.Stop();
         _leftDebounceTimer?.Stop();
         _rightDebounceTimer?.Stop();
-        _leftWatcher?.Dispose();
-        _rightWatcher?.Dispose();
+        if (_leftWatcher is not null)
+        {
+            _leftWatcher.EnableRaisingEvents = false;
+            _leftWatcher.Dispose();
+            _leftWatcher = null;
+        }
+        if (_rightWatcher is not null)
+        {
+            _rightWatcher.EnableRaisingEvents = false;
+            _rightWatcher.Dispose();
+            _rightWatcher = null;
+        }
     }
 
     private void UpdateWatcherForPane(Pane pane)
@@ -137,6 +168,40 @@ public partial class MainWindow
         }
 
         var pane = PaneOf(grid);
+        var inFlight = pane == Pane.Left ? _leftRefreshInFlight : _rightRefreshInFlight;
+        if (inFlight)
+        {
+            return;
+        }
+
+        if (pane == Pane.Left)
+        {
+            _leftRefreshInFlight = true;
+        }
+        else
+        {
+            _rightRefreshInFlight = true;
+        }
+
+        try
+        {
+            await ReloadDiffCoreAsync(grid, pane);
+        }
+        finally
+        {
+            if (pane == Pane.Left)
+            {
+                _leftRefreshInFlight = false;
+            }
+            else
+            {
+                _rightRefreshInFlight = false;
+            }
+        }
+    }
+
+    private async Task ReloadDiffCoreAsync(DataGrid grid, Pane pane)
+    {
         var path = GetCurrentPath(grid);
         if (string.IsNullOrEmpty(path) || ArchivePath.Contains(path))
         {

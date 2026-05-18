@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.4.0
+Version: 0.4.1
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -11,6 +11,8 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Repository: <https://github.com/fukuyori/tfx-for-windows>
 - Author: fukuyori (<self@spumoni.org>)
 - Release notes: [CHANGELOG.md](CHANGELOG.md)
+- Development roadmap: [docs/roadmap.md](docs/roadmap.md)
+- Contributing guide: [docs/contributing.md](docs/contributing.md)
 
 ---
 
@@ -23,7 +25,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - New File / New Folder, inline rename, drag-and-drop with full Windows modifier-key conventions, shortcut (`.lnk`) creation
 - Zip compression and extraction from the file pane or context menu, plus read-only browsing inside `.zip` files (open, drag out to other apps)
 - Right-click context menu (Windows 11–style ordering), "Open with..." dialog, sortable columns, customizable column visibility and order
-- Image / text preview pane with rendered Markdown and HTML (toggle between rendered view and source)
+- Image / text preview pane with rendered Markdown, HTML, CSV / TSV tables, and pretty-printed JSON (toggle between rendered view and source)
 - Status bar with item counts, selection size, active drive's free space, and the current version
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
@@ -43,7 +45,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.4.0 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.4.1 |
 +---------------------------------------------------------------------+
 ```
 
