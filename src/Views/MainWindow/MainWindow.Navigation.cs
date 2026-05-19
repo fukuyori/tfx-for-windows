@@ -19,6 +19,14 @@ public partial class MainWindow
             return;
         }
 
+        // Navigating cancels any in-flight subfolder search and clears the
+        // search box so the new folder shows real contents.
+        if (_subfolderSearchActive)
+        {
+            CancelSubfolderSearch();
+            SearchBox.Text = "";
+        }
+
         var current = GetCurrentPath(grid);
         if (pushHistory && IsNavigablePath(current) && !string.Equals(current, path, StringComparison.OrdinalIgnoreCase))
         {
@@ -84,7 +92,6 @@ public partial class MainWindow
                 }
             }
 
-            ApplySearchFilter();
             ApplyPendingSelection(grid, pane);
             UpdateStatus();
         }

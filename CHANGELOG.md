@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.4
+
+- Subfolder search (roadmap §2.4): the search box now always runs a recursive walk of the current folder. Type and press **Enter** to start; **Esc** clears and restores the real folder listing. Results stream into the active pane in batches of 50 with the status bar updating every ~120 ms ("Searching: N matches" → "Search complete: N matches"). Navigation to another folder cancels the in-flight search. Results show the relative path in the Name cell while keeping `FullPath` absolute. Inside zip archives the recursive walk is a no-op.
+- Removed the recursive-search toggle button and the `Ctrl+Shift+F` shortcut per user feedback — search is always recursive and only fires on Enter, so no auto-filter on text change. The in-memory `CollectionView` filter is dropped accordingly.
+- File-list column alignment fix: the shared `ListingCellText` / `RightAlignedCellText` styles now set `VerticalAlignment="Center"` and `TextTrimming="CharacterEllipsis"`, so Date / Type / Size / Created / Owner / Attribute cells line up with the centered Name column and clip with ellipsis instead of bleeding into adjacent columns. The Name column TextBlock also gained `TextTrimming="CharacterEllipsis"`.
+
 ## 0.4.3
 
 - Multi-selection preview (roadmap §2.3): selecting more than one item in the file list now renders a compact summary in the preview pane — total count, combined size, and per-item name / kind / size / modified up to a cap of 8 entries, with a "(+N more)" footer for the rest. Image / text / CSV / HTML previews are hidden during multi-selection and any in-flight preview load is cancelled.

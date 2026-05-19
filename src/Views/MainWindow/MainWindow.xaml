@@ -21,11 +21,15 @@
     <Window.Resources>
         <Style x:Key="ListingCellText" TargetType="TextBlock">
             <Setter Property="Margin" Value="0,0,12,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
         <Style x:Key="RightAlignedCellText" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="0,0,12,0" />
             <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
     </Window.Resources>
     <DockPanel>
@@ -54,7 +58,7 @@
                     <Border x:Name="ActiveHeaderPathBorder" Background="#0D1013" BorderBrush="{StaticResource TfxBorder}" BorderThickness="1" MinHeight="22" Margin="0,0,8,0" Cursor="IBeam" ToolTip="Edit current path (Ctrl+L)" MouseLeftButtonDown="ActiveHeaderPath_MouseLeftButtonDown">
                         <TextBlock x:Name="ActiveHeaderPath" Foreground="{StaticResource TfxForeground}" FontFamily="Consolas, Yu Gothic UI" VerticalAlignment="Center" Padding="10,0" TextTrimming="CharacterEllipsis" />
                     </Border>
-                    <TextBox x:Name="SearchBox" Grid.Column="1" VerticalContentAlignment="Center" TextChanged="SearchBox_TextChanged" KeyDown="SearchBox_KeyDown" PreviewKeyDown="SearchBox_PreviewKeyDown" />
+                    <TextBox x:Name="SearchBox" Grid.Column="1" VerticalContentAlignment="Center" KeyDown="SearchBox_KeyDown" PreviewKeyDown="SearchBox_PreviewKeyDown" />
                     <Button x:Name="FocusSearchButton" Grid.Column="2" Style="{StaticResource ToolbarButton}" Click="FocusSearch_Click" ToolTip="Focus search (Ctrl+F)" Content="&#xE721;" />
                 </Grid>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
@@ -211,7 +215,7 @@
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
                                                 <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center" SnapsToDevicePixels="True" />
-                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -284,7 +288,7 @@
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
                                                 <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center" SnapsToDevicePixels="True" />
-                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>

@@ -150,6 +150,8 @@ Done when:
 
 #### 2.4 Subfolder Search
 
+Status: **Done.** Search is **always** a recursive walk of the current folder's subtree; there is no recursive-mode toggle (removed per user feedback). Typing in the search box does not auto-trigger; pressing **Enter** starts the walk, **Esc** clears the box and reloads the real folder listing, and any folder navigation cancels the in-flight search. Matches stream into the active pane's `ObservableCollection` in batches of 50 with the status bar updating every ~120 ms ("Searching: N matches" → "Search complete: N matches"). Results show the relative path in the Name cell while preserving `FullPath` so Open / Reveal still work. Inside zip archives the recursive walk is a no-op (the archive listing is already flat). Move this section under §1 with a version tag at the next release bump.
+
 Upstream: §1.7 (Finder Compatibility and Search) — "Subfolder search supports progress reporting, incremental results, cancellation, and status-line display." Already shipped on macOS.
 
 Goal: parity with upstream §1.7 search behavior.

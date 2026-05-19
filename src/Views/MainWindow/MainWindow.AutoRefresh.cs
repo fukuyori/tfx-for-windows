@@ -291,7 +291,6 @@ public partial class MainWindow
         }
 
         DiffApply(target, newItems);
-        ApplySearchFilter();
         UpdateStatus();
     }
 
