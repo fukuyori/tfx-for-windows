@@ -72,7 +72,7 @@ public partial class MainWindow
         if (sender is DataGrid grid)
         {
             UpdateActivePane(grid);
-            SchedulePreviewUpdate(SelectedItems(grid).FirstOrDefault());
+            SchedulePreviewUpdate(SelectedItems(grid));
             UpdateStatus();
         }
     }

@@ -15,6 +15,7 @@ public static class JsonPrettyPrinter
             return null;
         }
 
+        using var _ = PerformanceTrace.Begin($"JsonPrettyPrinter(len={text.Length})");
         try
         {
             using var document = JsonDocument.Parse(text, new JsonDocumentOptions

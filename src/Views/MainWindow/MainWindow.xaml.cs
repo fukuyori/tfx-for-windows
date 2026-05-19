@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Path = System.IO.Path;
 
 namespace Tfx;
@@ -62,6 +63,7 @@ public partial class MainWindow : Window
         _settingsPath = Path.Combine(appData, "settings.json");
 
         LoadSettings();
+        PerformanceTrace.SetEnabled(_settings.ShowPerformanceLogs);
         InitializeFileColumns();
         LoadPinned();
         FolderTree.AddHandler(TreeViewItem.ExpandedEvent, new RoutedEventHandler(FolderTree_Expanded));
@@ -72,11 +74,29 @@ public partial class MainWindow : Window
         Navigate(LeftGrid, initial, false);
         Navigate(RightGrid, _settings.RightPath, false);
         ApplyLayoutSettings();
-        UpdateActivePane(string.Equals(_settings.ActivePane, "Right", StringComparison.OrdinalIgnoreCase) && _settings.ShowSplit ? RightGrid : LeftGrid);
+        // Always land on the left pane at startup so the user opens onto
+        // the left listing with the ".." row preselected (set by Navigate
+        // above). The previously-active pane is intentionally not restored.
+        UpdateActivePane(LeftGrid);
         QueueFolderTreeSyncToActivePane();
         _suspendSettingsSave = false;
 
         InitializeAutoRefresh();
+
+        // Reload from Navigate(LeftGrid, ...) is async; the ApplyPendingSelection
+        // path focuses the ".." row when items finish loading. Add a belt-and-
+        // braces follow-up at ApplicationIdle so focus is guaranteed to land on
+        // the left pane even if WPF was still arranging the window.
+        Loaded += (_, _) =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (_activeGrid == LeftGrid)
+                {
+                    FocusPane(Pane.Left);
+                }
+            }, DispatcherPriority.ApplicationIdle);
+        };
     }
 
     private string ResolveInitialPath()

@@ -14,30 +14,34 @@ public partial class MainWindow
         new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
     private static readonly TimeSpan PreviewDebounce = TimeSpan.FromMilliseconds(120);
 
+    private const int MultiSelectionPreviewCap = 8;
+
     private FileItem? _previewItem;
     private Task<bool>? _webViewInitTask;
     private DispatcherTimer? _previewDebounceTimer;
-    private FileItem? _pendingPreviewItem;
+    private IReadOnlyList<FileItem> _pendingPreviewSelection = Array.Empty<FileItem>();
 
-    private void SchedulePreviewUpdate(FileItem? item)
+    private void SchedulePreviewUpdate(FileItem? item) =>
+        SchedulePreviewUpdate(item is null ? Array.Empty<FileItem>() : new[] { item });
+
+    private void SchedulePreviewUpdate(IEnumerable<FileItem> selection)
     {
-        _pendingPreviewItem = item;
+        _pendingPreviewSelection = selection.Where(i => !i.IsParent).ToArray();
         if (_previewDebounceTimer is null)
         {
             _previewDebounceTimer = new DispatcherTimer { Interval = PreviewDebounce };
             _previewDebounceTimer.Tick += (_, _) =>
             {
                 _previewDebounceTimer!.Stop();
-                UpdatePreview(_pendingPreviewItem);
+                UpdatePreview(_pendingPreviewSelection);
             };
         }
         _previewDebounceTimer.Stop();
         _previewDebounceTimer.Start();
     }
 
-    private async void UpdatePreview(FileItem? item)
+    private async void UpdatePreview(IReadOnlyList<FileItem> selection)
     {
-        _previewItem = item;
         var cts = ReplacePreviewToken();
         ImagePreview.Visibility = Visibility.Collapsed;
         TextPreview.Visibility = Visibility.Collapsed;
@@ -45,13 +49,26 @@ public partial class MainWindow
         ImagePreview.Source = null;
         HideHtmlPreview();
         HideCsvPreview();
-        UpdateRenderedToggleVisibility(item);
 
-        if (item is null)
+        if (selection.Count == 0)
         {
+            _previewItem = null;
             InfoPreview.Text = "";
+            UpdateRenderedToggleVisibility(null);
             return;
         }
+
+        if (selection.Count > 1)
+        {
+            _previewItem = null;
+            UpdateRenderedToggleVisibility(null);
+            InfoPreview.Text = BuildMultiSelectionSummary(selection);
+            return;
+        }
+
+        var item = selection[0];
+        _previewItem = item;
+        UpdateRenderedToggleVisibility(item);
 
         InfoPreview.Text = $"{item.Name}\n{item.FullPath}\n{item.Kind}\n{item.SizeText}\n{Loc.F("Modified: {0}", item.ModifiedText)}\n{Loc.F("Created: {0}", item.CreatedText)}\n{Loc.F("Owner: {0}", item.OwnerText)}\n{Loc.F("Attributes: {0}", item.AttributeText)}";
 
@@ -114,6 +131,45 @@ public partial class MainWindow
 
     private static bool IsCsvLike(string extension) =>
         extension is ".csv" or ".tsv";
+
+    private static string BuildMultiSelectionSummary(IReadOnlyList<FileItem> selection)
+    {
+        var totalSize = selection.Where(i => !i.IsDirectory).Sum(i => i.Size);
+        var header = Loc.F("{0} items selected ({1})", selection.Count, FileItem.FormatSize(totalSize));
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append(header);
+
+        var shown = Math.Min(selection.Count, MultiSelectionPreviewCap);
+        for (var i = 0; i < shown; i++)
+        {
+            var item = selection[i];
+            sb.AppendLine();
+            sb.Append(item.Name);
+            sb.AppendLine();
+            sb.Append("  ");
+            sb.Append(item.Kind);
+            if (!item.IsDirectory && !string.IsNullOrEmpty(item.SizeText))
+            {
+                sb.Append("  /  ");
+                sb.Append(item.SizeText);
+            }
+            if (!string.IsNullOrEmpty(item.ModifiedText))
+            {
+                sb.Append("  /  ");
+                sb.Append(item.ModifiedText);
+            }
+        }
+
+        if (selection.Count > shown)
+        {
+            sb.AppendLine();
+            sb.AppendLine();
+            sb.Append(Loc.F("(+{0} more)", selection.Count - shown));
+        }
+
+        return sb.ToString();
+    }
 
     private void UpdateRenderedToggleVisibility(FileItem? item)
     {
@@ -394,6 +450,6 @@ img { max-width:100%; }
     {
         _settings.RenderMarkdownHtml = RenderedToggle.IsChecked == true;
         SaveSettings();
-        UpdatePreview(_previewItem);
+        UpdatePreview(_previewItem is null ? Array.Empty<FileItem>() : new[] { _previewItem });
     }
 }

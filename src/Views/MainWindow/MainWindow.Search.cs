@@ -12,6 +12,7 @@ public partial class MainWindow
 
     private void ApplySearchFilter()
     {
+        using var _ = PerformanceTrace.Begin("ApplySearchFilter");
         var filter = SearchBox.Text.Trim();
         ApplyGridFilter(LeftGrid, filter);
         ApplyGridFilter(RightGrid, filter);

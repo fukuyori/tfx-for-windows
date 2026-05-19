@@ -13,6 +13,7 @@ public static class CsvParser
 {
     public static IReadOnlyList<IReadOnlyList<string>> Parse(string text, char delimiter = ',')
     {
+        using var _ = PerformanceTrace.Begin($"CsvParser.Parse(len={text.Length})");
         var rows = new List<List<string>>();
         if (string.IsNullOrEmpty(text))
         {

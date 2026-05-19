@@ -13,6 +13,8 @@ internal static class DirectoryLoader
 {
     public static List<FileItem> Load(string path, DirectoryLoadOptions options, CancellationToken cancellationToken)
     {
+        using var _ = PerformanceTrace.Begin($"DirectoryLoader.Load({Path.GetFileName(path)})");
+
         if (ArchivePath.TryParse(path, out var archiveFile, out var innerPath))
         {
             return ArchiveBrowser.Load(archiveFile, innerPath, options, cancellationToken);

@@ -61,7 +61,7 @@ public partial class MainWindow
         }
 
         UpdateActivePane(grid);
-        SchedulePreviewUpdate(lb.SelectedItem as FileItem);
+        SchedulePreviewUpdate(lb.SelectedItems.OfType<FileItem>());
         UpdateStatus();
     }
 

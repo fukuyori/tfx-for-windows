@@ -132,6 +132,8 @@ Done when:
 
 #### 2.3 Multi-Selection Preview
 
+Status: **Done.** When more than one item is selected (excluding the `..` row), the preview pane renders a compact summary in `InfoPreview` showing the total count, combined size, and per-item name / kind / size / modified up to a cap of 8 entries; above that, a "(+N more)" footer indicates the rest. `ImagePreview`, `TextPreview`, `HtmlPreview`, and `CsvPreview` are hidden during multi-selection, and any in-flight preview task is cancelled via the existing `ReplacePreviewToken` path. Move this section under §1 with a version tag at the next release bump.
+
 Upstream: §1.2 (File View and Preview) — "Multiple selected files can be shown side by side in the preview pane." Already shipped on macOS.
 
 Goal: parity with upstream §1.2.
@@ -164,6 +166,8 @@ Done when:
 - Switching folders cancels the in-flight search.
 
 #### 2.5 Performance Measurement Infrastructure
+
+Status: **Done.** `Tfx.Core/PerformanceTrace.cs` exposes a static `Begin(label)` / `Measure(label, action)` helper that no-ops when disabled and prints one line per call (`Debug` + console) when on. It's activated by either the `TFX_PERFORMANCE_LOGS=1` environment variable (wins, never resets) or the persisted `AppSettings.ShowPerformanceLogs` flag (toggled via `PerformanceTrace.SetEnabled`). Trace points are wired into `DirectoryLoader.Load`, `PreviewLoader.Load`, `ApplySearchFilter`, `CsvParser.Parse`, and `JsonPrettyPrinter.TryPrettyPrint`. `Tfx.Tests/Benchmarks/PerformanceBenchmarks.cs` adds 7 informational benchmarks (`ArchivePath` × 2, `CsvParser` × 3 sizes, `JsonPrettyPrinter` × 2) that print per-iteration timings via `ITestOutputHelper` and never assert. Move this section under §1 with a version tag at the next release bump.
 
 Upstream: §1.14 (Performance Measurement Infrastructure). The macOS port uses `PerformanceTrace` + a Developer menu toggle + `tfxTests/PerformanceBenchmarks.swift`. The Windows port mirrors this with the same env var name (`TFX_PERFORMANCE_LOGS=1`) and a `Tfx.Tests/Benchmarks/` folder.
 

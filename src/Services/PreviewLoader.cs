@@ -21,6 +21,7 @@ internal static class PreviewLoader
 {
     public static PreviewContent Load(string path, CancellationToken cancellationToken)
     {
+        using var _ = PerformanceTrace.Begin($"PreviewLoader.Load({Path.GetFileName(path)})");
         cancellationToken.ThrowIfCancellationRequested();
         var extension = Path.GetExtension(path).ToLowerInvariant();
 

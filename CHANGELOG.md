@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.3
+
+- Multi-selection preview (roadmap §2.3): selecting more than one item in the file list now renders a compact summary in the preview pane — total count, combined size, and per-item name / kind / size / modified up to a cap of 8 entries, with a "(+N more)" footer for the rest. Image / text / CSV / HTML previews are hidden during multi-selection and any in-flight preview load is cancelled.
+- Performance measurement infrastructure (roadmap §2.5): `Tfx.Core/PerformanceTrace.cs` exposes a `Begin(label)` / `Measure(...)` static helper that no-ops when disabled (zero overhead) and emits one line per call to `Debug` and the console when enabled. Activated by either the `TFX_PERFORMANCE_LOGS=1` environment variable (wins) or the persisted `AppSettings.ShowPerformanceLogs` setting. Trace points wired into `DirectoryLoader.Load`, `PreviewLoader.Load`, `ApplySearchFilter`, `CsvParser.Parse`, and `JsonPrettyPrinter.TryPrettyPrint`.
+- Add `Tfx.Tests/Benchmarks/PerformanceBenchmarks.cs` with 7 informational benchmarks (`ArchivePath` × 2, `CsvParser` × 3 sizes, `JsonPrettyPrinter` × 2) that print per-iteration timings via `ITestOutputHelper` and never assert. Total test count: 63.
+- Always land on the left pane at startup with the `..` row preselected and focus on the file list, regardless of the saved `ActivePane` value. A belt-and-braces `FocusPane(Pane.Left)` call at `Loaded` + `ApplicationIdle` ensures focus survives the async initial reload.
+- Extend `docs/contributing.md` with the performance-trace env var, the in-app setting key, and the benchmark filter commands.
+
 ## 0.4.2
 
 - Add Swap-panes toolbar button and `Ctrl+Shift+S` shortcut. In split view, swaps the left / right pane paths and moves the active pane to follow the previously-active folder.

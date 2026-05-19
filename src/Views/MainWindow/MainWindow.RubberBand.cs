@@ -182,7 +182,7 @@ public partial class MainWindow
             _syncingSelection = false;
         }
 
-        SchedulePreviewUpdate(grid.SelectedItems.OfType<FileItem>().FirstOrDefault());
+        SchedulePreviewUpdate(grid.SelectedItems.OfType<FileItem>());
     }
 
     private void SelectIconItemsInRect(ListBox listBox, Rect selectionRect)
@@ -217,7 +217,7 @@ public partial class MainWindow
             _syncingSelection = false;
         }
 
-        SchedulePreviewUpdate(listBox.SelectedItems.OfType<FileItem>().FirstOrDefault());
+        SchedulePreviewUpdate(listBox.SelectedItems.OfType<FileItem>());
     }
 
     private static bool ElementIntersects(FrameworkElement element, Visual relativeTo, Rect selectionRect)

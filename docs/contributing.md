@@ -83,9 +83,30 @@ The test project is `Tfx.Tests` (xUnit). It references `Tfx.Core` only — not t
 
 ### Bench / performance probes
 
-Performance benchmarks live alongside the unit tests in `Tfx.Tests/Benchmarks/` once §2.5 of the roadmap ships. Benchmarks print timings via `Console.WriteLine` and do not assert. Run them via `dotnet test --filter` once they exist.
+Performance benchmarks live alongside the unit tests in [`Tfx.Tests/Benchmarks/`](../Tfx.Tests/Benchmarks/). They are regular `[Fact]` tests but print per-iteration timings via `ITestOutputHelper` and **never assert** — comparison is manual against rolling baselines on the same machine.
 
-Until then, ad-hoc measurements via `Stopwatch` are acceptable. Set the environment variable `TFX_PERFORMANCE_LOGS=1` before launching the app to enable any trace points that have been added.
+Run them alongside the rest of the suite:
+
+```powershell
+dotnet test Tfx.Tests/Tfx.Tests.csproj
+```
+
+Or just the benchmarks, with their timings visible:
+
+```powershell
+dotnet test Tfx.Tests/Tfx.Tests.csproj --filter "FullyQualifiedName~PerformanceBenchmarks" --logger "console;verbosity=detailed"
+```
+
+Enable runtime tracing in the application itself by either:
+
+- Setting the environment variable `TFX_PERFORMANCE_LOGS=1` before launching `Tfx.exe` / `dotnet run`. The env var wins over the in-app setting so CI and scripted runs do not have to flip a flag.
+- Toggling the persisted setting `ShowPerformanceLogs` in `%APPDATA%\tfx\settings.json`.
+
+When tracing is on, `PerformanceTrace.Begin(...)` and `Measure(...)` calls in hot paths (`DirectoryLoader.Load`, `PreviewLoader.Load`, `ApplySearchFilter`, `CsvParser.Parse`, `JsonPrettyPrinter.TryPrettyPrint`) print one line each to `Debug` and the console:
+
+```text
+[tfx perf] DirectoryLoader.Load(Downloads)               12.345 ms
+```
 
 ---
 
