@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.2
+
+- Add Swap-panes toolbar button and `Ctrl+Shift+S` shortcut. In split view, swaps the left / right pane paths and moves the active pane to follow the previously-active folder.
+- Add `Ctrl+\` shortcut for split-pane toggle and `Ctrl+Shift+P` for preview-pane toggle. Tooltips and the README key table updated.
+- When the user toggles split view back on, reset the pane ratio to 50 / 50 so the single-pane area divides evenly. The user can still drag the splitter afterward; that ratio is saved.
+- Rework Tab / arrow key focus behaviour to match the documented spec: Tab swaps between the two file panes only when focus is already in a pane and split view is on; folder tree, toolbar, and search box fall through to default focus traversal. Left / Right move focus between panes only when focus is already in a pane.
+- Always intercept Up / Down / PageUp / PageDown while focus is anywhere inside the active pane (container, row, or cell). The previous "only when SelectedItem is null" guard raced with focus settling after a Tab switch.
+- Auto-select the first item and use the queued listing-focus helper when switching panes via Tab or Left / Right, so arrow keys land on the row container reliably.
+- File-move audit: paste now uses `VbFileSystem.MoveDirectory` (handles cross-volume), wraps the paste loop in try/catch so one failure no longer aborts the rest, and post-verifies that move sources are gone. Drag-drop reports left-behind sources and per-file failures with names. New localized status messages.
+- Network-drive responsiveness: drop `File.Exists` from `UpdatePreview` and the rendered-toggle visibility check, drop `Directory.Exists` validation from `LoadPinned`, move `Directory.Exists` into the background task in `ReloadDiffCoreAsync`, and run `Directory.Exists` + `new FileSystemWatcher` on a background thread. Skip FSW entirely for UNC paths (the periodic poll covers them).
+- WebView2 on shutdown: replace synchronous `Dispose()` with `CoreWebView2.Stop()` to avoid an occasional "not responding" stall when the window closes mid-navigation.
+- Move `Markdown.ToHtml` rendering to a background `Task.Run`, skip the WebView2 about:blank refresh when the WebView was already hidden, and cache `DriveInfo` free-space lookups for 5 s so a slow network share no longer blocks the status bar.
+- Status-bar performance: status text and free-space refresh decoupled — `GetFreeSpaceText` returns the cached value immediately and triggers a background refresh that swaps the text in when ready.
+
 ## 0.4.1
 
 - Add a `Tfx.Tests` xUnit project and a new `Tfx.Core` library that holds the pure-logic types (`ArchivePath`, `CsvParser`, `JsonPrettyPrinter`) so they can be tested without WPF. CI runs `dotnet restore` / `build` / `test` on `windows-latest` via `.github/workflows/build.yml`.

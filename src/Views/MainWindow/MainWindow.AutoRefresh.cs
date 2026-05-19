@@ -84,33 +84,70 @@ public partial class MainWindow
         }
     }
 
-    private void UpdateWatcherForPane(Pane pane)
+    private async void UpdateWatcherForPane(Pane pane)
     {
         var existing = pane == Pane.Left ? _leftWatcher : _rightWatcher;
         existing?.Dispose();
         SetWatcher(pane, null);
 
         var path = PathOf(pane);
-        if (string.IsNullOrEmpty(path) || ArchivePath.Contains(path) || !Directory.Exists(path))
+        if (string.IsNullOrEmpty(path) || ArchivePath.Contains(path))
         {
             return;
         }
 
-        FileSystemWatcher watcher;
+        // UNC / network shares: FileSystemWatcher is unreliable (events drop
+        // silently, creation can hang on slow shares). Rely on the periodic
+        // poll instead — it auto-runs for panes whose watcher is null.
+        if (IsLikelyNetworkPath(path))
+        {
+            return;
+        }
+
+        // Run Directory.Exists and FileSystemWatcher creation on a background
+        // thread so a slow drive does not stall the UI during navigation.
+        FileSystemWatcher? watcher;
         try
         {
-            watcher = new FileSystemWatcher(path)
+            watcher = await Task.Run(() =>
             {
-                NotifyFilter = NotifyFilters.FileName
-                    | NotifyFilters.DirectoryName
-                    | NotifyFilters.LastWrite
-                    | NotifyFilters.Size
-                    | NotifyFilters.Attributes,
-                IncludeSubdirectories = false,
-            };
+                try
+                {
+                    if (!Directory.Exists(path))
+                    {
+                        return null;
+                    }
+                    return new FileSystemWatcher(path)
+                    {
+                        NotifyFilter = NotifyFilters.FileName
+                            | NotifyFilters.DirectoryName
+                            | NotifyFilters.LastWrite
+                            | NotifyFilters.Size
+                            | NotifyFilters.Attributes,
+                        IncludeSubdirectories = false,
+                    };
+                }
+                catch
+                {
+                    return null;
+                }
+            });
         }
         catch
         {
+            return;
+        }
+
+        if (watcher is null)
+        {
+            return;
+        }
+
+        // The pane may have navigated again while we were on the background
+        // thread; in that case throw away the watcher we just built.
+        if (!string.Equals(PathOf(pane), path, StringComparison.OrdinalIgnoreCase))
+        {
+            watcher.Dispose();
             return;
         }
 
@@ -136,6 +173,9 @@ public partial class MainWindow
 
         SetWatcher(pane, watcher);
     }
+
+    private static bool IsLikelyNetworkPath(string path) =>
+        path.StartsWith(@"\\", StringComparison.Ordinal);
 
     private void SetWatcher(Pane pane, FileSystemWatcher? watcher)
     {
@@ -208,11 +248,6 @@ public partial class MainWindow
             return;
         }
 
-        if (!Directory.Exists(path))
-        {
-            return;
-        }
-
         var target = ItemsOf(pane);
         var loadLarge = _settings.ViewMode == ViewMode.Icons;
         var options = new DirectoryLoadOptions(
@@ -221,12 +256,26 @@ public partial class MainWindow
             LoadLargeIcons: loadLarge,
             IncludeOwner: IsFileColumnVisible("Owner"));
 
-        List<FileItem> newItems;
+        List<FileItem>? newItems;
         try
         {
-            newItems = await Task.Run(() => DirectoryLoader.Load(path, options, CancellationToken.None));
+            // Run Directory.Exists on the background thread along with the
+            // enumeration — both can stall on a slow / offline network share.
+            newItems = await Task.Run(() =>
+            {
+                if (!Directory.Exists(path))
+                {
+                    return null;
+                }
+                return DirectoryLoader.Load(path, options, CancellationToken.None);
+            });
         }
         catch
+        {
+            return;
+        }
+
+        if (newItems is null)
         {
             return;
         }

@@ -102,6 +102,21 @@ public partial class MainWindow
             ToggleHidden();
             e.Handled = true;
         }
+        else if (ctrl && !shift && (e.Key == Key.OemBackslash || e.Key == Key.Oem5))
+        {
+            ToggleSplit();
+            e.Handled = true;
+        }
+        else if (ctrl && shift && e.Key == Key.P)
+        {
+            TogglePreview();
+            e.Handled = true;
+        }
+        else if (ctrl && shift && e.Key == Key.S)
+        {
+            SwapPanes();
+            e.Handled = true;
+        }
         else if (e.Key == Key.Delete)
         {
             if (!InArchiveContext)
@@ -127,17 +142,28 @@ public partial class MainWindow
             NavigateParent();
             e.Handled = true;
         }
-        else if (e.Key == Key.Left)
+        else if (e.Key == Key.Left || e.Key == Key.Right)
         {
-            UpdateActivePane(LeftGrid);
-            LeftGrid.Focus();
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Right && RightPaneColumn.Width.Value > 0)
-        {
-            UpdateActivePane(RightGrid);
-            RightGrid.Focus();
-            e.Handled = true;
+            // Left / Right move focus between file panes only when focus is
+            // already inside a pane. From the toolbar, folder tree, search
+            // box, etc. these keys fall through to default behavior.
+            var focused = Keyboard.FocusedElement as DependencyObject;
+            var inLeftPane = IsInsidePane(focused, isLeft: true);
+            var inRightPane = IsInsidePane(focused, isLeft: false);
+            if (!inLeftPane && !inRightPane)
+            {
+                return;
+            }
+            if (e.Key == Key.Left && inRightPane)
+            {
+                FocusPane(Pane.Left);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Right && inLeftPane && RightPaneColumn.Width.Value > 0)
+            {
+                FocusPane(Pane.Right);
+                e.Handled = true;
+            }
         }
     }
 
@@ -162,7 +188,13 @@ public partial class MainWindow
             return;
         }
 
-        if (!inTextBox && e.Key is Key.Up or Key.Down && IsFocusInActiveListing() && ActiveListingSelectedItem() is null)
+        // Always own Up / Down / PageUp / PageDown while focus is anywhere
+        // inside the active pane (container, row, or cell). Relying on the
+        // DataGrid / ListBox built-in handler races with focus settling after
+        // a Tab switch — sometimes focus ends up on the container and the
+        // built-in handler does nothing. Intercepting here makes navigation
+        // deterministic regardless of where focus landed inside the pane.
+        if (!inTextBox && e.Key is Key.Up or Key.Down or Key.PageUp or Key.PageDown && IsFocusInActiveListing())
         {
             MoveActiveListingSelection(e.Key);
             e.Handled = true;
@@ -211,36 +243,75 @@ public partial class MainWindow
 
     private bool HandleTabFocusCycle()
     {
-        var focused = Keyboard.FocusedElement as DependencyObject;
-        var inFolderTree = IsInside(focused, FolderTree);
-        var inLeft = IsInside(focused, LeftGrid);
-        var inRight = IsInside(focused, RightGrid);
-
-        if (!inFolderTree && !inLeft && !inRight)
+        // Tab is intercepted only when focus is already in a file pane, and
+        // only when split view is on. Other targets (folder tree, toolbar,
+        // search box) fall through to the default WPF Tab traversal.
+        if (RightPaneColumn.Width.Value <= 0)
         {
             return false;
         }
 
-        var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
-        var rightVisible = RightPaneColumn.Width.Value > 0;
-
-        var sequence = new List<IInputElement> { FolderTree, LeftGrid };
-        if (rightVisible)
+        var focused = Keyboard.FocusedElement as DependencyObject;
+        var inLeft = IsInsidePane(focused, isLeft: true);
+        var inRight = IsInsidePane(focused, isLeft: false);
+        if (!inLeft && !inRight)
         {
-            sequence.Add(RightGrid);
+            return false;
         }
 
-        var currentIdx = inFolderTree ? 0 : (inLeft ? 1 : 2);
-        if (currentIdx >= sequence.Count)
-        {
-            currentIdx = sequence.Count - 1;
-        }
-
-        var step = shift ? -1 : 1;
-        var nextIdx = ((currentIdx + step) % sequence.Count + sequence.Count) % sequence.Count;
-
-        FocusView(sequence[nextIdx]);
+        FocusPane(inLeft ? Pane.Right : Pane.Left);
         return true;
+    }
+
+    private bool IsInsidePane(DependencyObject? focused, bool isLeft)
+    {
+        if (focused is null)
+        {
+            return false;
+        }
+        var grid = isLeft ? LeftGrid : RightGrid;
+        var iconView = isLeft ? LeftIconView : RightIconView;
+        return IsInside(focused, grid) || IsInside(focused, iconView);
+    }
+
+    private void FocusPane(Pane pane)
+    {
+        var grid = GridOf(pane);
+        var iconView = IconViewOf(pane);
+        UpdateActivePane(grid);
+
+        // Ensure something is selected so Up / Down have a starting point.
+        if (_settings.ViewMode == ViewMode.Icons)
+        {
+            if (iconView.SelectedItem is null && iconView.Items.Count > 0)
+            {
+                iconView.SelectedIndex = 0;
+            }
+        }
+        else
+        {
+            if (grid.SelectedItem is null && grid.Items.Count > 0)
+            {
+                grid.SelectedIndex = 0;
+            }
+        }
+
+        var selected = _settings.ViewMode == ViewMode.Icons
+            ? iconView.SelectedItem as FileItem
+            : grid.SelectedItem as FileItem;
+        if (selected is not null)
+        {
+            // Use the queued variant: the single-shot version sometimes fires
+            // before the DataGrid row container is realized after a Tab focus
+            // switch, leaving focus on the container instead of the row. The
+            // queued version retries at Input / ContextIdle / ApplicationIdle
+            // priorities so the row receives focus once it exists.
+            FocusSelectedListingItem(grid, iconView, selected);
+        }
+        else
+        {
+            FocusElement(_settings.ViewMode == ViewMode.Icons ? iconView : grid);
+        }
     }
 
     private void FocusView(IInputElement element)

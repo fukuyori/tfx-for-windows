@@ -158,9 +158,10 @@ public partial class MainWindow : Window
         ExplorerButton.ToolTip = Loc.T("Reveal in Explorer");
         SelectAllButton.ToolTip = Loc.T("Select all (Ctrl+A)");
         ReloadButton.ToolTip = Loc.T("Reload (Ctrl+R)");
-        PreviewButton.ToolTip = Loc.T("Toggle preview");
+        PreviewButton.ToolTip = Loc.T("Toggle preview (Ctrl+Shift+P)");
         RenderedToggle.ToolTip = Loc.T("Show rendered preview");
-        SplitButton.ToolTip = Loc.T("Toggle split pane");
+        SplitButton.ToolTip = Loc.T("Toggle split pane (Ctrl+\\)");
+        SwapPanesButton.ToolTip = Loc.T("Swap left and right panes (Ctrl+Shift+S)");
         ColumnsButton.ToolTip = Loc.T("Columns");
         PinnedHeader.Text = Loc.T("PINNED");
         FoldersHeader.Text = Loc.T("FOLDERS");
@@ -308,7 +309,10 @@ public partial class MainWindow : Window
         FreeSpaceText.Text = GetFreeSpaceText(path);
     }
 
-    private static string GetFreeSpaceText(string path)
+    private static readonly Dictionary<string, (string Text, DateTime FetchedAt)> _freeSpaceCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan FreeSpaceCacheTtl = TimeSpan.FromSeconds(5);
+
+    private string GetFreeSpaceText(string path)
     {
         try
         {
@@ -323,17 +327,54 @@ public partial class MainWindow : Window
                 return "";
             }
 
-            var drive = new DriveInfo(root);
-            if (!drive.IsReady)
+            if (_freeSpaceCache.TryGetValue(root, out var cached) &&
+                DateTime.UtcNow - cached.FetchedAt < FreeSpaceCacheTtl)
             {
-                return "";
+                return cached.Text;
             }
 
-            return Loc.F("{0}  {1} free of {2}", drive.Name, FileItem.FormatSize(drive.AvailableFreeSpace), FileItem.FormatSize(drive.TotalSize));
+            // Show the cached (possibly stale) value immediately, refresh in background.
+            var staleText = cached.Text ?? "";
+            _ = RefreshFreeSpaceAsync(root);
+            return staleText;
         }
         catch
         {
             return "";
+        }
+    }
+
+    private async Task RefreshFreeSpaceAsync(string root)
+    {
+        try
+        {
+            var fetched = await Task.Run(() =>
+            {
+                try
+                {
+                    var drive = new DriveInfo(root);
+                    if (!drive.IsReady)
+                    {
+                        return "";
+                    }
+                    return Loc.F("{0}  {1} free of {2}", drive.Name, FileItem.FormatSize(drive.AvailableFreeSpace), FileItem.FormatSize(drive.TotalSize));
+                }
+                catch
+                {
+                    return "";
+                }
+            });
+
+            _freeSpaceCache[root] = (fetched, DateTime.UtcNow);
+            // Repaint the status bar if the active pane still points at the same root.
+            var currentRoot = Path.GetPathRoot(GetCurrentPath(_activeGrid));
+            if (string.Equals(currentRoot, root, StringComparison.OrdinalIgnoreCase))
+            {
+                FreeSpaceText.Text = fetched;
+            }
+        }
+        catch
+        {
         }
     }
 

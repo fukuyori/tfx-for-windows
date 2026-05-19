@@ -55,10 +55,14 @@ public partial class MainWindow
 
         InfoPreview.Text = $"{item.Name}\n{item.FullPath}\n{item.Kind}\n{item.SizeText}\n{Loc.F("Modified: {0}", item.ModifiedText)}\n{Loc.F("Created: {0}", item.CreatedText)}\n{Loc.F("Owner: {0}", item.OwnerText)}\n{Loc.F("Attributes: {0}", item.AttributeText)}";
 
-        if (item.IsDirectory || item.IsParent || !File.Exists(item.FullPath))
+        if (item.IsDirectory || item.IsParent)
         {
             return;
         }
+
+        // Skip the File.Exists check on the UI thread: it can stall on slow
+        // network shares. PreviewLoader will throw if the file actually went
+        // away, and the catch below surfaces the error.
 
         try
         {
@@ -113,8 +117,11 @@ public partial class MainWindow
 
     private void UpdateRenderedToggleVisibility(FileItem? item)
     {
+        // Decide visibility from the FileItem alone — never call File.Exists
+        // here. The item came from a recent directory enumeration and may sit
+        // on a slow network share; the toggle is harmless even if the file
+        // has since been removed.
         var visible = item is { IsDirectory: false, IsParent: false } &&
-                      File.Exists(item.FullPath) &&
                       IsRenderable(Path.GetExtension(item.FullPath).ToLowerInvariant());
         RenderedToggle.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         RenderedToggle.IsChecked = _settings.RenderMarkdownHtml;
@@ -169,8 +176,22 @@ public partial class MainWindow
         {
             if (extension == ".md")
             {
-                var bodyHtml = Markdown.ToHtml(text, MarkdownPipeline);
-                HtmlPreview.NavigateToString(BuildMarkdownDocument(bodyHtml));
+                string fullHtml;
+                try
+                {
+                    fullHtml = await Task.Run(
+                        () => BuildMarkdownDocument(Markdown.ToHtml(text, MarkdownPipeline)),
+                        cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                if (cts.IsCancellationRequested)
+                {
+                    return;
+                }
+                HtmlPreview.NavigateToString(fullHtml);
             }
             else
             {
@@ -305,9 +326,13 @@ public partial class MainWindow
 
     private void HideHtmlPreview()
     {
+        var wasVisible = HtmlPreview.Visibility == Visibility.Visible;
         HtmlPreview.Visibility = Visibility.Collapsed;
         PreviewScroll.Visibility = Visibility.Visible;
-        if (HtmlPreview.CoreWebView2 != null)
+        // Only churn WebView2 when it was actually showing something; navigating
+        // to about:blank on every selection change otherwise floods the WebView2
+        // navigation queue.
+        if (wasVisible && HtmlPreview.CoreWebView2 != null)
         {
             try
             {
@@ -357,7 +382,9 @@ img { max-width:100%; }
         PreviewButton.IsChecked = visible;
     }
 
-    private void Preview_Click(object sender, RoutedEventArgs e)
+    private void Preview_Click(object sender, RoutedEventArgs e) => TogglePreview();
+
+    private void TogglePreview()
     {
         SetPreviewVisible(PreviewColumn.Width.Value == 0);
         SaveSettings();

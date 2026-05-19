@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.4.1
+Version: 0.4.2
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -45,7 +45,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.4.1 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.4.2 |
 +---------------------------------------------------------------------+
 ```
 
@@ -62,7 +62,7 @@ Buttons use **Segoe Fluent Icons** with **Segoe MDL2 Assets** fallback. Hover fo
 | Navigation | Back, Forward, Up, Open folder, Pin / unpin current folder |
 | Path / search | Active path, Search, Focus search |
 | View | View mode (Details / Icons), Toggle hidden files |
-| Utility | Open Terminal here, Reveal in Explorer, Select all, Reload, Preview toggle, Split toggle, Columns |
+| Utility | Open Terminal here, Reveal in Explorer, Select all, Reload, Preview toggle, Split toggle, Swap panes, Columns |
 
 File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste are available from the keyboard and context menu.
 
@@ -88,11 +88,14 @@ File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste 
 | `Ctrl + R` | Reload |
 | `Ctrl + F` | Focus Search |
 | `Ctrl + L` / `F4` | Focus address bar (edit path) |
-| `Tab` / `Shift + Tab` | Cycle focus: FolderTree -> Left pane -> Right pane |
-| `Left` / `Right` | Move focus between file panes |
+| `Tab` / `Shift + Tab` | Switch focus to the other file pane (split view only; only when focus is already in a pane) |
+| `Left` / `Right` | Move focus between file panes (only when focus is already in a pane) |
 | `Up` / `Down` | Move selection in active view |
 | `Ctrl + Shift + T` | Open Terminal in current folder |
 | `Ctrl + Shift + .` | Toggle hidden files |
+| `Ctrl + \` | Toggle split pane |
+| `Ctrl + Shift + P` | Toggle preview pane |
+| `Ctrl + Shift + S` | Swap left and right panes (split view only) |
 | `Esc` | Cancel rename / clear search / exit address-bar edit |
 
 ---

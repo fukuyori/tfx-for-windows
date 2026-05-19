@@ -111,9 +111,48 @@ public partial class MainWindow
         RightPaneColumn.Width = new GridLength(1 - ratio, GridUnitType.Star);
     }
 
-    private void Split_Click(object sender, RoutedEventArgs e)
+    private void SwapPanes_Click(object sender, RoutedEventArgs e) => SwapPanes();
+
+    private void SwapPanes()
     {
-        SetSplitVisible(RightPaneColumn.Width.Value == 0);
+        if (RightPaneColumn.Width.Value <= 0)
+        {
+            // Single-pane view: nothing to swap.
+            return;
+        }
+
+        var oldLeftPath = _leftPath;
+        var oldRightPath = _rightPath;
+        var activeWasLeft = _activeGrid == LeftGrid;
+
+        if (string.Equals(oldLeftPath, oldRightPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        Navigate(LeftGrid, oldRightPath, false);
+        Navigate(RightGrid, oldLeftPath, false);
+
+        // Follow the path: the active pane physically moves to the other side
+        // so the user stays on the same folder they were viewing.
+        UpdateActivePane(activeWasLeft ? RightGrid : LeftGrid);
+        SaveSettings();
+    }
+
+    private void Split_Click(object sender, RoutedEventArgs e) => ToggleSplit();
+
+    private void ToggleSplit()
+    {
+        var enabling = RightPaneColumn.Width.Value == 0;
+        if (enabling)
+        {
+            // When the user toggles split back on, divide the single-pane area
+            // evenly. The previous (possibly skewed) ratio is intentionally
+            // discarded; the user can still drag the splitter afterwards, and
+            // that new ratio will be saved.
+            _settings.LeftPaneRatio = 0.5;
+        }
+        SetSplitVisible(enabling);
         SaveSettings();
     }
 }

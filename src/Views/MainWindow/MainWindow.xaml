@@ -112,6 +112,38 @@
                             </Grid>
                         </Viewbox>
                     </ToggleButton>
+                    <Button x:Name="SwapPanesButton" Style="{StaticResource ToolbarButton}" Click="SwapPanes_Click" ToolTip="Swap left and right panes (Ctrl+Shift+S)">
+                        <Viewbox Width="15" Height="11" Stretch="Uniform">
+                            <Grid Width="15" Height="11">
+                                <Rectangle Width="5"
+                                           Height="9"
+                                           RadiusX="1.2"
+                                           RadiusY="1.2"
+                                           HorizontalAlignment="Left"
+                                           VerticalAlignment="Center"
+                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                           StrokeThickness="1.2"
+                                           Fill="Transparent"
+                                           SnapsToDevicePixels="True" />
+                                <Rectangle Width="5"
+                                           Height="9"
+                                           RadiusX="1.2"
+                                           RadiusY="1.2"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                           StrokeThickness="1.2"
+                                           Fill="Transparent"
+                                           SnapsToDevicePixels="True" />
+                                <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.1"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Data="M 5.5,3.5 L 9.5,3.5 M 8.5,2.5 L 9.5,3.5 L 8.5,4.5 M 5.5,7.5 L 9.5,7.5 M 6.5,6.5 L 5.5,7.5 L 6.5,8.5"
+                                      SnapsToDevicePixels="True" />
+                            </Grid>
+                        </Viewbox>
+                    </Button>
                     <Button Style="{StaticResource ToolbarButton}" x:Name="ColumnsButton" Click="Columns_Click" ToolTip="Columns" Content="&#xE713;" />
                 </StackPanel>
             </Grid>

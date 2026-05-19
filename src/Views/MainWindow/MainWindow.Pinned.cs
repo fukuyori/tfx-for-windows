@@ -14,7 +14,11 @@ public partial class MainWindow
     {
         _pinned.Clear();
 
-        foreach (var folder in _settings.PinnedFolders.Where(Directory.Exists))
+        // Load saved pins as-is — do not call Directory.Exists on the UI thread.
+        // Network pins that are temporarily offline must still show up so the
+        // user can see (and unpin) them; clicking a stale pin fails through the
+        // normal Navigate error path.
+        foreach (var folder in _settings.PinnedFolders)
         {
             _pinned.Add(folder);
         }

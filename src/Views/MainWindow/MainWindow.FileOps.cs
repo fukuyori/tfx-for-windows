@@ -108,6 +108,10 @@ public partial class MainWindow
 
         var destination = GetCurrentPath(_activeGrid);
         var files = Clipboard.GetFileDropList().Cast<string>().ToArray();
+        var succeeded = 0;
+        var failed = new List<string>();
+        var leftBehind = new List<string>();
+
         foreach (var source in files)
         {
             var requestedTarget = Path.Combine(destination, Path.GetFileName(source));
@@ -118,34 +122,72 @@ public partial class MainWindow
             }
 
             var target = FsHelpers.NextAvailablePath(requestedTarget);
-            if (Directory.Exists(source))
+            try
             {
-                if (isMove)
+                if (Directory.Exists(source))
                 {
-                    Directory.Move(source, target);
+                    if (isMove)
+                    {
+                        // Use VbFileSystem.MoveDirectory: it falls back to copy + delete
+                        // across volumes, where Directory.Move would throw IOException.
+                        VbFileSystem.MoveDirectory(source, target);
+                    }
+                    else
+                    {
+                        VbFileSystem.CopyDirectory(source, target);
+                    }
+                }
+                else if (File.Exists(source))
+                {
+                    if (isMove)
+                    {
+                        File.Move(source, target);
+                    }
+                    else
+                    {
+                        File.Copy(source, target);
+                    }
                 }
                 else
                 {
-                    VbFileSystem.CopyDirectory(source, target);
+                    failed.Add(Path.GetFileName(source));
+                    continue;
+                }
+
+                // Post-move verification: if a move claimed to succeed but the
+                // source still exists, the underlying copy-then-delete swallowed
+                // a delete failure. Track for user feedback.
+                if (isMove && (File.Exists(source) || Directory.Exists(source)))
+                {
+                    leftBehind.Add(Path.GetFileName(source));
+                }
+                else
+                {
+                    succeeded++;
                 }
             }
-            else if (File.Exists(source))
+            catch (Exception ex)
             {
-                if (isMove)
-                {
-                    File.Move(source, target);
-                }
-                else
-                {
-                    File.Copy(source, target);
-                }
+                failed.Add($"{Path.GetFileName(source)} ({ex.Message})");
             }
         }
 
         _cutBuffer = [];
         Reload(LeftGrid);
         Reload(RightGrid);
-        SetStatus(Loc.F("Pasted {0} item(s)", files.Length));
+
+        if (failed.Count == 0 && leftBehind.Count == 0)
+        {
+            SetStatus(Loc.F("Pasted {0} item(s)", succeeded));
+        }
+        else if (leftBehind.Count > 0)
+        {
+            SetStatus(Loc.F("Pasted {0}; source remained for: {1}", succeeded, string.Join(", ", leftBehind)));
+        }
+        else
+        {
+            SetStatus(Loc.F("Pasted {0}; failed: {1}", succeeded, string.Join(", ", failed)));
+        }
     }
 
     private void MoveSelectionToTrash()

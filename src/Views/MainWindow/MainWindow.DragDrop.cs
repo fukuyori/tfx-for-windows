@@ -134,6 +134,9 @@ public partial class MainWindow
         var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
         var effect = ResolveDropEffect(e, destination);
 
+        var leftBehind = new List<string>();
+        var failed = new List<string>();
+
         foreach (var source in paths)
         {
             try
@@ -175,17 +178,35 @@ public partial class MainWindow
                             File.Copy(source, target);
                         }
                     }
+
+                    // Post-move verification: VbFileSystem.MoveDirectory and
+                    // File.Move fall back to copy + delete across volumes; if the
+                    // delete half fails silently we'd otherwise leave duplicates
+                    // at the source. Flag those so the user is not surprised.
+                    if (effect == DragDropEffects.Move && (File.Exists(source) || Directory.Exists(source)))
+                    {
+                        leftBehind.Add(Path.GetFileName(source));
+                    }
                 }
             }
             catch (Exception ex)
             {
-                SetStatus(ex.Message);
+                failed.Add($"{Path.GetFileName(source)} ({ex.Message})");
             }
         }
 
         e.Effects = effect;
         Reload(LeftGrid);
         Reload(RightGrid);
+
+        if (leftBehind.Count > 0)
+        {
+            SetStatus(Loc.F("Source remained for: {0}", string.Join(", ", leftBehind)));
+        }
+        else if (failed.Count > 0)
+        {
+            SetStatus(Loc.F("Failed: {0}", string.Join(", ", failed)));
+        }
     }
 
     private void Grid_DragOver(object sender, DragEventArgs e)
