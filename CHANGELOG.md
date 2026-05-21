@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1
+
+- Git column centered: the badge character now centers in the 30 px column instead of hugging the left edge.
+- Toggle split-on copies the left pane's current folder to the right pane (unless they already match), so opening split view starts both sides at the same known location.
+- Arrow-key wrap-around in the file list: `..` + Up wraps to the bottom entry; the bottom + Down wraps to `..`. PageUp / PageDown still clamp at the edges.
+- Arrow keys with no current selection (e.g. right after a rename) now land on `..` so navigation can resume immediately.
+- Rename keeps the renamed entry selected: the new name is set as a pending selection target before the post-rename reload, restoring selection + focus on the renamed row.
+
 ## 0.5.0
 
 - Git status indicators (roadmap §2.6): each file row in a Git working copy shows a one-character badge in a new "Git" column (M / A / D / R / C / ? / ! / U), and the current branch appears in the status bar as `⎇ name` next to the free-space text. Directories aggregate to "M" or "?" based on descendants. Uses `git status --porcelain=v2 --branch --untracked-files=normal --no-renames` on a background thread with cancellation and an 8-second timeout; silently disables itself if `git` is not on `PATH`. Refresh hooks: navigation, reload completion, and the auto-refresh diff path. `Tfx.Core/GitStatus.cs` parser and `Tfx.Tests/GitStatusParserTests.cs` (20 cases).

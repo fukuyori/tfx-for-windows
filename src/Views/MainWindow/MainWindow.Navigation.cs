@@ -296,16 +296,37 @@ public partial class MainWindow
             ? iconView.SelectedItem
             : _activeGrid.SelectedItem;
         var currentIndex = current is null ? -1 : items.IndexOf(current);
-        var step = key switch
+        var lastIndex = items.Count - 1;
+
+        int nextIndex;
+        if (currentIndex < 0)
         {
-            Key.Up => -1,
-            Key.PageUp => -10,
-            Key.PageDown => 10,
-            _ => 1
-        };
-        var nextIndex = currentIndex < 0
-            ? 0
-            : Math.Clamp(currentIndex + step, 0, items.Count - 1);
+            // No selection (e.g. just after a rename or focus loss): land on
+            // the first item (which is always the ".." parent row when one
+            // exists).
+            nextIndex = 0;
+        }
+        else if (key == Key.Up && currentIndex == 0)
+        {
+            // ".." + Up wraps to the bottom of the listing.
+            nextIndex = lastIndex;
+        }
+        else if (key == Key.Down && currentIndex == lastIndex)
+        {
+            // Last entry + Down wraps to "..".
+            nextIndex = 0;
+        }
+        else
+        {
+            var step = key switch
+            {
+                Key.Up => -1,
+                Key.PageUp => -10,
+                Key.PageDown => 10,
+                _ => 1, // Down
+            };
+            nextIndex = Math.Clamp(currentIndex + step, 0, lastIndex);
+        }
 
         if (items[nextIndex] is not FileItem item)
         {

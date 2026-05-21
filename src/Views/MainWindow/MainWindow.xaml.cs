@@ -91,16 +91,38 @@ public partial class MainWindow : Window
         // path focuses the ".." row when items finish loading. Add a belt-and-
         // braces follow-up at ApplicationIdle so focus is guaranteed to land on
         // the left pane even if WPF was still arranging the window.
-        Loaded += (_, _) =>
+        Loaded += (_, _) => Dispatcher.BeginInvoke(EnsureInitialLeftFocus, DispatcherPriority.ApplicationIdle);
+    }
+
+    private int _initialFocusAttempts;
+
+    private void EnsureInitialLeftFocus()
+    {
+        // Don't fight the user — if they already moved focus elsewhere, stop.
+        if (_activeGrid != LeftGrid)
         {
-            Dispatcher.BeginInvoke(() =>
+            return;
+        }
+
+        // The initial DirectoryLoader runs on Task.Run; items may still be on
+        // the way. Retry a few times before giving up.
+        if (LeftGrid.Items.Count == 0)
+        {
+            if (++_initialFocusAttempts > 20)
             {
-                if (_activeGrid == LeftGrid)
-                {
-                    FocusPane(Pane.Left);
-                }
-            }, DispatcherPriority.ApplicationIdle);
-        };
+                return;
+            }
+            Dispatcher.BeginInvoke(EnsureInitialLeftFocus, DispatcherPriority.ApplicationIdle);
+            return;
+        }
+
+        // Select the first row when nothing is selected. That row is "..".
+        // if there is one (non-root path), otherwise the topmost entry.
+        if (LeftGrid.SelectedItem is null)
+        {
+            LeftGrid.SelectedIndex = 0;
+        }
+        FocusPane(Pane.Left);
     }
 
     private string ResolveInitialPath()

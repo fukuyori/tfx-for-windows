@@ -364,6 +364,11 @@ public partial class MainWindow
             return;
         }
 
+        // Restore selection on the renamed entry after the reload so the
+        // user keeps their place (and so arrow keys keep navigating).
+        var renamedName = Path.GetFileName(target);
+        SetPendingSelectionName(PaneOf(grid), renamedName);
+
         Dispatcher.BeginInvoke(() =>
         {
             Reload(LeftGrid);

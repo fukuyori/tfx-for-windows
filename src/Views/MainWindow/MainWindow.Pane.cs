@@ -154,6 +154,16 @@ public partial class MainWindow
             _settings.LeftPaneRatio = 0.5;
         }
         SetSplitVisible(enabling);
+
+        // Open the right pane at the same folder as the left pane so the
+        // user starts with a known location instead of an unrelated saved
+        // path. Only when toggling on, and only when the two diverge.
+        if (enabling && !string.IsNullOrEmpty(_leftPath) &&
+            !string.Equals(_leftPath, _rightPath, StringComparison.OrdinalIgnoreCase))
+        {
+            Navigate(RightGrid, _leftPath, false);
+        }
+
         SaveSettings();
     }
 }
