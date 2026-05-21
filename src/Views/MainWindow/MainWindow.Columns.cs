@@ -14,6 +14,7 @@ public partial class MainWindow
         var defs = new List<FileColumnDefinition>
         {
             new("Name", Loc.T("Name"), LeftNameColumn, RightNameColumn),
+            new("Git", Loc.T("Git"), LeftGitColumn, RightGitColumn),
             new("DateModified", Loc.T("Date modified"), LeftDateModifiedColumn, RightDateModifiedColumn),
             new("Type", Loc.T("Type"), LeftTypeColumn, RightTypeColumn),
             new("Size", Loc.T("Size"), LeftSizeColumn, RightSizeColumn),

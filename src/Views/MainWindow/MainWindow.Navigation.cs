@@ -50,6 +50,7 @@ public partial class MainWindow
             QueueFolderTreeSyncToActivePane();
         }
         UpdateWatcherForPane(PaneOf(grid));
+        RefreshGitStatusForPane(PaneOf(grid));
         SaveSettings();
     }
 
@@ -93,6 +94,7 @@ public partial class MainWindow
             }
 
             ApplyPendingSelection(grid, pane);
+            ApplyGitBadges(pane);
             UpdateStatus();
         }
         catch (OperationCanceledException)

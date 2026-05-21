@@ -190,6 +190,8 @@ Done when:
 
 #### 2.6 Git Status Indicators
 
+Status: **Done.** `Tfx.Core/GitStatus.cs` implements the `git status --porcelain=v2 --branch --untracked-files=normal --no-renames` parser (untracked, ignored, modified, added, deleted, renamed, copied, conflicted). `src/Services/GitStatusReader.cs` walks for a `.git` ancestor and runs the `git` process on a background thread with cancellation and 8-second timeout; silently disables itself if `git` isn't on `PATH`. `MainWindow.GitStatus.cs` orchestrates per-pane state, cached `_leftGitRoot` / `_rightGitRoot` + `_leftGitStatus` / `_rightGitStatus`, and stamps the new mutable `FileItem.GitStatusText` (now `INotifyPropertyChanged`-aware) onto each row. A new narrow "Git" column appears between Name and Date Modified, and the current branch shows in the status bar as `⎇ name` next to the free-space text. Refresh hooks: Navigate, Reload completion, and the auto-refresh diff path. Folders aggregate to "M" / "?" if any descendant has changes. Move this section under §1 with a version tag at the next release bump.
+
 Upstream: §2.2 (Git Status Indicators) — same plan; `Process.Start` replaces the macOS `Process` API but the porcelain v2 parsing is identical.
 
 Goal: surface Git status next to files inside a Git working copy. Direct port of upstream §2.2.

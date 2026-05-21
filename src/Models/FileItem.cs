@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.IO;
 using System.Security.AccessControl;
 using System.Security.Principal;
@@ -5,7 +6,7 @@ using System.Windows.Media;
 
 namespace Tfx;
 
-public sealed class FileItem
+public sealed class FileItem : INotifyPropertyChanged
 {
     public required string Name { get; init; }
     public required string FullPath { get; init; }
@@ -22,6 +23,28 @@ public sealed class FileItem
     public string AttributeText { get; init; } = "";
     public ImageSource? Icon { get; init; }
     public ImageSource? LargeIcon { get; init; }
+
+    private string _gitStatusText = "";
+
+    /// <summary>
+    /// One-character Git status badge (e.g. "M", "?", "A") — set externally
+    /// after a `git status` run; bound by the Git column in the file list.
+    /// </summary>
+    public string GitStatusText
+    {
+        get => _gitStatusText;
+        set
+        {
+            if (_gitStatusText == value)
+            {
+                return;
+            }
+            _gitStatusText = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(GitStatusText)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public static FileItem Parent(string path, bool loadSmallIcon, bool loadLargeIcon) => new()
     {

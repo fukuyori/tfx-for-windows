@@ -31,6 +31,11 @@
             <Setter Property="TextAlignment" Value="Right" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
+        <Style x:Key="CenteredCellText" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
     </Window.Resources>
     <DockPanel>
         <Border DockPanel.Dock="Top" Background="#0B0E10" BorderBrush="{StaticResource TfxBorder}" BorderThickness="0,0,0,1" Padding="5,4">
@@ -164,6 +169,7 @@
             </StatusBarItem>
             <StatusBarItem DockPanel.Dock="Right">
                 <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="GitBranchText" Margin="0,0,12,0" />
                     <TextBlock x:Name="FreeSpaceText" Margin="0,0,12,0" />
                     <TextBlock x:Name="VersionStatusText" Margin="0,0,8,0" />
                 </StackPanel>
@@ -225,12 +231,13 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>
+                                <DataGridTextColumn x:Name="LeftGitColumn" Header="Git" Binding="{Binding GitStatusText}" SortMemberPath="GitStatusText" Width="30" ElementStyle="{StaticResource CenteredCellText}" CanUserResize="False" />
                                 <DataGridTextColumn x:Name="LeftDateModifiedColumn" Header="Date modified" Binding="{Binding ModifiedText}" SortMemberPath="Modified" Width="155" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
                                 <DataGridTextColumn x:Name="LeftTypeColumn" Header="Type" Binding="{Binding Kind}" SortMemberPath="Kind" Width="110" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
                                 <DataGridTextColumn x:Name="LeftSizeColumn" Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="95" ElementStyle="{StaticResource RightAlignedCellText}" CanUserResize="False" />
                                 <DataGridTextColumn x:Name="LeftDateCreatedColumn" Header="Date created" Binding="{Binding CreatedText}" SortMemberPath="Created" Width="155" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
                                 <DataGridTextColumn x:Name="LeftOwnerColumn" Header="Owner" Binding="{Binding OwnerText}" SortMemberPath="OwnerText" Width="160" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
-                                <DataGridTextColumn x:Name="LeftAttributeColumn" Header="Attribute" Binding="{Binding AttributeText}" SortMemberPath="AttributeText" Width="140" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="LeftAttributeColumn" Header="Attribute" Binding="{Binding AttributeText}" SortMemberPath="AttributeText" Width="90" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
                             </DataGrid.Columns>
                         </DataGrid>
                         <ListBox x:Name="LeftIconView" Visibility="Collapsed" ItemsSource="{Binding LeftItems}"
@@ -298,12 +305,13 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>
+                                <DataGridTextColumn x:Name="RightGitColumn" Header="Git" Binding="{Binding GitStatusText}" SortMemberPath="GitStatusText" Width="30" ElementStyle="{StaticResource CenteredCellText}" CanUserResize="False" />
                                 <DataGridTextColumn x:Name="RightDateModifiedColumn" Header="Date modified" Binding="{Binding ModifiedText}" SortMemberPath="Modified" Width="155" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
                                 <DataGridTextColumn x:Name="RightTypeColumn" Header="Type" Binding="{Binding Kind}" SortMemberPath="Kind" Width="110" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
                                 <DataGridTextColumn x:Name="RightSizeColumn" Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="95" ElementStyle="{StaticResource RightAlignedCellText}" CanUserResize="False" />
                                 <DataGridTextColumn x:Name="RightDateCreatedColumn" Header="Date created" Binding="{Binding CreatedText}" SortMemberPath="Created" Width="155" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
                                 <DataGridTextColumn x:Name="RightOwnerColumn" Header="Owner" Binding="{Binding OwnerText}" SortMemberPath="OwnerText" Width="160" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
-                                <DataGridTextColumn x:Name="RightAttributeColumn" Header="Attribute" Binding="{Binding AttributeText}" SortMemberPath="AttributeText" Width="140" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
+                                <DataGridTextColumn x:Name="RightAttributeColumn" Header="Attribute" Binding="{Binding AttributeText}" SortMemberPath="AttributeText" Width="90" ElementStyle="{StaticResource ListingCellText}" CanUserResize="False" />
                             </DataGrid.Columns>
                         </DataGrid>
                         <ListBox x:Name="RightIconView" Visibility="Collapsed" ItemsSource="{Binding RightItems}"

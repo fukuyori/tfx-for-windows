@@ -291,6 +291,8 @@ public partial class MainWindow
         }
 
         DiffApply(target, newItems);
+        // External change → re-fetch git status and re-stamp badges.
+        RefreshGitStatusForPane(pane);
         UpdateStatus();
     }
 

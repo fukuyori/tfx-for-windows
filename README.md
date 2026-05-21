@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.4.5
+Version: 0.5.0
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -26,7 +26,11 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Zip compression and extraction from the file pane or context menu, plus read-only browsing inside `.zip` files (open, drag out to other apps)
 - Right-click context menu (Windows 11–style ordering), "Open with..." dialog, sortable columns, customizable column visibility and order
 - Image / text preview pane with rendered Markdown, HTML, CSV / TSV tables, and pretty-printed JSON (toggle between rendered view and source)
-- Status bar with item counts, selection size, active drive's free space, and the current version
+- Multi-selection preview: when more than one item is selected, the preview pane shows a compact summary (count, combined size, per-item name / kind / size / modified) up to a cap of 8 entries
+- Recursive subfolder search: type a query in the search box and press **Enter** to walk the current folder's subtree on a background thread, streaming matches into the active pane with live status-bar progress; **Esc** cancels and restores the real listing
+- Git working-copy integration: when inside a Git repository, file rows show a one-character status badge (M / A / ? / D / R / C / U) in the **Git** column and the current branch appears in the status bar as `⎇ name`
+- USB / removable drive hot detection: the folder-tree drive list refreshes when devices are added or removed (via `WM_DEVICECHANGE`)
+- Status bar with item counts, selection size, active drive's free space (cached and refreshed in the background to stay responsive on slow network drives), Git branch, and the current version
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
 - File panes auto-refresh on external changes via `FileSystemWatcher` (with a low-frequency periodic fallback) and apply a diff so scroll position and selection are preserved
@@ -45,7 +49,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.4.5 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.5.0 |
 +---------------------------------------------------------------------+
 ```
 
@@ -63,6 +67,7 @@ Buttons use **Segoe Fluent Icons** with **Segoe MDL2 Assets** fallback. Hover fo
 | Path / search | Active path, Search, Focus search |
 | View | View mode (Details / Icons), Toggle hidden files |
 | Utility | Open Terminal here, Reveal in Explorer, Select all, Reload, Preview toggle, Split toggle, Swap panes, Columns |
+| Status bar | Item count / selection size, current Git branch (if inside a working copy), free space on the active drive, version |
 
 File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste are available from the keyboard and context menu.
 
@@ -206,11 +211,12 @@ Saved automatically to `%APPDATA%\tfx\settings.json` on every change and on clos
 | `LeftPath`, `RightPath` | Current folder of each pane |
 | `ActivePane` | Last active pane |
 | `ShowSplit`, `ShowPreview`, `ShowHidden` | View toggles |
-| `RenderMarkdownHtml` | Render Markdown / HTML in preview (toggle in preview header) |
+| `RenderMarkdownHtml` | Render Markdown / HTML / CSV / TSV / JSON previews (toggle in preview header) |
+| `ShowPerformanceLogs` | Enable `PerformanceTrace` output to Debug / console. The `TFX_PERFORMANCE_LOGS=1` environment variable also turns this on and wins over the setting. |
 | `Left`, `Top`, `Width`, `Height`, `IsMaximized` | Window placement |
 | `SidebarWidth`, `PreviewWidth`, `LeftPaneRatio` | Pane layout |
 | `PinnedFolders` | Pinned entries in display order |
-| `VisibleFileColumns` | Which columns are visible |
+| `VisibleFileColumns` | Which columns are visible (`Name` / `Git` / `DateModified` / `Type` / `Size` / `DateCreated` / `Owner` / `Attribute`) |
 | `FileColumnOrder` | Column display order |
 | `ViewMode` | `Details` or `Icons` |
 
@@ -266,17 +272,21 @@ src/Views/MainWindow/MainWindow.xaml.cs
                                     Core: fields, ctor, settings load/save, status helpers
 src/Views/MainWindow/*.cs           MainWindow partial files split by feature:
                                     tree, pinned folders, navigation, path bar, pane,
-                                    search, columns, preview, file ops, drag and drop,
-                                    external actions, context menu, view mode, keyboard
-                                    routing, auto-refresh. `MainWindow.Pane.cs` defines a
-                                    `Pane` enum + helpers (`PaneOf`, `GridOf`, `IconViewOf`,
-                                    `ItemsOf`, `PathOf`, `ActivePane`) used across the
-                                    partials to avoid `LeftGrid` / `RightGrid` ternaries.
+                                    search (recursive walk), columns, preview, file ops,
+                                    drag and drop, external actions, context menu,
+                                    view mode, keyboard routing, auto-refresh, git status.
+                                    `MainWindow.Pane.cs` defines a `Pane` enum + helpers
+                                    (`PaneOf`, `GridOf`, `IconViewOf`, `ItemsOf`, `PathOf`,
+                                    `ActivePane`) used across the partials to avoid
+                                    `LeftGrid` / `RightGrid` ternaries.
 
 src/Controls/PathBar.xaml           Breadcrumb + edit-mode address bar UserControl
 src/Controls/PathBar.xaml.cs
+src/Controls/MiddleEllipsisTextBlock.cs
+                                    Width-based middle-ellipsis TextBlock for pinned folder paths
 
-src/Models/FileItem.cs              File / folder model + factory + formatters
+src/Models/FileItem.cs              File / folder model (INPC-aware GitStatusText) +
+                                    factory + formatters
 src/Models/FileItemComparer.cs      Sort comparer (parent -> dirs -> files, then by column)
 src/Models/AppSettings.cs           Persisted settings POCO + ViewMode enum
 
@@ -285,11 +295,20 @@ src/Services/FsHelpers.cs           File system helpers (enumerate, hidden, name
 src/Services/IconCache.cs           Shell icon retrieval (small + large), per-extension cache
 src/Services/WindowTheme.cs         DWM title-bar color integration
 src/Services/ShellOpenWith.cs       `SHOpenWithDialog` P/Invoke wrapper
-src/Services/ArchivePath.cs         Virtual archive path parser (`<zip>::<inner>` form)
-src/Services/ArchiveBrowser.cs      Zip listing and on-demand temp extraction
+src/Services/ShellThumbnail.cs      `IShellItemImageFactory` wrapper (cache-only and
+                                    generate modes via `SIIGBF_INCACHEONLY`)
+src/Services/PdfPreviewRenderer.cs  Shell-thumbnail + pdftoppm + LRU-cache PDF preview
+src/Services/GitStatusReader.cs     `git status --porcelain=v2` runner; `FindRoot` walk
+                                    for `.git` ancestor
 
-src/Controls/MiddleEllipsisTextBlock.cs
-                                    Width-based middle-ellipsis TextBlock for pinned folder paths
+Tfx.Core/Tfx.Core.csproj            Pure-logic library (net10.0, no WPF). Contains
+                                    `ArchivePath`, `CsvParser`, `JsonPrettyPrinter`,
+                                    `GitStatusParser`, `PerformanceTrace`.
+
+Tfx.Tests/Tfx.Tests.csproj          xUnit tests for the pure-logic types
+                                    (`ArchivePathTests`, `CsvParserTests`,
+                                    `JsonPrettyPrinterTests`, `GitStatusParserTests`)
+                                    plus informational `Benchmarks/PerformanceBenchmarks.cs`.
 ```
 
 `MainWindow` is a single class split into partial files by feature. All fields are declared in `MainWindow.xaml.cs` to keep state in one place.
@@ -308,6 +327,8 @@ src/Controls/MiddleEllipsisTextBlock.cs
 - The DataGrid header drag-reorder is disabled by default style; use the Columns popup to keep both panes in sync.
 - Network locations work if mounted as drives or by typing UNC paths in the address bar.
 - Zip browsing is read-only. Entries previewed or opened are extracted on demand to `%TEMP%\tfx\archive-<id>\…` and the folder is cleaned up when the window closes. Nested zips are not auto-mounted; opening a `.zip` inside an archive extracts it first.
+- Git integration requires the `git` executable on `PATH`. Without it, the **Git** column stays empty and the branch label in the status bar is hidden. Runs `git status --porcelain=v2 --branch --untracked-files=normal --no-renames` with an 8-second timeout; the parser handles ordinary changes (X / Y status), untracked (`?`), conflicted (`u`), and ignored (`!`) entries, plus type-2 rename / copy records.
+- PDF previews go through three stages: cached Windows shell thumbnail (instant, never blocks) → `pdftoppm` if installed → shell-generated thumbnail (may block briefly). Results are stored in an in-process LRU cache keyed by path + last-write time + length + render size, so re-selecting the same PDF is instant.
 
 ---
 

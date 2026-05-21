@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- Git status indicators (roadmap §2.6): each file row in a Git working copy shows a one-character badge in a new "Git" column (M / A / D / R / C / ? / ! / U), and the current branch appears in the status bar as `⎇ name` next to the free-space text. Directories aggregate to "M" or "?" based on descendants. Uses `git status --porcelain=v2 --branch --untracked-files=normal --no-renames` on a background thread with cancellation and an 8-second timeout; silently disables itself if `git` is not on `PATH`. Refresh hooks: navigation, reload completion, and the auto-refresh diff path. `Tfx.Core/GitStatus.cs` parser and `Tfx.Tests/GitStatusParserTests.cs` (20 cases).
+- JSON pretty-print now uses `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`, so CJK / Latin-with-diacritics / emoji characters stored as `\uXXXX` escape sequences in the source file display as the actual characters in the Rendered preview.
+- Preview pane toggle now expands the window to the right when shown and shrinks it back when hidden (only when the window is not maximized), keeping the two file panes at the same width regardless of preview visibility. Clamps to the working area; shifts `Left` if growing would push past the right edge.
+- Attribute column width reduced from 140 px to 90 px — comfortably fits the `drwxr-xr-x` strings while reclaiming space for other columns.
+- `FileItem` gained `INotifyPropertyChanged` + a mutable `GitStatusText` property so badges can update without rebuilding rows.
+
 ## 0.4.5
 
 - Subfolder search reliability fixes: switch the walker to a single `EnumerateFileSystemInfos` call with `EnumerationOptions { RecurseSubdirectories=true, IgnoreInaccessible=true, AttributesToSkip=ReparsePoint(|Hidden|System) }`, so the runtime handles recursion / permission errors / attribute filtering efficiently — particularly on SMB / network shares. Mid-iteration enumeration errors no longer abort the whole subtree silently.

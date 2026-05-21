@@ -57,6 +57,7 @@ internal static class Loc
         ["Date created"] = "作成日時",
         ["Owner"] = "所有者",
         ["Attribute"] = "属性",
+        ["Git"] = "Git",
         ["Open"] = "開く",
         ["Open with..."] = "アプリケーションで開く...",
         ["Open with failed: {0}"] = "アプリケーションで開く処理に失敗しました: {0}",

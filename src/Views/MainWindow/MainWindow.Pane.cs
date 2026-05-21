@@ -60,6 +60,7 @@ public partial class MainWindow
         RightPaneBorder.BorderThickness = new Thickness(grid == RightGrid ? 2 : 1);
         UpdatePathText();
         QueueFolderTreeSyncToActivePane();
+        UpdateGitBranchText();
     }
 
     private void Grid_SelectionChanged(object sender, SelectionChangedEventArgs e)

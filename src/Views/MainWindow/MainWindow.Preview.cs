@@ -442,7 +442,36 @@ img { max-width:100%; }
 
     private void TogglePreview()
     {
-        SetPreviewVisible(PreviewColumn.Width.Value == 0);
+        var willBeVisible = PreviewColumn.Width.Value == 0;
+
+        // Grow the window to the right when showing the preview, and shrink
+        // it back by the same amount when hiding. This way the two file panes
+        // keep the same width regardless of whether the preview is open. Only
+        // applies to a normal window — when maximized we have no headroom to
+        // grow, so we fall back to the previous "share width" behaviour.
+        if (WindowState == WindowState.Normal)
+        {
+            var previewWidth = _settings.PreviewWidth >= 240 ? _settings.PreviewWidth : 320;
+            const double splitterWidth = 5;
+            var delta = previewWidth + splitterWidth;
+            var workArea = SystemParameters.WorkArea;
+
+            if (willBeVisible)
+            {
+                var newWidth = Math.Min(Width + delta, workArea.Width);
+                if (Left + newWidth > workArea.Right)
+                {
+                    Left = Math.Max(workArea.Left, workArea.Right - newWidth);
+                }
+                Width = newWidth;
+            }
+            else
+            {
+                Width = Math.Max(MinWidth, Width - delta);
+            }
+        }
+
+        SetPreviewVisible(willBeVisible);
         SaveSettings();
     }
 
