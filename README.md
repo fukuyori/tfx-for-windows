@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.5.1
+Version: 0.5.2
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -30,6 +30,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Recursive subfolder search: type a query in the search box and press **Enter** to walk the current folder's subtree on a background thread, streaming matches into the active pane with live status-bar progress; **Esc** cancels and restores the real listing
 - Git working-copy integration: when inside a Git repository, file rows show a one-character status badge (M / A / ? / D / R / C / U) in the **Git** column and the current branch appears in the status bar as `⎇ name`
 - USB / removable drive hot detection: the folder-tree drive list refreshes when devices are added or removed (via `WM_DEVICECHANGE`)
+- Configurable terminal launcher: "Open Terminal here" picks Windows Terminal / PowerShell automatically by default, or a user-specified executable and argument template configured from **Terminal Settings...** in the context menu (`{path}` and environment variables are expanded)
 - Status bar with item counts, selection size, active drive's free space (cached and refreshed in the background to stay responsive on slow network drives), Git branch, and the current version
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
@@ -49,7 +50,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.5.1 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.5.2 |
 +---------------------------------------------------------------------+
 ```
 
@@ -112,7 +113,7 @@ File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste 
 - **Single click** on row / icon -> select; **Ctrl** / **Shift** for multi-select
 - **Double-click** on row / icon -> open
 - After entering a folder, the parent row (`..`) is selected and focused. When returning to the parent with `..` or Backspace, the folder you came from is selected and focused.
-- **Right-click** -> context menu (Open, Open with..., Reveal, Pin / Unpin, Cut, Copy, Paste, Copy current path, Compress, Extract, New folder, New file, Open Terminal, Rename, Trash, Delete permanently for the selected item)
+- **Right-click** -> context menu (Open, Open with..., Reveal, Pin / Unpin, Cut, Copy, Paste, Copy current path, Compress, Extract, New folder, New file, Open Terminal, Terminal Settings..., Rename, Trash, Delete permanently for the selected item)
 - **Click** on a breadcrumb segment -> jump to that ancestor
 - **Click** on the empty area of the address bar -> switch to free-text edit mode
 - **Click** column header -> sort by that column (toggle ascending / descending)
@@ -215,6 +216,8 @@ Saved automatically to `%APPDATA%\tfx\settings.json` on every change and on clos
 | `ShowPerformanceLogs` | Enable `PerformanceTrace` output to Debug / console. The `TFX_PERFORMANCE_LOGS=1` environment variable also turns this on and wins over the setting. |
 | `Left`, `Top`, `Width`, `Height`, `IsMaximized` | Window placement |
 | `SidebarWidth`, `PreviewWidth`, `LeftPaneRatio` | Pane layout |
+| `TerminalCommand` | Executable to launch when invoking **Open Terminal here**. Empty (default) means auto-detect (`wt.exe` when running inside Windows Terminal, otherwise `powershell.exe`). |
+| `TerminalArguments` | Argument template for the configured terminal command. Supports the `{path}` placeholder (replaced with the active pane's folder) and environment-variable expansion such as `%ProgramFiles%`. |
 | `PinnedFolders` | Pinned entries in display order |
 | `VisibleFileColumns` | Which columns are visible (`Name` / `Git` / `DateModified` / `Type` / `Size` / `DateCreated` / `Owner` / `Attribute`) |
 | `FileColumnOrder` | Column display order |
@@ -327,6 +330,7 @@ Tfx.Tests/Tfx.Tests.csproj          xUnit tests for the pure-logic types
 - The DataGrid header drag-reorder is disabled by default style; use the Columns popup to keep both panes in sync.
 - Network locations work if mounted as drives or by typing UNC paths in the address bar.
 - Zip browsing is read-only. Entries previewed or opened are extracted on demand to `%TEMP%\tfx\archive-<id>\…` and the folder is cleaned up when the window closes. Nested zips are not auto-mounted; opening a `.zip` inside an archive extracts it first.
+- The configured terminal command is started via `ShellExecute`, so executables on `PATH`, registered app aliases (e.g. `wt`, `pwsh`, `code`), and `.cmd` / `.bat` / `.lnk` targets all work. If the configured command fails to start, the launcher silently falls back to `powershell.exe` so the user is never stuck with a broken configuration.
 - Git integration requires the `git` executable on `PATH`. Without it, the **Git** column stays empty and the branch label in the status bar is hidden. Runs `git status --porcelain=v2 --branch --untracked-files=normal --no-renames` with an 8-second timeout; the parser handles ordinary changes (X / Y status), untracked (`?`), conflicted (`u`), and ignored (`!`) entries, plus type-2 rename / copy records.
 - PDF previews go through three stages: cached Windows shell thumbnail (instant, never blocks) → `pdftoppm` if installed → shell-generated thumbnail (may block briefly). Results are stored in an in-process LRU cache keyed by path + last-write time + length + render size, so re-selecting the same PDF is instant.
 

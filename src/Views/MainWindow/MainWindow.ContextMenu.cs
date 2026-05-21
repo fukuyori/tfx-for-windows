@@ -164,6 +164,10 @@ public partial class MainWindow
         openTerminal.Click += (_, _) => OpenTerminal();
         menu.Items.Add(openTerminal);
 
+        var terminalSettings = new MenuItem { Header = Loc.T("Terminal Settings...") };
+        terminalSettings.Click += (_, _) => OpenTerminalSettings();
+        menu.Items.Add(terminalSettings);
+
         menu.Items.Add(new Separator());
 
         var rename = new MenuItem { Header = Loc.T("Rename"), InputGestureText = "F2", IsEnabled = oneSelected && writableContext };

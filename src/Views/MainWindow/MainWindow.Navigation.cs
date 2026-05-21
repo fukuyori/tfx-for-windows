@@ -95,6 +95,22 @@ public partial class MainWindow
 
             ApplyPendingSelection(grid, pane);
             ApplyGitBadges(pane);
+
+            // First successful reload of the left pane after startup: force
+            // focus onto the ".." row (or the first entry at a drive root)
+            // so the user can immediately use Up / Down. This is the reliable
+            // event-driven path; the Loaded handler in MainWindow.xaml.cs is
+            // a belt-and-braces backup.
+            if (!_initialLeftFocusDone && grid == LeftGrid && grid.Items.Count > 0)
+            {
+                _initialLeftFocusDone = true;
+                if (grid.SelectedItem is null)
+                {
+                    grid.SelectedIndex = 0;
+                }
+                FocusPane(Pane.Left);
+            }
+
             UpdateStatus();
         }
         catch (OperationCanceledException)

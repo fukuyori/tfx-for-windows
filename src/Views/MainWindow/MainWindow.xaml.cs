@@ -49,6 +49,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _rightReloadCts;
     private CancellationTokenSource? _previewCts;
     private string? _archiveTempRoot;
+    private bool _initialLeftFocusDone;
 
     public MainWindow()
     {

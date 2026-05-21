@@ -8,22 +8,21 @@ public partial class MainWindow
     private void OpenTerminal()
     {
         var path = GetCurrentPath(_activeGrid);
-        try
+        if (!TerminalLauncher.Launch(path, _settings.TerminalCommand, _settings.TerminalArguments, out var error))
         {
-            var terminal = Environment.GetEnvironmentVariable("WT_SESSION") is not null ? "wt.exe" : "powershell.exe";
-            Process.Start(new ProcessStartInfo(terminal)
-            {
-                WorkingDirectory = path,
-                UseShellExecute = true
-            });
+            SetStatus(Loc.F("Failed to launch terminal: {0}", error ?? string.Empty));
         }
-        catch
+    }
+
+    private void OpenTerminalSettings()
+    {
+        var dialog = new TerminalSettingsDialog(_settings.TerminalCommand, _settings.TerminalArguments);
+        if (dialog.ShowDialog() == true)
         {
-            Process.Start(new ProcessStartInfo("powershell.exe")
-            {
-                WorkingDirectory = path,
-                UseShellExecute = true
-            });
+            _settings.TerminalCommand = dialog.Command;
+            _settings.TerminalArguments = dialog.Arguments;
+            SaveSettings();
+            SetStatus(Loc.T("Terminal settings updated"));
         }
     }
 

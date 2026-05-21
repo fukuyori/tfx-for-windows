@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2
+
+- Configurable terminal launcher: the "Open Terminal here" command honors a user-specified executable and argument template stored in `AppSettings.TerminalCommand` / `TerminalArguments`. Empty values keep the previous auto-detect behavior (`wt.exe` when running inside Windows Terminal, otherwise `powershell.exe`).
+- New "Terminal Settings..." entry in the file-pane context menu opens a small dialog with Command / Arguments / Reset fields. Arguments support the `{path}` placeholder (replaced with the current pane's folder) and environment variable expansion (e.g. `%ProgramFiles%`).
+- If a custom command fails to start, the launcher falls back to `powershell.exe` so the user is never stuck with a broken configuration.
+
 ## 0.5.1
 
 - Git column centered: the badge character now centers in the 30 px column instead of hugging the left edge.

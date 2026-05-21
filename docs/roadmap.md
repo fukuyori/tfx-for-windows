@@ -211,6 +211,8 @@ Done when:
 
 #### 2.7 Pane Tabs
 
+Status: **On hold.** Deferred per user direction; revisit after the remaining Phase B / Phase C items have shipped.
+
 Upstream: §2.3 (Pane Tabs).
 
 Goal: each pane carries multiple folders and switches with the keyboard. Direct port of upstream §2.3.
@@ -247,23 +249,27 @@ Done when:
 
 #### 2.9 Built-in Terminal Pane
 
+Status: **Replaced by external terminal launcher configuration in 0.5.2.** Embedding ConPTY + a VT emulator inside the window adds substantial surface area (input modes, resize, color schemes, paste behavior, accessibility) for a feature that overlaps almost entirely with Windows Terminal. Instead, `AppSettings.TerminalCommand` and `AppSettings.TerminalArguments` (configurable via **Terminal Settings...** in the file-pane context menu) let users point "Open Terminal here" / `Ctrl+Shift+T` at any shell or terminal binary (wt.exe, pwsh, Git Bash, Cmder, VS Code `code -r "{path}"`, etc.). Arguments support the `{path}` placeholder and environment-variable expansion; failures fall back to `powershell.exe`. The built-in pane variant may be revisited if there is concrete demand that the launcher hand-off cannot satisfy. Move this section under §1 with a version tag at the next release bump.
+
 Upstream: §2.4 (Built-in Terminal Pane). Library evaluation differs: SwiftTerm on macOS vs `Microsoft.Terminal.Wpf` / ConPTY samples on Windows.
 
-Goal: collapsible shell pane at the bottom of the window. Aligns with the project's terminal-inspired identity. Direct port of upstream §2.4.
+Goal (deferred): collapsible shell pane at the bottom of the window. Aligns with the project's terminal-inspired identity. Direct port of upstream §2.4.
 
-Tasks:
+Tasks (deferred):
 
 - Evaluate ConPTY-based options before writing custom: `Microsoft.Terminal.Wpf`, [WPF.ConPTY.Terminal samples](https://github.com/microsoft/terminal), or community packages.
 - Default shell from `%ComSpec%` / PowerShell preference; working directory follows the active pane (toggleable, default on).
 - Commands: toggle terminal pane (`Ctrl+\`` proposed), focus terminal pane, run command on selected files.
 - Persist visibility, height, font size in `AppSettings`.
 
-Done when:
+Done when (deferred):
 
 - The terminal pane can be toggled on / off through a menu item and a keyboard shortcut.
 - Active pane folder changes drive a `cd` in the terminal when the follow-folder setting is on.
 
 #### 2.10 NTFS ACL / Owner Editing
+
+Status: **On hold.** Deferred per user direction; the surface area (UAC restart, take-ownership, ACL edits) is high relative to the typical day-to-day workflow tfx targets.
 
 Upstream: §2.5 (Permissions and Owner Editing). Adapted: NTFS ACL (`System.Security.AccessControl.FileSecurity`) replaces POSIX mode bits; UAC restart-with-`runas` replaces `AuthorizationServices`.
 
@@ -282,6 +288,8 @@ Done when:
 - Take-ownership operations prompt for elevation cleanly and roll back on cancel.
 
 #### 2.11 Auto-Update
+
+Status: **On hold.** Deferred per user direction; revisit once a regular release cadence (and a signing-key plan) is in place. Until then, distribution stays at "GitHub Releases — direct download".
 
 Upstream: §2.7 (Sparkle Auto-Update). Adapted: **Velopack** (recommended) / `NetSparkle` / `Squirrel.Windows` instead of Sparkle. GitHub Releases delivery replaces the macOS appcast XML.
 
@@ -399,6 +407,7 @@ Priority: lower than §2.16. Address once §2.12 lands and concrete user demand 
 | --- | --- | --- |
 | §2.1 macOS Tags | **Skipped** | Windows lacks an OS-level tag system that interoperates with Explorer or other applications. Internal-only virtual tags can be reconsidered after §2.12 lands. |
 | §2.7 Sparkle | **Replaced by §2.11 Velopack** | Windows-native auto-update stack. |
+| §2.4 Built-in Terminal Pane | **Replaced by configurable external terminal launcher (0.5.2)** | `AppSettings.TerminalCommand` / `TerminalArguments` invoke any shell (wt / pwsh / Git Bash / `code -r "{path}"` / …) with `{path}` and env-var expansion. The built-in pane variant tracked in §2.9 may be revisited if launcher hand-off proves insufficient. |
 | §2.5 POSIX permissions | **Replaced by §2.10 NTFS ACL** | Different security model. |
 | §3.3 distribution (TestFlight / Mac App Store) | **Replaced by GitHub Releases + `winget`** | See §3.3 below. |
 
@@ -434,9 +443,9 @@ Initial budgets. Revise once §2.5 produces real numbers from typical hardware.
 | --- | --- |
 | Local `dotnet run` | Current state. Development only. |
 | GitHub Releases (direct download) | `dotnet publish -r win-x64 --self-contained` produces `Tfx.exe`. `scripts\build-release.ps1` already wraps this. |
-| GitHub Releases + Velopack (auto-update) | Unblocked by §2.11. Stable + beta channels via separate manifest URLs. |
+| GitHub Releases + Velopack (auto-update) | Blocked by §2.11 (currently on hold). Stable + beta channels via separate manifest URLs once unblocked. |
 | Microsoft Store | Out of scope for now. MSIX packaging is feasible later but not committed. |
-| `winget` manifest | Trivial once Releases is established; ship after §2.11. |
+| `winget` manifest | Trivial once Releases is established; revisit after §2.11 ships. |
 
 ### 3.4 Windows and Hardware Compatibility
 
@@ -510,11 +519,11 @@ Quick lookup between this Windows roadmap and the upstream macOS roadmap [`fukuy
 | §2.4 Subfolder Search | §1.7 (partial) | Direct port. |
 | §2.5 Performance Measurement Infrastructure | §1.14 | `TFX_PERFORMANCE_LOGS` env var name preserved. |
 | §2.6 Git Status Indicators | §2.2 | Direct port; `Process.Start` for `git status`. |
-| §2.7 Pane Tabs | §2.3 | Direct port. |
+| §2.7 Pane Tabs | §2.3 | **On hold.** Direct port. |
 | §2.8 Built-in Color Themes | §2.6 | XAML `ResourceDictionary` ↔ Swift theme token table. |
-| §2.9 Built-in Terminal Pane | §2.4 | `Microsoft.Terminal.Wpf` / ConPTY ↔ SwiftTerm. |
-| §2.10 NTFS ACL / Owner Editing | §2.5 | NTFS ACL ↔ POSIX bits; UAC `runas` ↔ `AuthorizationServices`. |
-| §2.11 Auto-Update | §2.7 | Velopack / `NetSparkle` ↔ Sparkle 2. |
+| §2.9 Built-in Terminal Pane | §2.4 | **Replaced** by configurable external launcher (`AppSettings.TerminalCommand` / `TerminalArguments`) in 0.5.2. |
+| §2.10 NTFS ACL / Owner Editing | §2.5 | **On hold.** NTFS ACL ↔ POSIX bits; UAC `runas` ↔ `AuthorizationServices`. |
+| §2.11 Auto-Update | §2.7 | **On hold.** Velopack / `NetSparkle` ↔ Sparkle 2. |
 | §2.12 Configuration Foundation (TOML) | §2.8 | `Tomlyn`; `%APPDATA%\tfx\` ↔ `~/Library/Application Support/tfx/`. |
 | §2.13 Shortcut Organization | §2.9 | Direct port. |
 | §2.14 Theme Customization via TOML | §2.10 | Direct port. |

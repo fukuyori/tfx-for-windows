@@ -27,6 +27,8 @@ public sealed class AppSettings
     public double PreviewWidth { get; set; } = 320;
     public double LeftPaneRatio { get; set; } = 0.5;
     public List<string> PinnedFolders { get; set; } = [];
+    public string TerminalCommand { get; set; } = "";
+    public string TerminalArguments { get; set; } = "";
     public List<string> VisibleFileColumns { get; set; } =
     [
         "Name",
