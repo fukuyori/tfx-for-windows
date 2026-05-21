@@ -33,7 +33,7 @@ internal static class Loc
         ["Toggle preview"] = "プレビュー切替",
         ["Toggle preview (Ctrl+Shift+P)"] = "プレビュー切替 (Ctrl+Shift+P)",
         ["Toggle split pane (Ctrl+\\)"] = "分割表示切替 (Ctrl+\\)",
-        ["Swap left and right panes (Ctrl+Shift+S)"] = "左右ペインを入れ替え (Ctrl+Shift+S)",
+        ["Swap left and right panes (Ctrl+Shift+X)"] = "左右ペインを入れ替え (Ctrl+Shift+X)",
         ["Show rendered Markdown / HTML"] = "Markdown / HTML をレンダリング表示",
         ["Show source"] = "ソースを表示",
         ["Show rendered preview"] = "レンダリング表示",

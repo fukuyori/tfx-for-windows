@@ -8,10 +8,21 @@ namespace Tfx;
 
 internal static class ShellThumbnail
 {
-    private const int ThumbnailOnly = 0x8;
     private const int BiggerSizeOk = 0x1;
+    private const int ThumbnailOnly = 0x8;
+    private const int InCacheOnly = 0x10;
 
-    public static BitmapSource? TryGetThumbnail(string path, int size)
+    /// <summary>
+    /// Returns the Windows shell thumbnail for <paramref name="path"/>.
+    /// </summary>
+    /// <param name="cacheOnly">
+    /// When <c>true</c> (default), only return a thumbnail that the OS already
+    /// has cached and never trigger background generation. This guarantees the
+    /// call is fast (returns either a bitmap or <c>null</c> within microseconds)
+    /// — useful as an opportunistic fast path before a slower render. When
+    /// <c>false</c>, the OS may block while generating the thumbnail.
+    /// </param>
+    public static BitmapSource? TryGetThumbnail(string path, int size, bool cacheOnly = true)
     {
         var itemId = typeof(IShellItemImageFactory).GUID;
         var hr = SHCreateItemFromParsingName(path, IntPtr.Zero, ref itemId, out var factory);
@@ -24,7 +35,12 @@ internal static class ShellThumbnail
         try
         {
             var thumbnailSize = new SIZE(size, size);
-            factory.GetImage(thumbnailSize, ThumbnailOnly | BiggerSizeOk, out hBitmap);
+            var flags = ThumbnailOnly | BiggerSizeOk;
+            if (cacheOnly)
+            {
+                flags |= InCacheOnly;
+            }
+            factory.GetImage(thumbnailSize, flags, out hBitmap);
             if (hBitmap == IntPtr.Zero)
             {
                 return null;

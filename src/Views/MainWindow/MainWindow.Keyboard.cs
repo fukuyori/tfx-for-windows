@@ -112,7 +112,7 @@ public partial class MainWindow
             TogglePreview();
             e.Handled = true;
         }
-        else if (ctrl && shift && e.Key == Key.S)
+        else if (ctrl && shift && e.Key == Key.X)
         {
             SwapPanes();
             e.Handled = true;

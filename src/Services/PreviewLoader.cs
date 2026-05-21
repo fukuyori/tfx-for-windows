@@ -33,7 +33,10 @@ internal static class PreviewLoader
 
         if (FsHelpers.IsPdf(extension))
         {
-            var preview = PdfPreviewRenderer.TryRenderFirstPage(path, 1200, cancellationToken, out var error);
+            // Preview pane is typically 320–500 px wide; 600 covers HiDPI
+            // (×2) generously while halving pdftoppm rasterisation cost vs
+            // the prior 1200 px target.
+            var preview = PdfPreviewRenderer.TryRenderFirstPage(path, 600, cancellationToken, out var error);
             return preview is null
                 ? new PreviewContent(PreviewKind.None, null, null, Loc.F("PDF preview is unavailable: {0}", error ?? ""))
                 : new PreviewContent(PreviewKind.Image, preview, null, null);

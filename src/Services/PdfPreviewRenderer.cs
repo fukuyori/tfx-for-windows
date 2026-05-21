@@ -6,31 +6,123 @@ namespace Tfx;
 
 internal static class PdfPreviewRenderer
 {
+    // ─── In-process LRU cache ─────────────────────────────────────────────
+    //
+    // Repeated visits to the same PDF (arrow-key navigation, toggling back
+    // and forth, multi-select preview restoring focus) all re-rendered from
+    // scratch. The cache key is (path, last-write time, file length, size)
+    // so external edits invalidate the entry naturally.
+
+    private const int CacheCapacity = 10;
+    private static readonly object CacheLock = new();
+    private static readonly LinkedList<CacheEntry> CacheLruOrder = new();
+    private static readonly Dictionary<string, LinkedListNode<CacheEntry>> CacheIndex =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private sealed record CacheEntry(string Key, BitmapSource Image);
+
     public static BitmapSource? TryRenderFirstPage(string path, int size, CancellationToken cancellationToken, out string? error)
     {
         error = null;
         cancellationToken.ThrowIfCancellationRequested();
 
+        var cacheKey = BuildCacheKey(path, size);
+        if (cacheKey is not null && TryGetCached(cacheKey, out var cached))
+        {
+            return cached;
+        }
+
+        // 1. Fast path: the OS already has a thumbnail cached.
+        var shellCached = ShellThumbnail.TryGetThumbnail(path, size, cacheOnly: true);
+        if (shellCached is not null)
+        {
+            StoreInCache(cacheKey, shellCached);
+            return shellCached;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // 2. pdftoppm if available — high-quality first-page render.
         var pdftoppm = FindPdftoppm();
         if (pdftoppm is not null)
         {
             var rendered = TryRenderWithPdftoppm(pdftoppm, path, size, cancellationToken, out error);
             if (rendered is not null)
             {
+                StoreInCache(cacheKey, rendered);
                 return rendered;
             }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var shellPreview = ShellThumbnail.TryGetThumbnail(path, size);
-        if (shellPreview is not null)
+
+        // 3. Last resort: ask the shell to generate a thumbnail.
+        var generated = ShellThumbnail.TryGetThumbnail(path, size, cacheOnly: false);
+        if (generated is not null)
         {
             error = null;
-            return shellPreview;
+            StoreInCache(cacheKey, generated);
+            return generated;
         }
 
         error ??= Loc.T("No PDF renderer or thumbnail provider is available.");
         return null;
+    }
+
+    private static string? BuildCacheKey(string path, int size)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            return $"{path}|{info.LastWriteTimeUtc.Ticks}|{info.Length}|{size}";
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool TryGetCached(string key, out BitmapSource image)
+    {
+        lock (CacheLock)
+        {
+            if (CacheIndex.TryGetValue(key, out var node))
+            {
+                CacheLruOrder.Remove(node);
+                CacheLruOrder.AddFirst(node);
+                image = node.Value.Image;
+                return true;
+            }
+        }
+        image = null!;
+        return false;
+    }
+
+    private static void StoreInCache(string? key, BitmapSource image)
+    {
+        if (key is null)
+        {
+            return;
+        }
+        lock (CacheLock)
+        {
+            if (CacheIndex.TryGetValue(key, out var existing))
+            {
+                CacheLruOrder.Remove(existing);
+            }
+            else if (CacheIndex.Count >= CacheCapacity)
+            {
+                var last = CacheLruOrder.Last;
+                if (last is not null)
+                {
+                    CacheLruOrder.RemoveLast();
+                    CacheIndex.Remove(last.Value.Key);
+                }
+            }
+            var node = new LinkedListNode<CacheEntry>(new CacheEntry(key, image));
+            CacheLruOrder.AddFirst(node);
+            CacheIndex[key] = node;
+        }
     }
 
     private static BitmapSource? TryRenderWithPdftoppm(string executable, string path, int size, CancellationToken cancellationToken, out string? error)
@@ -61,27 +153,27 @@ internal static class PdfPreviewRenderer
             process.StartInfo.ArgumentList.Add(outputBase);
 
             process.Start();
-            var deadline = DateTime.UtcNow.AddSeconds(8);
-            while (!process.WaitForExit(100))
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    process.Kill(entireProcessTree: true);
-                    cancellationToken.ThrowIfCancellationRequested();
-                }
 
-                if (DateTime.UtcNow >= deadline)
+            // Replace the 100ms-step polling loop with an async wait that
+            // returns the instant the process exits (no up-to-100ms tail
+            // latency) while still honoring cancellation and a hard timeout.
+            var waitTask = process.WaitForExitAsync(cancellationToken);
+            try
+            {
+                if (!waitTask.Wait(TimeSpan.FromSeconds(8)))
                 {
-                    process.Kill(entireProcessTree: true);
+                    try { process.Kill(entireProcessTree: true); } catch { }
                     error = Loc.T("PDF renderer timed out.");
                     return null;
                 }
             }
-
-            if (cancellationToken.IsCancellationRequested)
+            catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
             {
+                try { process.Kill(entireProcessTree: true); } catch { }
                 cancellationToken.ThrowIfCancellationRequested();
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (process.ExitCode != 0 || !File.Exists(outputPng))
             {

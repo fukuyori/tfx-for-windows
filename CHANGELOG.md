@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.5
+
+- Subfolder search reliability fixes: switch the walker to a single `EnumerateFileSystemInfos` call with `EnumerationOptions { RecurseSubdirectories=true, IgnoreInaccessible=true, AttributesToSkip=ReparsePoint(|Hidden|System) }`, so the runtime handles recursion / permission errors / attribute filtering efficiently — particularly on SMB / network shares. Mid-iteration enumeration errors no longer abort the whole subtree silently.
+- Subfolder search matching now uses `CompareInfo.IndexOf` with `IgnoreCase | IgnoreWidth | IgnoreKanaType`, so full-width / half-width and hiragana / katakana variants match the query.
+- Detect drive arrival / removal via the `WM_DEVICECHANGE` Windows message and refresh the folder-tree drive list with a 250 ms debounce. Plugging in a USB drive now shows it without restarting the app.
+- Swap left and right panes shortcut moved from `Ctrl + Shift + S` to `Ctrl + Shift + X` to free up Ctrl + Shift + S for future "Save" semantics.
+- File-list column alignment fix carry-over (0.4.4 mid-stream): shared cell-text styles set `VerticalAlignment="Center"` and `TextTrimming="CharacterEllipsis"`.
+- PDF preview speed: reduce render target from 1200 px to 600 px (covers HiDPI ×2 while halving rasterisation cost) and replace pdftoppm's polling exit wait with `WaitForExitAsync` (eliminates up to 100 ms tail latency).
+- PDF preview reliability: add `SIIGBF_INCACHEONLY` flag to the shell-thumbnail fast path so it never blocks on background thumbnail generation, fixing "blank on first selection, shows on second" symptom. The renderer now falls back through three stages: shell-cache → pdftoppm → shell-generate.
+- PDF preview cache: in-process LRU (10 entries, keyed by path + last-write time + length + render size) so repeated selections of the same PDF return instantly without re-rendering.
+
 ## 0.4.4
 
 - Subfolder search (roadmap §2.4): the search box now always runs a recursive walk of the current folder. Type and press **Enter** to start; **Esc** clears and restores the real folder listing. Results stream into the active pane in batches of 50 with the status bar updating every ~120 ms ("Searching: N matches" → "Search complete: N matches"). Navigation to another folder cancels the in-flight search. Results show the relative path in the Name cell while keeping `FullPath` absolute. Inside zip archives the recursive walk is a no-op.

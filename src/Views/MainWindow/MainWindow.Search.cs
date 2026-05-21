@@ -192,7 +192,7 @@ public partial class MainWindow
         {
             try
             {
-                Walk(root, root, query, showHidden, channel.Writer, token);
+                Walk(root, query, showHidden, channel.Writer, token);
             }
             catch (OperationCanceledException) { }
             finally
@@ -208,7 +208,6 @@ public partial class MainWindow
     }
 
     private static void Walk(
-        string current,
         string root,
         string query,
         bool showHidden,
@@ -217,45 +216,88 @@ public partial class MainWindow
     {
         token.ThrowIfCancellationRequested();
 
-        IEnumerable<string> dirs;
-        IEnumerable<string> files;
+        // Single recursive enumeration via .NET's built-in walker. The
+        // runtime hands one `FindFirstFile`-backed iterator per directory and
+        // surfaces both files and folders together with their attributes
+        // already populated — no extra stat per entry, no manual recursion
+        // overhead. Critical for SMB / network shares where every round trip
+        // is expensive.
+        var skipAttrs = FileAttributes.ReparsePoint;
+        if (!showHidden)
+        {
+            skipAttrs |= FileAttributes.Hidden | FileAttributes.System;
+        }
+
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = skipAttrs,
+            ReturnSpecialDirectories = false,
+        };
+
+        DirectoryInfo rootInfo;
         try
         {
-            dirs = FsHelpers.SafeEnumerateDirectories(current);
-            files = FsHelpers.SafeEnumerateFiles(current);
+            rootInfo = new DirectoryInfo(root);
         }
         catch
         {
             return;
         }
 
-        foreach (var dir in dirs)
+        IEnumerable<FileSystemInfo> enumerator;
+        try
         {
-            token.ThrowIfCancellationRequested();
-            if (!showHidden && FsHelpers.IsHidden(dir))
-            {
-                continue;
-            }
-            var name = Path.GetFileName(dir);
-            if (!string.IsNullOrEmpty(name) && name.Contains(query, StringComparison.OrdinalIgnoreCase))
-            {
-                writer.TryWrite(BuildSearchResult(dir, root, isDirectory: true));
-            }
-            Walk(dir, root, query, showHidden, writer, token);
+            enumerator = rootInfo.EnumerateFileSystemInfos("*", options);
+        }
+        catch
+        {
+            return;
         }
 
-        foreach (var file in files)
+        var compareInfo = System.Globalization.CultureInfo.CurrentCulture.CompareInfo;
+        const System.Globalization.CompareOptions matchOpts =
+            System.Globalization.CompareOptions.IgnoreCase
+            | System.Globalization.CompareOptions.IgnoreWidth
+            | System.Globalization.CompareOptions.IgnoreKanaType;
+
+        var iterator = enumerator.GetEnumerator();
+        try
         {
-            token.ThrowIfCancellationRequested();
-            if (!showHidden && FsHelpers.IsHidden(file))
+            while (true)
             {
-                continue;
+                token.ThrowIfCancellationRequested();
+                bool moved;
+                try
+                {
+                    moved = iterator.MoveNext();
+                }
+                catch
+                {
+                    // A single inaccessible entry threw during enumeration;
+                    // bail this directory but keep results found so far.
+                    break;
+                }
+                if (!moved) break;
+
+                var info = iterator.Current;
+                var name = info.Name;
+                if (string.IsNullOrEmpty(name)) continue;
+
+                // tfx hides dot-prefixed entries when ShowHidden is off
+                // (independent of Windows Hidden attribute).
+                if (!showHidden && name.Length > 1 && name[0] == '.') continue;
+
+                if (compareInfo.IndexOf(name, query, matchOpts) < 0) continue;
+
+                var isDir = (info.Attributes & FileAttributes.Directory) != 0;
+                writer.TryWrite(BuildSearchResult(info.FullName, root, isDir));
             }
-            var name = Path.GetFileName(file);
-            if (!string.IsNullOrEmpty(name) && name.Contains(query, StringComparison.OrdinalIgnoreCase))
-            {
-                writer.TryWrite(BuildSearchResult(file, root, isDirectory: false));
-            }
+        }
+        finally
+        {
+            iterator.Dispose();
         }
     }
 

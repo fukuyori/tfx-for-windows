@@ -53,7 +53,11 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        SourceInitialized += (_, _) => WindowTheme.Apply(this);
+        SourceInitialized += (_, _) =>
+        {
+            WindowTheme.Apply(this);
+            HookDeviceChange();
+        };
         DataContext = this;
         _activeGrid = LeftGrid;
         ApplyLocalization();
@@ -181,7 +185,7 @@ public partial class MainWindow : Window
         PreviewButton.ToolTip = Loc.T("Toggle preview (Ctrl+Shift+P)");
         RenderedToggle.ToolTip = Loc.T("Show rendered preview");
         SplitButton.ToolTip = Loc.T("Toggle split pane (Ctrl+\\)");
-        SwapPanesButton.ToolTip = Loc.T("Swap left and right panes (Ctrl+Shift+S)");
+        SwapPanesButton.ToolTip = Loc.T("Swap left and right panes (Ctrl+Shift+X)");
         ColumnsButton.ToolTip = Loc.T("Columns");
         PinnedHeader.Text = Loc.T("PINNED");
         FoldersHeader.Text = Loc.T("FOLDERS");
@@ -411,6 +415,47 @@ public partial class MainWindow : Window
     private IEnumerable<FileItem> SelectedItems(DataGrid grid) => grid.SelectedItems.Cast<FileItem>();
 
     private void SetStatus(string text) => StatusText.Text = text;
+
+    // ─── USB / drive add-remove detection ─────────────────────────────────
+
+    private const int WM_DEVICECHANGE = 0x0219;
+    private const int DBT_DEVICEARRIVAL = 0x8000;
+    private const int DBT_DEVICEREMOVECOMPLETE = 0x8004;
+    private const int DBT_DEVNODES_CHANGED = 0x0007;
+    private DispatcherTimer? _driveRefreshDebounce;
+
+    private void HookDeviceChange()
+    {
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var src = System.Windows.Interop.HwndSource.FromHwnd(hwnd);
+        src?.AddHook(DeviceChangeHook);
+    }
+
+    private IntPtr DeviceChangeHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg != WM_DEVICECHANGE)
+        {
+            return IntPtr.Zero;
+        }
+        var ev = wParam.ToInt32();
+        if (ev == DBT_DEVICEARRIVAL || ev == DBT_DEVICEREMOVECOMPLETE || ev == DBT_DEVNODES_CHANGED)
+        {
+            // Debounce: Windows emits several events in quick succession when a
+            // drive arrives. Refresh once after they settle.
+            if (_driveRefreshDebounce is null)
+            {
+                _driveRefreshDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+                _driveRefreshDebounce.Tick += (_, _) =>
+                {
+                    _driveRefreshDebounce!.Stop();
+                    LoadDrives();
+                };
+            }
+            _driveRefreshDebounce.Stop();
+            _driveRefreshDebounce.Start();
+        }
+        return IntPtr.Zero;
+    }
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {

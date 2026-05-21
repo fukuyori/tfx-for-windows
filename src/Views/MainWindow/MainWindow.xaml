@@ -116,7 +116,7 @@
                             </Grid>
                         </Viewbox>
                     </ToggleButton>
-                    <Button x:Name="SwapPanesButton" Style="{StaticResource ToolbarButton}" Click="SwapPanes_Click" ToolTip="Swap left and right panes (Ctrl+Shift+S)">
+                    <Button x:Name="SwapPanesButton" Style="{StaticResource ToolbarButton}" Click="SwapPanes_Click" ToolTip="Swap left and right panes (Ctrl+Shift+X)">
                         <Viewbox Width="15" Height="11" Stretch="Uniform">
                             <Grid Width="15" Height="11">
                                 <Rectangle Width="5"
