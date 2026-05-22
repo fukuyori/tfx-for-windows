@@ -35,6 +35,8 @@ public partial class MainWindow : Window
     private Point _dragStart;
     private FileItem? _pendingFileDragItem;
     private string[] _pendingFileDragPaths = [];
+    private bool _suppressNextContextMenu;
+    private bool _nativeRightDragInProgress;
     private bool _isRubberBandSelecting;
     private Point _rubberBandStart;
     private FrameworkElement? _rubberBandSource;

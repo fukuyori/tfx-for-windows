@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Microsoft.VisualBasic.FileIO;
 using VbFileSystem = Microsoft.VisualBasic.FileIO.FileSystem;
 using Path = System.IO.Path;
@@ -12,6 +13,14 @@ namespace Tfx;
 
 public partial class MainWindow
 {
+    /// <summary>
+    /// Custom DataObject format set when a drag is initiated inside tfx with the
+    /// right mouse button. When <see cref="Grid_Drop"/> sees this marker it pops
+    /// the Copy / Move / Shortcut / Cancel menu instead of executing the
+    /// modifier-key resolved effect directly.
+    /// </summary>
+    private const string TfxRightDragFormat = "Tfx.RightDrag";
+
     private void Grid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStart = e.GetPosition(this);
@@ -57,7 +66,15 @@ public partial class MainWindow
 
     private void Grid_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || sender is not DataGrid grid)
+        if (sender is not DataGrid grid)
+        {
+            return;
+        }
+
+        var leftPressed = e.LeftButton == MouseButtonState.Pressed;
+        var rightPressed = e.RightButton == MouseButtonState.Pressed;
+
+        if (!leftPressed && !rightPressed)
         {
             _dragStart = e.GetPosition(this);
             _pendingFileDragItem = null;
@@ -65,7 +82,7 @@ public partial class MainWindow
             return;
         }
 
-        if (_isRubberBandSelecting)
+        if (leftPressed && _isRubberBandSelecting)
         {
             UpdateRubberBandSelection(e);
             return;
@@ -83,6 +100,17 @@ public partial class MainWindow
             return;
         }
 
+        StartFileDrag(grid, isRightDrag: rightPressed && !leftPressed);
+    }
+
+    /// <summary>
+    /// Builds the DataObject and invokes <see cref="DragDrop.DoDragDrop"/>. Used
+    /// by both left- and right-button drag starts. Right-button drags attach a
+    /// custom marker (<see cref="TfxRightDragFormat"/>) so that drops landing
+    /// back inside tfx can show the Copy / Move / Shortcut / Cancel menu.
+    /// </summary>
+    private void StartFileDrag(DependencyObject source, bool isRightDrag)
+    {
         var paths = _pendingFileDragPaths;
         if (paths.Length == 0)
         {
@@ -93,19 +121,65 @@ public partial class MainWindow
         var realPaths = ResolveDragPaths(paths);
         if (realPaths.Length == 0)
         {
-            _pendingFileDragItem = null;
-            _pendingFileDragPaths = [];
+            ClearPendingFileDrag();
             return;
         }
 
-        var data = new DataObject();
-        var collection = new StringCollection();
-        collection.AddRange(realPaths);
-        data.SetFileDropList(collection);
+        if (isRightDrag && TryStartNativeRightDrag(realPaths, hasArchive, out var nativeEffect))
+        {
+            CompleteFileDrag(nativeEffect, suppressNextContextMenu: true);
+            return;
+        }
+
+        var data = BuildFileDropData(realPaths, isRightDrag);
         var allowedEffects = hasArchive
             ? DragDropEffects.Copy
             : DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link;
-        var effect = DragDrop.DoDragDrop(grid, data, allowedEffects);
+        var effect = DragDrop.DoDragDrop(source, data, allowedEffects);
+
+        CompleteFileDrag(effect, suppressNextContextMenu: isRightDrag);
+    }
+
+    private bool TryStartNativeRightDrag(string[] realPaths, bool hasArchive, out DragDropEffects effect)
+    {
+        effect = DragDropEffects.None;
+        if (hasArchive)
+        {
+            return false;
+        }
+
+        _nativeRightDragInProgress = true;
+        try
+        {
+            return ShellFileDrag.TryStartRightButtonDrag(realPaths, out effect);
+        }
+        finally
+        {
+            _nativeRightDragInProgress = false;
+        }
+    }
+
+    private static DataObject BuildFileDropData(string[] paths, bool isRightDrag)
+    {
+        var data = new DataObject();
+        var collection = new StringCollection();
+        collection.AddRange(paths);
+        data.SetFileDropList(collection);
+
+        if (isRightDrag)
+        {
+            data.SetData(TfxRightDragFormat, true);
+        }
+
+        return data;
+    }
+
+    private void CompleteFileDrag(DragDropEffects effect, bool suppressNextContextMenu)
+    {
+        if (suppressNextContextMenu)
+        {
+            _suppressNextContextMenu = true;
+        }
 
         if (effect != DragDropEffects.None)
         {
@@ -113,8 +187,7 @@ public partial class MainWindow
             Reload(RightGrid);
         }
 
-        _pendingFileDragItem = null;
-        _pendingFileDragPaths = [];
+        ClearPendingFileDrag();
     }
 
     private void Grid_Drop(object sender, DragEventArgs e)
@@ -124,7 +197,6 @@ public partial class MainWindow
             return;
         }
 
-        var grid = SideOf(view);
         var destination = ResolveDropDestination(view, e);
         if (ArchivePath.Contains(destination))
         {
@@ -132,8 +204,37 @@ public partial class MainWindow
             return;
         }
         var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
-        var effect = ResolveDropEffect(e, destination);
 
+        // Right-button drag started from a tfx pane: pop the Copy / Move /
+        // Shortcut / Cancel menu and act on the user's choice.
+        if (_nativeRightDragInProgress || e.Data.GetDataPresent(TfxRightDragFormat))
+        {
+            e.Handled = true;
+            var allowMoveLink = !paths.Any(ArchivePath.Contains);
+            var chosen = ShowRightDragMenu(view as UIElement, allowMoveLink);
+            if (chosen is null)
+            {
+                e.Effects = DragDropEffects.None;
+                return;
+            }
+            ExecuteDrop(paths, destination, chosen.Value);
+            e.Effects = chosen.Value;
+            return;
+        }
+
+        var effect = ResolveDropEffect(e, destination);
+        ExecuteDrop(paths, destination, effect);
+        e.Effects = effect;
+    }
+
+    /// <summary>
+    /// Shared drop-execution core. Performs the Copy / Move / Link operation
+    /// for each source path, verifies the move actually removed the source
+    /// (catches cross-volume copy + delete failures), surfaces left-behind /
+    /// failed items via the status bar, and reloads both panes.
+    /// </summary>
+    private void ExecuteDrop(string[] paths, string destination, DragDropEffects effect)
+    {
         var leftBehind = new List<string>();
         var failed = new List<string>();
 
@@ -179,10 +280,6 @@ public partial class MainWindow
                         }
                     }
 
-                    // Post-move verification: VbFileSystem.MoveDirectory and
-                    // File.Move fall back to copy + delete across volumes; if the
-                    // delete half fails silently we'd otherwise leave duplicates
-                    // at the source. Flag those so the user is not surprised.
                     if (effect == DragDropEffects.Move && (File.Exists(source) || Directory.Exists(source)))
                     {
                         leftBehind.Add(Path.GetFileName(source));
@@ -195,7 +292,6 @@ public partial class MainWindow
             }
         }
 
-        e.Effects = effect;
         Reload(LeftGrid);
         Reload(RightGrid);
 
@@ -207,6 +303,44 @@ public partial class MainWindow
         {
             SetStatus(Loc.F("Failed: {0}", string.Join(", ", failed)));
         }
+    }
+
+    /// <summary>
+    /// Pops a ContextMenu at the current cursor with the four standard
+    /// right-drag options. Returns the chosen <see cref="DragDropEffects"/>,
+    /// or null if the user cancels / dismisses the menu.
+    /// </summary>
+    private DragDropEffects? ShowRightDragMenu(UIElement? placement, bool allowMoveAndLink)
+    {
+        DragDropEffects? chosen = null;
+        var menu = new ContextMenu { PlacementTarget = placement, Placement = PlacementMode.MousePoint };
+
+        var copyItem = new MenuItem { Header = Loc.T("Copy here") };
+        copyItem.Click += (_, _) => chosen = DragDropEffects.Copy;
+        menu.Items.Add(copyItem);
+
+        var moveItem = new MenuItem { Header = Loc.T("Move here"), IsEnabled = allowMoveAndLink };
+        moveItem.Click += (_, _) => chosen = DragDropEffects.Move;
+        menu.Items.Add(moveItem);
+
+        var linkItem = new MenuItem { Header = Loc.T("Create shortcut here"), IsEnabled = allowMoveAndLink };
+        linkItem.Click += (_, _) => chosen = DragDropEffects.Link;
+        menu.Items.Add(linkItem);
+
+        menu.Items.Add(new Separator());
+
+        var cancelItem = new MenuItem { Header = Loc.T("Cancel") };
+        cancelItem.Click += (_, _) => chosen = null;
+        menu.Items.Add(cancelItem);
+
+        // Open synchronously: pump the dispatcher until the menu closes so the
+        // Drop handler can act on the user's choice before returning.
+        menu.IsOpen = true;
+        var frame = new DispatcherFrame();
+        menu.Closed += (_, _) => frame.Continue = false;
+        Dispatcher.PushFrame(frame);
+
+        return chosen;
     }
 
     private void Grid_DragOver(object sender, DragEventArgs e)

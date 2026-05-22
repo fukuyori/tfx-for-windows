@@ -86,9 +86,11 @@ public partial class MainWindow
             node = VisualTreeHelper.GetParent(node);
         }
 
-        if (node is ListBoxItem lbItem && lbItem.Content is FileItem fi && !fi.IsParent)
+        FileItem? rowItem = null;
+        if (node is ListBoxItem lbItem && lbItem.Content is FileItem fi)
         {
-            if (!lb.SelectedItems.Contains(fi))
+            rowItem = fi;
+            if (!fi.IsParent && !lb.SelectedItems.Contains(fi))
             {
                 lb.SelectedItems.Clear();
                 lb.SelectedItems.Add(fi);
@@ -98,6 +100,19 @@ public partial class MainWindow
         UpdateActivePane(SideOf(lb));
         SyncIconSelectionToGrid(lb);
         lb.ContextMenu = BuildGridContextMenu(SideOf(lb));
+
+        // Prime a possible right-button drag (mirror of Grid_PreviewMouseRightButtonDown).
+        _dragStart = e.GetPosition(this);
+        _pendingFileDragItem = null;
+        _pendingFileDragPaths = [];
+        if (rowItem is { IsParent: false })
+        {
+            _pendingFileDragItem = rowItem;
+            var selectedItems = lb.SelectedItems.OfType<FileItem>().Where(i => !i.IsParent).ToArray();
+            _pendingFileDragPaths = selectedItems.Contains(rowItem)
+                ? selectedItems.Select(i => i.FullPath).ToArray()
+                : [rowItem.FullPath];
+        }
     }
 
     private void IconView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -140,6 +155,13 @@ public partial class MainWindow
 
     private void IconView_ContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
+        if (_suppressNextContextMenu)
+        {
+            _suppressNextContextMenu = false;
+            e.Handled = true;
+            return;
+        }
+
         if (sender is not ListBox lb)
         {
             e.Handled = true;
@@ -171,7 +193,15 @@ public partial class MainWindow
 
     private void IconView_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || sender is not ListBox lb)
+        if (sender is not ListBox lb)
+        {
+            return;
+        }
+
+        var leftPressed = e.LeftButton == MouseButtonState.Pressed;
+        var rightPressed = e.RightButton == MouseButtonState.Pressed;
+
+        if (!leftPressed && !rightPressed)
         {
             _dragStart = e.GetPosition(this);
             _pendingFileDragItem = null;
@@ -179,7 +209,7 @@ public partial class MainWindow
             return;
         }
 
-        if (_isRubberBandSelecting)
+        if (leftPressed && _isRubberBandSelecting)
         {
             UpdateRubberBandSelection(e);
             return;
@@ -197,37 +227,6 @@ public partial class MainWindow
             return;
         }
 
-        var paths = _pendingFileDragPaths;
-        if (paths.Length == 0)
-        {
-            return;
-        }
-
-        var hasArchive = paths.Any(ArchivePath.Contains);
-        var realPaths = ResolveDragPaths(paths);
-        if (realPaths.Length == 0)
-        {
-            _pendingFileDragItem = null;
-            _pendingFileDragPaths = [];
-            return;
-        }
-
-        var data = new DataObject();
-        var collection = new StringCollection();
-        collection.AddRange(realPaths);
-        data.SetFileDropList(collection);
-        var allowedEffects = hasArchive
-            ? DragDropEffects.Copy
-            : DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link;
-        var effect = DragDrop.DoDragDrop(lb, data, allowedEffects);
-
-        if (effect != DragDropEffects.None)
-        {
-            Reload(LeftGrid);
-            Reload(RightGrid);
-        }
-
-        _pendingFileDragItem = null;
-        _pendingFileDragPaths = [];
+        StartFileDrag(lb, isRightDrag: rightPressed && !leftPressed);
     }
 }

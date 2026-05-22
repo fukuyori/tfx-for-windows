@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.3
+
+- Right-button drag from tfx to Windows Explorer now uses a shell-native drag source for real filesystem items. `ShellFileDrag` builds a real Shell `IDataObject` with `SHParseDisplayName` / `SHCreateDataObject` and starts the drag with `ole32!DoDragDrop`, so Explorer receives the same kind of data object it expects from a normal Explorer file drag. This makes Explorer's standard right-drag menu include `ショートカットをここに作成` / "Create shortcut here" in addition to Copy / Move / Cancel.
+- Kept tfx-internal right-button drops on the existing WPF path. While a shell-native drag is active, drops back into a tfx pane are detected and routed to tfx's own Copy / Move / Create shortcut / Cancel menu, which then executes through the existing `ExecuteDrop` logic and `FsHelpers.CreateShortcut`.
+- Avoided the unsafe intermediate approaches discovered during testing: a hand-built `Shell IDList Array` payload could crash Explorer, and setting only `Preferred DropEffect = Link` on a plain `FileDrop` payload caused Explorer to show the no-drop cursor. The final implementation does not inject those ad hoc formats; it asks the Shell to create the data object.
+- Refactored drag cleanup so right-drag state, context-menu suppression, pane reloads, and pending-drag clearing are handled in small helpers (`TryStartNativeRightDrag`, `BuildFileDropData`, `CompleteFileDrag`). Archive drag-out remains restricted to Copy and continues to use the WPF `FileDrop` fallback.
+
 ## 0.5.2
 
 - Configurable terminal launcher: the "Open Terminal here" command honors a user-specified executable and argument template stored in `AppSettings.TerminalCommand` / `TerminalArguments`. Empty values keep the previous auto-detect behavior (`wt.exe` when running inside Windows Terminal, otherwise `powershell.exe`).

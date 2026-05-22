@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet clean *)",
+      "Bash(tasklist)",
+      "PowerShell(Get-Process -Name Tfx -ErrorAction SilentlyContinue)",
+      "Bash(dotnet test *)",
+      "Bash(git restore *)"
+    ]
+  }
+}

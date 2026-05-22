@@ -35,9 +35,11 @@ public partial class MainWindow
             node = VisualTreeHelper.GetParent(node);
         }
 
-        if (node is DataGridRow row && row.Item is FileItem item && !item.IsParent)
+        FileItem? rowItem = null;
+        if (node is DataGridRow row && row.Item is FileItem item)
         {
-            if (!grid.SelectedItems.Contains(item))
+            rowItem = item;
+            if (!item.IsParent && !grid.SelectedItems.Contains(item))
             {
                 grid.SelectedItems.Clear();
                 grid.SelectedItems.Add(item);
@@ -46,10 +48,34 @@ public partial class MainWindow
 
         UpdateActivePane(grid);
         grid.ContextMenu = BuildGridContextMenu(grid);
+
+        // Prime a possible right-button drag. The actual DoDragDrop call is
+        // launched from Grid_PreviewMouseMove once the cursor crosses the
+        // system drag threshold while the right button is held.
+        _dragStart = e.GetPosition(this);
+        _pendingFileDragItem = null;
+        _pendingFileDragPaths = [];
+        if (rowItem is { IsParent: false })
+        {
+            _pendingFileDragItem = rowItem;
+            var selectedItems = SelectedItems(grid).Where(i => !i.IsParent).ToArray();
+            _pendingFileDragPaths = selectedItems.Contains(rowItem)
+                ? selectedItems.Select(i => i.FullPath).ToArray()
+                : [rowItem.FullPath];
+        }
     }
 
     private void Grid_ContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
+        // After a right-button drag completes, suppress the context menu that
+        // would otherwise pop from the eventual right-button-up event.
+        if (_suppressNextContextMenu)
+        {
+            _suppressNextContextMenu = false;
+            e.Handled = true;
+            return;
+        }
+
         if (sender is not DataGrid grid)
         {
             e.Handled = true;
