@@ -65,21 +65,7 @@ public partial class MainWindow
 
     private void Terminal_Click(object sender, RoutedEventArgs e) => OpenTerminal();
 
-    private void Explorer_Click(object sender, RoutedEventArgs e) => RevealInExplorer();
-
     private void Hidden_Click(object sender, RoutedEventArgs e) => ToggleHidden();
-
-    private void SelectAll_Click(object sender, RoutedEventArgs e)
-    {
-        if (_settings.ViewMode == ViewMode.Icons)
-        {
-            IconViewOf(ActivePane).SelectAll();
-        }
-        else
-        {
-            _activeGrid.SelectAll();
-        }
-    }
 
     private void CopySelectedPath(IReadOnlyList<FileItem> selection)
     {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.4
+
+- Auto-refresh now updates modified date / size / attributes / owner in place when a file on disk changes. `DiffApply` used to match rows by name only and skip everything else, so an externally edited file kept showing its old timestamp and size until the user navigated away and back. `FileItem`'s `Modified` / `ModifiedText` / `Size` / `SizeText` / `OwnerText` / `AttributeText` are now backing-field properties with `INotifyPropertyChanged`, and `DiffApply` calls a new `UpdateMutableFrom` helper whenever the fresh listing reports different metadata for an existing row. Selection, focus, and scroll position are preserved because the row instance is reused.
+- Toolbar trim: removed the **Select all**, **Open folder**, and **Reveal in Explorer** buttons. The keyboard shortcut `Ctrl+A` still selects all, `Reveal in Explorer` remains available from the right-click context menu, and navigation is well covered by the editable path bar, drag-and-drop, pinned folders, and the folder tree. Unused handlers (`SelectAll_Click`, `OpenFolder_Click`, `Explorer_Click`, `OpenFolderPicker`) and the matching `Loc` entries / README rows were removed alongside.
+
 ## 0.5.3
 
 - Right-button drag from tfx to Windows Explorer now uses a shell-native drag source for real filesystem items. `ShellFileDrag` builds a real Shell `IDataObject` with `SHParseDisplayName` / `SHCreateDataObject` and starts the drag with `ole32!DoDragDrop`, so Explorer receives the same kind of data object it expects from a normal Explorer file drag. This makes Explorer's standard right-drag menu include `ショートカットをここに作成` / "Create shortcut here" in addition to Copy / Move / Cancel.

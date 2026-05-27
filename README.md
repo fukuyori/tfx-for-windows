@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.5.3
+Version: 0.5.4
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -50,7 +50,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.5.3 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.5.4 |
 +---------------------------------------------------------------------+
 ```
 
@@ -64,10 +64,10 @@ Buttons use **Segoe Fluent Icons** with **Segoe MDL2 Assets** fallback. Hover fo
 
 | Group | Buttons |
 | --- | --- |
-| Navigation | Back, Forward, Up, Open folder, Pin / unpin current folder |
+| Navigation | Back, Forward, Up, Pin / unpin current folder |
 | Path / search | Active path, Search, Focus search |
 | View | View mode (Details / Icons), Toggle hidden files |
-| Utility | Open Terminal here, Reveal in Explorer, Select all, Reload, Preview toggle, Split toggle, Swap panes, Columns |
+| Utility | Open Terminal here, Reload, Preview toggle, Split toggle, Swap panes, Columns |
 | Status bar | Item count / selection size, current Git branch (if inside a working copy), free space on the active drive, version |
 
 File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste are available from the keyboard and context menu.

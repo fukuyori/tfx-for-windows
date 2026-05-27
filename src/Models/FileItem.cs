@@ -13,16 +13,85 @@ public sealed class FileItem : INotifyPropertyChanged
     public required string Kind { get; init; }
     public bool IsDirectory { get; init; }
     public bool IsParent { get; init; }
-    public long Size { get; init; }
-    public DateTime Modified { get; init; }
     public DateTime Created { get; init; }
-    public string SizeText { get; init; } = "";
-    public string ModifiedText { get; init; } = "";
     public string CreatedText { get; init; } = "";
-    public string OwnerText { get; init; } = "";
-    public string AttributeText { get; init; } = "";
     public ImageSource? Icon { get; init; }
     public ImageSource? LargeIcon { get; init; }
+
+    // These five change when a file is modified externally. They use backing
+    // fields with INPC so the DataGrid re-renders the row when DiffApply detects
+    // a metadata change and calls UpdateMutableFrom.
+    private long _size;
+    private DateTime _modified;
+    private string _sizeText = "";
+    private string _modifiedText = "";
+    private string _ownerText = "";
+    private string _attributeText = "";
+
+    public long Size
+    {
+        get => _size;
+        set { if (_size != value) { _size = value; Raise(nameof(Size)); } }
+    }
+    public DateTime Modified
+    {
+        get => _modified;
+        set { if (_modified != value) { _modified = value; Raise(nameof(Modified)); } }
+    }
+    public string SizeText
+    {
+        get => _sizeText;
+        set { if (_sizeText != value) { _sizeText = value; Raise(nameof(SizeText)); } }
+    }
+    public string ModifiedText
+    {
+        get => _modifiedText;
+        set { if (_modifiedText != value) { _modifiedText = value; Raise(nameof(ModifiedText)); } }
+    }
+    public string OwnerText
+    {
+        get => _ownerText;
+        set { if (_ownerText != value) { _ownerText = value; Raise(nameof(OwnerText)); } }
+    }
+    public string AttributeText
+    {
+        get => _attributeText;
+        set { if (_attributeText != value) { _attributeText = value; Raise(nameof(AttributeText)); } }
+    }
+
+    private void Raise(string propertyName) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    /// <summary>
+    /// Copies metadata that can change externally (size, modified time,
+    /// attributes, owner) from <paramref name="source"/> into this instance,
+    /// raising <see cref="PropertyChanged"/> for any field that actually
+    /// differs. Called by <c>DiffApply</c> when a same-named row is seen with
+    /// new file-system metadata, so the DataGrid re-renders that single row
+    /// without losing selection / focus.
+    /// </summary>
+    public void UpdateMutableFrom(FileItem source)
+    {
+        Size = source.Size;
+        Modified = source.Modified;
+        SizeText = source.SizeText;
+        ModifiedText = source.ModifiedText;
+        OwnerText = source.OwnerText;
+        AttributeText = source.AttributeText;
+    }
+
+    /// <summary>
+    /// True when this row's externally-mutable metadata differs from
+    /// <paramref name="other"/>'s. Drives the decision in
+    /// <c>DiffApply</c> to call <see cref="UpdateMutableFrom"/>.
+    /// </summary>
+    public bool HasMutableDifferenceFrom(FileItem other) =>
+        Size != other.Size
+        || Modified != other.Modified
+        || !string.Equals(SizeText, other.SizeText, StringComparison.Ordinal)
+        || !string.Equals(ModifiedText, other.ModifiedText, StringComparison.Ordinal)
+        || !string.Equals(OwnerText, other.OwnerText, StringComparison.Ordinal)
+        || !string.Equals(AttributeText, other.AttributeText, StringComparison.Ordinal);
 
     private string _gitStatusText = "";
 

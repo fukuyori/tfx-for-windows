@@ -339,6 +339,7 @@ public partial class MainWindow
             var n = newItems[i];
             if (i < existing.Count && NameEquals(existing[i].Name, n.Name))
             {
+                MergeMutable(existing[i], n);
                 continue;
             }
 
@@ -349,11 +350,20 @@ public partial class MainWindow
                 {
                     existing.Move(found, i);
                 }
+                MergeMutable(existing[i], n);
             }
             else
             {
                 existing.Insert(i, n);
             }
+        }
+    }
+
+    private static void MergeMutable(FileItem existing, FileItem fresh)
+    {
+        if (existing.HasMutableDifferenceFrom(fresh))
+        {
+            existing.UpdateMutableFrom(fresh);
         }
     }
 

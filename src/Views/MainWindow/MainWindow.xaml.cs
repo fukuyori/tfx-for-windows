@@ -197,15 +197,12 @@ public partial class MainWindow : Window
         BackButton.ToolTip = Loc.T("Back (Ctrl+[)");
         ForwardButton.ToolTip = Loc.T("Forward (Ctrl+])");
         ParentButton.ToolTip = Loc.T("Up (Ctrl+Up / Backspace)");
-        OpenFolderButton.ToolTip = Loc.T("Open folder");
         TogglePinButton.ToolTip = Loc.T("Pin / unpin current folder");
         ActiveHeaderPathBorder.ToolTip = Loc.T("Edit current path (Ctrl+L)");
         FocusSearchButton.ToolTip = Loc.T("Focus search (Ctrl+F)");
         ViewModeButton.ToolTip = Loc.T("Switch view mode");
         HiddenButton.ToolTip = Loc.T("Toggle hidden files (Ctrl+Shift+.)");
         TerminalButton.ToolTip = Loc.T("Open Terminal here (Ctrl+Shift+T)");
-        ExplorerButton.ToolTip = Loc.T("Reveal in Explorer");
-        SelectAllButton.ToolTip = Loc.T("Select all (Ctrl+A)");
         ReloadButton.ToolTip = Loc.T("Reload (Ctrl+R)");
         PreviewButton.ToolTip = Loc.T("Toggle preview (Ctrl+Shift+P)");
         RenderedToggle.ToolTip = Loc.T("Show rendered preview");

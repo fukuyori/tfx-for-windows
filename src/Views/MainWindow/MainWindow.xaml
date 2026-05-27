@@ -51,7 +51,6 @@
                     <Button x:Name="BackButton" Style="{StaticResource ToolbarButton}" Click="Back_Click" ToolTip="Back (Ctrl+[)" Content="&#xE72B;" />
                     <Button x:Name="ForwardButton" Style="{StaticResource ToolbarButton}" Click="Forward_Click" ToolTip="Forward (Ctrl+])" Content="&#xE72A;" />
                     <Button x:Name="ParentButton" Style="{StaticResource ToolbarButton}" Click="Parent_Click" ToolTip="Up (Ctrl+Up / Backspace)" Content="&#xE74A;" />
-                    <Button x:Name="OpenFolderButton" Style="{StaticResource ToolbarButton}" Click="OpenFolder_Click" ToolTip="Open folder" Content="&#xE838;" />
                     <Button x:Name="TogglePinButton" Style="{StaticResource ToolbarButton}" Click="TogglePin_Click" ToolTip="Pin / unpin current folder" Content="&#xE718;" />
                 </StackPanel>
                 <Grid Grid.Column="1" Margin="8,0">
@@ -72,8 +71,6 @@
                 </StackPanel>
                 <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="8,0,0,0">
                     <Button x:Name="TerminalButton" Style="{StaticResource ToolbarButton}" Click="Terminal_Click" ToolTip="Open Terminal here (Ctrl+Shift+T)" Content="&#xE756;" />
-                    <Button x:Name="ExplorerButton" Style="{StaticResource ToolbarButton}" Click="Explorer_Click" ToolTip="Reveal in Explorer" Content="&#xE838;" />
-                    <Button x:Name="SelectAllButton" Style="{StaticResource ToolbarButton}" Click="SelectAll_Click" ToolTip="Select all (Ctrl+A)" Content="&#xE762;" />
                     <Button x:Name="ReloadButton" Style="{StaticResource ToolbarButton}" Click="Reload_Click" ToolTip="Reload (Ctrl+R)" Content="&#xE72C;" />
                     <ToggleButton x:Name="PreviewButton" Style="{StaticResource ToolbarToggleButton}" Click="Preview_Click" ToolTip="Toggle preview">
                         <Viewbox Width="15" Height="11" Stretch="Uniform">
