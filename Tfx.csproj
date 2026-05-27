@@ -2,12 +2,17 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- Windows SDK projection unlocks Windows.Data.Pdf (PDFium-derived
+         renderer shipped with the OS), used by PdfPreviewRenderer.Stage 2.
+         SupportedOSPlatformVersion is held lower so the app still runs on
+         Windows 10 1809 baseline. -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    <Version>0.5.4</Version>
+    <Version>0.6.0</Version>
     <DefaultItemExcludes>$(DefaultItemExcludes);Tfx.Tests\**;Tfx.Core\**;artifacts\**</DefaultItemExcludes>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>fukuyori</Authors>

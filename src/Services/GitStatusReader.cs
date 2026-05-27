@@ -7,6 +7,42 @@ namespace Tfx;
 
 internal static class GitStatusReader
 {
+    // Resolve `git.exe` once via PATH at first use, cache the absolute path.
+    // Beyond this point we always invoke that pinned path, so a later
+    // PATH-shadowing `git.exe` in the user's CWD or a writable PATH entry
+    // can't hijack the call. Set to a sentinel "" if not found.
+    private static string? _resolvedGitPath;
+    private static readonly object GitPathLock = new();
+
+    private static string? ResolveGitExe()
+    {
+        lock (GitPathLock)
+        {
+            if (_resolvedGitPath is not null)
+            {
+                return _resolvedGitPath.Length == 0 ? null : _resolvedGitPath;
+            }
+            try
+            {
+                var pathVar = Environment.GetEnvironmentVariable("PATH") ?? "";
+                foreach (var dir in pathVar.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var candidate = Path.Combine(dir.Trim(), "git.exe");
+                    if (File.Exists(candidate))
+                    {
+                        _resolvedGitPath = candidate;
+                        return candidate;
+                    }
+                }
+            }
+            catch
+            {
+            }
+            _resolvedGitPath = "";
+            return null;
+        }
+    }
+
     /// <summary>
     /// Walks up from <paramref name="path"/> looking for a <c>.git</c> entry
     /// (directory or file). Returns the directory that contains <c>.git</c>,
@@ -45,10 +81,15 @@ internal static class GitStatusReader
     public static async Task<GitWorkingCopyStatus?> ReadAsync(string root, CancellationToken cancellationToken)
     {
         using var _ = PerformanceTrace.Begin($"git status({Path.GetFileName(root)})");
+        var gitExe = ResolveGitExe();
+        if (gitExe is null)
+        {
+            return null;
+        }
         try
         {
             using var process = new Process();
-            process.StartInfo.FileName = "git";
+            process.StartInfo.FileName = gitExe;
             process.StartInfo.WorkingDirectory = root;
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
@@ -56,6 +97,20 @@ internal static class GitStatusReader
             process.StartInfo.RedirectStandardError = true;
             process.StartInfo.StandardOutputEncoding = Encoding.UTF8;
             process.StartInfo.StandardErrorEncoding = Encoding.UTF8;
+            // Belt-and-braces hardening against malicious repository configs
+            // (CVE-2022-24765 class). Disable filesystem-monitor hooks, all
+            // hooks, file:// protocol fetches and prevent any executable lookup
+            // from inside the repo via override config.
+            process.StartInfo.ArgumentList.Add("-c");
+            process.StartInfo.ArgumentList.Add("core.fsmonitor=");
+            process.StartInfo.ArgumentList.Add("-c");
+            process.StartInfo.ArgumentList.Add("core.hooksPath=NUL");
+            process.StartInfo.ArgumentList.Add("-c");
+            process.StartInfo.ArgumentList.Add("protocol.file.allow=never");
+            process.StartInfo.ArgumentList.Add("-c");
+            process.StartInfo.ArgumentList.Add("core.sshCommand=");
+            process.StartInfo.ArgumentList.Add("-c");
+            process.StartInfo.ArgumentList.Add("core.pager=cat");
             // -c core.quotepath=off avoids \xxx octal escapes for non-ASCII paths.
             process.StartInfo.ArgumentList.Add("-c");
             process.StartInfo.ArgumentList.Add("core.quotepath=off");

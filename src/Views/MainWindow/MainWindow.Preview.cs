@@ -10,8 +10,12 @@ namespace Tfx;
 
 public partial class MainWindow
 {
+    // DisableHtml(): strip raw HTML / inline scripts / event-handler attributes from
+    // Markdown. Without it a malicious .md could drop a <script> or an
+    // <img onerror=...> that the rendered WebView2 would execute. We still allow
+    // advanced Markdown features (tables, math, etc.).
     private static readonly MarkdownPipeline MarkdownPipeline =
-        new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+        new MarkdownPipelineBuilder().UseAdvancedExtensions().DisableHtml().Build();
     private static readonly TimeSpan PreviewDebounce = TimeSpan.FromMilliseconds(120);
 
     private const int MultiSelectionPreviewCap = 8;
@@ -39,6 +43,13 @@ public partial class MainWindow
         _previewDebounceTimer.Stop();
         _previewDebounceTimer.Start();
     }
+
+    private PreviewSecurityOptions BuildPreviewSecurityOptions() => new(
+        EnablePdfPreview: _settings.EnablePdfPreview,
+        PdfMaxBytes: _settings.PdfPreviewMaxBytes,
+        Pdf: new PdfPreviewOptions(
+            UserRendererPath: _settings.PdfRendererPath,
+            AllowShellThumbnailGenerate: _settings.AllowShellPdfThumbnail));
 
     private async void UpdatePreview(IReadOnlyList<FileItem> selection)
     {
@@ -84,7 +95,8 @@ public partial class MainWindow
         try
         {
             var path = item.FullPath;
-            var preview = await Task.Run(() => PreviewLoader.Load(path, cts.Token), cts.Token);
+            var security = BuildPreviewSecurityOptions();
+            var preview = await Task.Run(() => PreviewLoader.Load(path, security, cts.Token), cts.Token);
             if (cts.IsCancellationRequested)
             {
                 return;
@@ -251,7 +263,12 @@ public partial class MainWindow
             }
             else
             {
-                HtmlPreview.CoreWebView2.Navigate(new Uri(path).AbsoluteUri);
+                // Don't Navigate() to file:// — that would re-enable same-origin
+                // file:// fetches inside the page. Load the HTML as a string
+                // (script-disabled WebView2 settings, see InitWebViewAsync)
+                // instead, with a strict CSP wrapper so external requests and
+                // inline scripts can't execute even if WebView2 settings drift.
+                HtmlPreview.NavigateToString(BuildHtmlPreviewDocument(text));
             }
             PreviewScroll.Visibility = Visibility.Collapsed;
             HtmlPreview.Visibility = Visibility.Visible;
@@ -372,6 +389,19 @@ public partial class MainWindow
         try
         {
             await HtmlPreview.EnsureCoreWebView2Async();
+            if (HtmlPreview.CoreWebView2 is { } cw2)
+            {
+                // Disable JavaScript / form fills / DevTools in the preview
+                // WebView2. Markdown rendering doesn't need any of these, and
+                // turning them off neutralises an entire class of attacks
+                // (XSS in rendered HTML, file:// fetches, drive-by navigation).
+                cw2.Settings.IsScriptEnabled = false;
+                cw2.Settings.AreDefaultScriptDialogsEnabled = false;
+                cw2.Settings.IsWebMessageEnabled = false;
+                cw2.Settings.AreDevToolsEnabled = false;
+                cw2.Settings.AreHostObjectsAllowed = false;
+                cw2.Settings.IsBuiltInErrorPageEnabled = false;
+            }
             return HtmlPreview.CoreWebView2 != null;
         }
         catch
@@ -416,7 +446,28 @@ blockquote { color:#9AA0A6; border-left:3px solid #2A2F35; padding-left:10px; ma
 hr { border:0; border-top:1px solid #2A2F35; }
 img { max-width:100%; }
 """;
-        return $"<!doctype html><html><head><meta charset='utf-8'><style>{css}</style></head><body>{bodyHtml}</body></html>";
+        // Defense-in-depth CSP: even though DisableHtml() strips inline scripts
+        // and `javascript:` URLs at the Markdig level, set a strict policy in
+        // case some future pipeline change re-enables raw HTML. Allows our own
+        // inline <style> block but forbids scripts entirely and blocks all
+        // network fetches (so a leak-via-image / fetch is impossible).
+        const string csp = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';";
+        return $"<!doctype html><html><head><meta charset='utf-8'><meta http-equiv='Content-Security-Policy' content=\"{csp}\"><style>{css}</style></head><body>{bodyHtml}</body></html>";
+    }
+
+    /// <summary>
+    /// Wraps a user-supplied .html / .htm document with a strict CSP so that any
+    /// inline scripts, <c>file://</c> fetches, or third-party resource loads it
+    /// tries to perform are blocked. WebView2 also has JavaScript disabled at
+    /// the settings level (see <see cref="InitWebViewAsync"/>), so this is a
+    /// belt-and-braces measure for the rendered view.
+    /// </summary>
+    private static string BuildHtmlPreviewDocument(string htmlSource)
+    {
+        const string csp = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';";
+        // Wrap the original document inside our shell — the CSP <meta> in the
+        // head we control wins because it appears first.
+        return $"<!doctype html><html><head><meta charset='utf-8'><meta http-equiv='Content-Security-Policy' content=\"{csp}\"></head><body>{htmlSource}</body></html>";
     }
 
     private CancellationTokenSource ReplacePreviewToken()

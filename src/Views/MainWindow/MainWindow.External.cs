@@ -49,7 +49,10 @@ public partial class MainWindow
             argument = currentPath;
         }
 
-        Process.Start(new ProcessStartInfo("explorer.exe", argument) { UseShellExecute = true });
+        // Always invoke explorer.exe by its absolute System32 path so we never
+        // race a `explorer.exe` on PATH / in CWD that an attacker could plant.
+        var explorerExe = System.IO.Path.Combine(Environment.SystemDirectory, "explorer.exe");
+        Process.Start(new ProcessStartInfo(explorerExe, argument) { UseShellExecute = true });
     }
 
     private void ToggleHidden()

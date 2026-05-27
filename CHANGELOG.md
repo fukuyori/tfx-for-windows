@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.6.0
+
+### PDF preview overhaul
+
+- **New multi-stage renderer pipeline**: disk cache → shell cache → external `pdftoppm` (auto-detected) → `Windows.Data.Pdf` (OS-shipped PDFium-derived) → shell thumbnail provider. Earlier shell-only path returned 256-px-ish blurry images and failed on OneDrive / Google Drive virtual files (`0x8004B2xx` from the cloud-files API). The new pipeline renders at the requested resolution and works on cloud-synced files.
+- **`Windows.Data.Pdf` integration**: targets `net10.0-windows10.0.19041.0` so the WinRT projection is available; `SupportedOSPlatformVersion=10.0.17763.0` keeps Windows 10 1809 compatibility. New `src/Services/WinRtPdfRenderer.cs` opens the PDF via `FileStream` + `AsRandomAccessStream` (cheaper than `StorageFile.GetFileFromPathAsync`) and forces an opaque-white background so transparent pages don't render dark against tfx's dark preview.
+- **External `pdftoppm` auto-detection**: when `PdfRendererPath` is empty, tfx searches `%PATH%`, Calibre's bundled location, the poppler-windows standalone layout, Scoop's, Chocolatey's, and Conda/Miniforge install paths. Each candidate is gated by a `FileVersionInfo` vendor check (must identify itself as Poppler / Xpdf / pdftoppm), so a bare `pdftoppm.exe` dropped in a writable PATH entry without the right metadata is rejected.
+- **Job Object isolation for `pdftoppm`**: 256 MB process-memory cap, max 4 active processes per job, `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` so leftovers die with tfx, `JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION` for early termination on faults. `src/Services/JobObject.cs` provides the Win32 wrapper.
+- **Persistent disk cache**: rendered first pages are written to `%LocalAppData%\tfx\pdf-cache\<sha256>.png` (up to 200 entries, LRU by mtime). Re-selecting a previously-rendered PDF is essentially free even after restarting tfx. Cache key includes path + last-write time + length + render size, so external edits invalidate the entry automatically.
+- **High-quality WPF scaling**: `ImagePreview` now sets `RenderOptions.BitmapScalingMode="HighQuality"` so the bitmap doesn't look pixelated when the preview pane is wider than the source.
+- **Configurable**: `AppSettings.EnablePdfPreview` (master toggle), `PdfPreviewMaxBytes` (default 500 MB), `PdfRendererPath` (pin to a specific `pdftoppm.exe`), `AllowShellPdfThumbnail` (in-process shell thumbnailer; default `true`).
+- **Diagnostic error surfacing**: shell-thumbnail HRESULT / exception text is now propagated to the preview pane instead of being swallowed and replaced with the generic "no provider available" message. `0x8004B2xx` errors get an inline hint pointing at "Always keep on this device" or `PdfRendererPath`.
+
+### Security hardening
+
+- **Markdown XSS**: Markdig pipeline now uses `.DisableHtml()` so inline `<script>` / `<img onerror>` / `javascript:` URLs in `.md` files cannot execute. A strict CSP `<meta>` (`default-src 'none'; img-src data:; style-src 'unsafe-inline'`) is injected as defense in depth.
+- **HTML preview**: `.html` / `.htm` files are no longer navigated via `file://` (which would have re-enabled same-origin `file://` fetches). They are loaded with `NavigateToString` inside a CSP-wrapped document. WebView2 is configured with `IsScriptEnabled=false`, `AreDevToolsEnabled=false`, `IsWebMessageEnabled=false`, `AreHostObjectsAllowed=false` for the preview pane.
+- **Zip Slip guard** in `ArchiveBrowser.ExtractEntriesToTemp`: entries containing `..\` or absolute paths now fail the `IsPathInside` check and are skipped. `ZipFile.ExtractToDirectory` provides this guard automatically, but the on-demand extractor used by zip browsing was hand-rolled.
+- **`TextPreviewReader` OOM**: previously called `File.ReadAllBytes` then truncated to 256 KB, so clicking a multi-GB `.log` could exhaust memory. Now streams only the first 256 KB via `FileStream`.
+- **Git command hardening**: `GitStatusReader` resolves `git.exe` once via PATH lookup and pins the absolute path, blocking PATH planting. The command now includes `-c core.fsmonitor= -c core.hooksPath=NUL -c protocol.file.allow=never -c core.sshCommand= -c core.pager=cat` to defuse CVE-2022-24765-class repository-config exploits.
+- **`{path}` injection in `TerminalLauncher`**: the working-directory substitution is now always wrapped in `"..."` with embedded quotes doubled, so a folder name containing spaces / quotes / `&` / `|` cannot break out of the argument and be re-interpreted as additional arguments or shell commands.
+- **`CreateShortcut` target validation**: `FsHelpers.CreateShortcut` now requires the source path to exist (`File.Exists || Directory.Exists`). Without this check, a forged `FileDrop` payload from another process could persist arbitrary command strings (e.g. `cmd.exe /c calc & ...`) as a `.lnk` `TargetPath` that any later user click would execute.
+- **Archive temp cleanup on startup**: `EnsureArchiveTempRoot` opportunistically sweeps `%TEMP%\tfx\archive-*` leftovers from previous tfx runs that crashed before they could delete their own folders, instead of accumulating extracted (possibly sensitive) files indefinitely.
+- **`explorer.exe` absolute path**: `RevealInExplorer` now uses `%SystemDirectory%\explorer.exe` so it cannot race a planted `explorer.exe` on PATH or in CWD.
+
 ## 0.5.4
 
 - Auto-refresh now updates modified date / size / attributes / owner in place when a file on disk changes. `DiffApply` used to match rows by name only and skip everything else, so an externally edited file kept showing its old timestamp and size until the user navigated away and back. `FileItem`'s `Modified` / `ModifiedText` / `Size` / `SizeText` / `OwnerText` / `AttributeText` are now backing-field properties with `INotifyPropertyChanged`, and `DiffApply` calls a new `UpdateMutableFrom` helper whenever the fresh listing reports different metadata for an existing row. Selection, focus, and scroll position are preserved because the row instance is reused.

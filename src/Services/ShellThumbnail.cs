@@ -22,12 +22,22 @@ internal static class ShellThumbnail
     /// — useful as an opportunistic fast path before a slower render. When
     /// <c>false</c>, the OS may block while generating the thumbnail.
     /// </param>
-    public static BitmapSource? TryGetThumbnail(string path, int size, bool cacheOnly = true)
+    public static BitmapSource? TryGetThumbnail(string path, int size, bool cacheOnly = true) =>
+        TryGetThumbnail(path, size, cacheOnly, out _);
+
+    /// <summary>
+    /// Same as the simpler overload but reports why the call failed via
+    /// <paramref name="error"/> so callers can surface a useful message in
+    /// the preview pane (e.g. "0x80004005 from PDF shell extension").
+    /// </summary>
+    public static BitmapSource? TryGetThumbnail(string path, int size, bool cacheOnly, out string? error)
     {
+        error = null;
         var itemId = typeof(IShellItemImageFactory).GUID;
         var hr = SHCreateItemFromParsingName(path, IntPtr.Zero, ref itemId, out var factory);
         if (hr != 0 || factory is null)
         {
+            error = $"SHCreateItemFromParsingName failed (0x{hr:X8})";
             return null;
         }
 
@@ -43,6 +53,9 @@ internal static class ShellThumbnail
             factory.GetImage(thumbnailSize, flags, out hBitmap);
             if (hBitmap == IntPtr.Zero)
             {
+                error = cacheOnly
+                    ? "no cached thumbnail"
+                    : "no thumbnail produced (no PDF shell handler returned an image)";
                 return null;
             }
 
@@ -54,8 +67,9 @@ internal static class ShellThumbnail
             source.Freeze();
             return source;
         }
-        catch
+        catch (Exception ex)
         {
+            error = $"{ex.GetType().Name}: {ex.Message}";
             return null;
         }
         finally

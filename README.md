@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.5.4
+Version: 0.6.0
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -50,7 +50,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.5.4 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.0 |
 +---------------------------------------------------------------------+
 ```
 
@@ -218,6 +218,10 @@ Saved automatically to `%APPDATA%\tfx\settings.json` on every change and on clos
 | `SidebarWidth`, `PreviewWidth`, `LeftPaneRatio` | Pane layout |
 | `TerminalCommand` | Executable to launch when invoking **Open Terminal here**. Empty (default) means auto-detect (`wt.exe` when running inside Windows Terminal, otherwise `powershell.exe`). |
 | `TerminalArguments` | Argument template for the configured terminal command. Supports the `{path}` placeholder (replaced with the active pane's folder) and environment-variable expansion such as `%ProgramFiles%`. |
+| `EnablePdfPreview` | Master toggle for the PDF preview pipeline. `false` skips all PDF rendering and shows only file metadata. Default `true`. |
+| `PdfPreviewMaxBytes` | Skip rendering for PDFs larger than this. Default `524288000` (500 MB). Set to `0` for no limit. |
+| `PdfRendererPath` | Absolute path to a user-pinned `pdftoppm.exe`. When set, takes priority over auto-detected installations. Empty (default) falls back to the auto-detection / built-in renderers described under [PDF preview](#pdf-preview). |
+| `AllowShellPdfThumbnail` | Allow the Windows shell PDF thumbnail provider (Adobe / Foxit / Edge etc.) to run in-process as a last-resort renderer. Default `true`; set `false` for a stricter security posture. |
 | `PinnedFolders` | Pinned entries in display order |
 | `VisibleFileColumns` | Which columns are visible (`Name` / `Git` / `DateModified` / `Type` / `Size` / `DateCreated` / `Owner` / `Attribute`) |
 | `FileColumnOrder` | Column display order |
@@ -300,7 +304,12 @@ src/Services/WindowTheme.cs         DWM title-bar color integration
 src/Services/ShellOpenWith.cs       `SHOpenWithDialog` P/Invoke wrapper
 src/Services/ShellThumbnail.cs      `IShellItemImageFactory` wrapper (cache-only and
                                     generate modes via `SIIGBF_INCACHEONLY`)
-src/Services/PdfPreviewRenderer.cs  Shell-thumbnail + pdftoppm + LRU-cache PDF preview
+src/Services/PdfPreviewRenderer.cs  Multi-stage PDF preview: disk cache + shell cache
+                                    + external pdftoppm (Job-Object isolated) +
+                                    Windows.Data.Pdf + shell thumbnail provider
+src/Services/WinRtPdfRenderer.cs    Windows.Data.Pdf wrapper used by the renderer's
+                                    fallback stage
+src/Services/JobObject.cs           Win32 Job Object wrapper for the external pdftoppm
 src/Services/GitStatusReader.cs     `git status --porcelain=v2` runner; `FindRoot` walk
                                     for `.git` ancestor
 
@@ -318,13 +327,51 @@ Tfx.Tests/Tfx.Tests.csproj          xUnit tests for the pure-logic types
 
 ---
 
+## PDF preview
+
+tfx renders the first page of a PDF in the preview pane. Multiple renderer stages run in priority order; the first one that returns an image wins. The whole pipeline is skipped if `EnablePdfPreview` is `false` or the file is larger than `PdfPreviewMaxBytes`.
+
+| Stage | Source | When it runs |
+| --- | --- | --- |
+| Disk cache | `%LocalAppData%\tfx\pdf-cache\<sha256>.png` (up to 200 entries, LRU) | Whenever a previously-rendered PDF is selected — survives app restarts |
+| Shell cache (read-only) | Windows thumbnail cache that Explorer / other apps populated | Always |
+| External `pdftoppm` | User-pinned path, then `%PATH%`, then well-known install locations | When a vendor-verified `pdftoppm.exe` is found |
+| `Windows.Data.Pdf` | OS-shipped PDFium-derived renderer | When no external `pdftoppm` was found (fallback) |
+| Shell thumbnail provider (in-process) | Adobe / Foxit / Edge etc. registered shell extension | Only when `AllowShellPdfThumbnail` is `true` (default) |
+
+### External `pdftoppm` auto-detection
+
+When `PdfRendererPath` is empty, tfx searches the following locations (in order) and uses the first executable whose `FileVersionInfo` metadata identifies it as Poppler / Xpdf / pdftoppm:
+
+1. `%PATH%`
+2. `%ProgramFiles%\Calibre2\app\bin\pdftoppm.exe`
+3. `%ProgramFiles(x86)%\Calibre2\app\bin\pdftoppm.exe`
+4. `%ProgramFiles%\poppler\bin\pdftoppm.exe` / `…\Library\bin\pdftoppm.exe`
+5. `%LocalAppData%\Programs\poppler\bin\pdftoppm.exe` / `…\Library\bin\pdftoppm.exe`
+6. `%UserProfile%\scoop\apps\poppler\current\bin\pdftoppm.exe` / `…\Library\bin\pdftoppm.exe`
+7. `C:\ProgramData\chocolatey\bin\pdftoppm.exe`
+8. `%UserProfile%\miniforge3\Library\bin\pdftoppm.exe`
+9. `%UserProfile%\anaconda3\Library\bin\pdftoppm.exe`
+
+Set `PdfRendererPath` in `settings.json` to an absolute path (with `\\` escapes) to override the auto-detection. The external renderer runs in a separate process with a [Job Object](https://learn.microsoft.com/windows/win32/procthread/job-objects) limit of 256 MB and an 8-second timeout, killed automatically when tfx exits.
+
+### Built-in `Windows.Data.Pdf`
+
+When no external `pdftoppm` is found, tfx falls back to the PDFium-derived renderer shipped with Windows 10/11 (1809 baseline). No extra install needed; works on OneDrive / Google Drive virtual files because the OS resolves the content on demand when tfx opens the file stream.
+
+### Cloud-synced files
+
+The shell thumbnail provider (Stage 5) returns `0x8004B2xx` errors for OneDrive / Google Drive virtual files. tfx surfaces a hint suggesting either marking the file "Always keep on this device" or installing an external `pdftoppm`. The external `pdftoppm` and `Windows.Data.Pdf` stages both work on cloud-synced files without that workaround.
+
+---
+
 ## Notes and limitations
 
 - Delete-like operations move to the Recycle Bin by default. Use `Shift + Delete` for permanent removal.
 - Cross-volume directory moves are handled via `Microsoft.VisualBasic.FileIO.FileSystem.MoveDirectory`, which falls back to copy + delete.
-- PDF preview renders the first page with `pdftoppm` when available, then falls back to the Windows shell thumbnail provider. If neither is available, tfx shows file information only.
+- PDF preview pipeline is documented under [PDF preview](#pdf-preview). Short version: cache → external `pdftoppm` (auto-detected) → built-in `Windows.Data.Pdf` → shell thumbnail provider. Each layer can be disabled individually via settings.
 - Text preview detects UTF-8 with/without BOM, UTF-16 with BOM, EUC-JP, ISO-2022-JP (JIS), and Shift_JIS, and shows the detected encoding and newline style.
-- Markdown (`.md`) and HTML (`.html`, `.htm`) previews render via the embedded WebView2 control; a toggle button in the preview header switches between rendered view and source. Requires the Microsoft Edge WebView2 runtime (preinstalled on Windows 11).
+- Markdown (`.md`) and HTML (`.html`, `.htm`) previews render via the embedded WebView2 control; a toggle button in the preview header switches between rendered view and source. Requires the Microsoft Edge WebView2 runtime (preinstalled on Windows 11). The preview WebView2 has JavaScript disabled (`IsScriptEnabled=false`), Markdown is rendered with `Markdig.DisableHtml()` to strip inline `<script>` / `javascript:`, and rendered output is wrapped in a strict CSP (`default-src 'none'; img-src data:; style-src 'unsafe-inline'`) so a hostile `.md` / `.html` cannot exfiltrate files or perform network requests.
 - Video previews are not implemented.
 - Inline rename (`F2`) is wired to the active Details view.
 - The DataGrid header drag-reorder is disabled by default style; use the Columns popup to keep both panes in sync.
@@ -332,7 +379,7 @@ Tfx.Tests/Tfx.Tests.csproj          xUnit tests for the pure-logic types
 - Zip browsing is read-only. Entries previewed or opened are extracted on demand to `%TEMP%\tfx\archive-<id>\…` and the folder is cleaned up when the window closes. Nested zips are not auto-mounted; opening a `.zip` inside an archive extracts it first.
 - The configured terminal command is started via `ShellExecute`, so executables on `PATH`, registered app aliases (e.g. `wt`, `pwsh`, `code`), and `.cmd` / `.bat` / `.lnk` targets all work. If the configured command fails to start, the launcher silently falls back to `powershell.exe` so the user is never stuck with a broken configuration.
 - Git integration requires the `git` executable on `PATH`. Without it, the **Git** column stays empty and the branch label in the status bar is hidden. Runs `git status --porcelain=v2 --branch --untracked-files=normal --no-renames` with an 8-second timeout; the parser handles ordinary changes (X / Y status), untracked (`?`), conflicted (`u`), and ignored (`!`) entries, plus type-2 rename / copy records.
-- PDF previews go through three stages: cached Windows shell thumbnail (instant, never blocks) → `pdftoppm` if installed → shell-generated thumbnail (may block briefly). Results are stored in an in-process LRU cache keyed by path + last-write time + length + render size, so re-selecting the same PDF is instant.
+- PDF previews are cached on disk under `%LocalAppData%\tfx\pdf-cache\` (LRU, 200 entries). Re-selecting a previously-rendered PDF is essentially free even after restarting tfx; an external edit invalidates the cached entry automatically because the cache key includes the file's last-write time and length. The disk cache can be cleared by deleting that folder.
 
 ---
 

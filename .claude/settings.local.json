@@ -5,7 +5,10 @@
       "Bash(tasklist)",
       "PowerShell(Get-Process -Name Tfx -ErrorAction SilentlyContinue)",
       "Bash(dotnet test *)",
-      "Bash(git restore *)"
+      "Bash(git restore *)",
+      "Bash(cat \"%APPDATA%\\\\tfx\\\\settings.json\" 2>/dev/null | head -40)",
+      "PowerShell($p = \"$env:APPDATA\\\\tfx\\\\settings.json\"; if \\(Test-Path $p\\) { Get-Content $p | Select-String -Pattern \"Pdf|Thumbnail\" } else { \"no settings.json\" })",
+      "PowerShell($p = \"$env:APPDATA\\\\tfx\\\\settings.json\"; Write-Host \"Path: $p\"; Write-Host \"Exists: $\\(Test-Path $p\\)\"; if \\(Test-Path $p\\) { Get-Content -Raw $p })"
     ]
   }
 }

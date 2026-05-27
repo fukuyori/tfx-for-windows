@@ -17,9 +17,27 @@ internal static class TextPreviewReader
     public static TextPreviewResult Read(string path, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var bytes = File.ReadAllBytes(path);
+        // Stream the first MaxPreviewBytes only. The old `File.ReadAllBytes` +
+        // slice approach loaded the entire file into memory before discarding
+        // the tail, so a 10 GB .log would OOM the app just by being clicked.
+        byte[] previewBytes;
+        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+        {
+            var toRead = (int)Math.Min(stream.Length, MaxPreviewBytes);
+            previewBytes = new byte[toRead];
+            var offset = 0;
+            while (offset < toRead)
+            {
+                var read = stream.Read(previewBytes, offset, toRead - offset);
+                if (read <= 0) break;
+                offset += read;
+            }
+            if (offset != toRead)
+            {
+                Array.Resize(ref previewBytes, offset);
+            }
+        }
         cancellationToken.ThrowIfCancellationRequested();
-        var previewBytes = bytes.Length > MaxPreviewBytes ? bytes[..MaxPreviewBytes] : bytes;
         var encoding = DetectEncoding(previewBytes);
         var text = encoding.GetString(previewBytes);
         if (text.Length > 0 && text[0] == '\uFEFF')

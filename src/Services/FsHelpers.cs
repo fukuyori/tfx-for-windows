@@ -8,6 +8,16 @@ internal static class FsHelpers
 {
     public static void CreateShortcut(string sourcePath, string lnkPath)
     {
+        // Reject anything that isn't a real existing file or directory before
+        // we hand it to WScript.Shell. Without this check, a malicious source
+        // (e.g. a forged FileDrop from another process) could persist arbitrary
+        // command strings like `cmd.exe /c calc & ...` into the saved .lnk —
+        // any user later opening the shortcut would run those.
+        if (!File.Exists(sourcePath) && !Directory.Exists(sourcePath))
+        {
+            throw new FileNotFoundException("Shortcut target does not exist.", sourcePath);
+        }
+
         var shellType = Type.GetTypeFromProgID("WScript.Shell")
             ?? throw new InvalidOperationException("WScript.Shell is unavailable");
 

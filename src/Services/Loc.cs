@@ -132,6 +132,8 @@ internal static class Loc
         ["Attributes: {0}"] = "属性: {0}",
         ["Preview error: {0}"] = "プレビュー エラー: {0}",
         ["PDF preview is unavailable: {0}"] = "PDF プレビューを表示できません: {0}",
+        ["PDF preview is disabled in settings."] = "PDF プレビューは設定で無効化されています。",
+        ["PDF preview skipped: file is larger than the configured limit ({0} bytes)."] = "PDF プレビューをスキップしました: ファイルサイズが上限 ({0} バイト) を超えています。",
         ["Encoding: {0}"] = "エンコード: {0}",
         ["Newline: {0}"] = "改行コード: {0}",
         ["No PDF renderer or thumbnail provider is available."] = "PDF レンダラーまたはサムネイルプロバイダーがありません。",

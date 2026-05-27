@@ -78,6 +78,24 @@ public partial class MainWindow
         {
             return _archiveTempRoot!;
         }
+        // Before creating this session's folder, opportunistically sweep
+        // leftovers from previous tfx runs that crashed before they could
+        // delete their temp folders. Best-effort: anything currently held
+        // open by another tfx process is silently skipped.
+        try
+        {
+            var parent = Path.Combine(Path.GetTempPath(), "tfx");
+            if (Directory.Exists(parent))
+            {
+                foreach (var stale in Directory.EnumerateDirectories(parent, "archive-*"))
+                {
+                    try { Directory.Delete(stale, recursive: true); } catch { }
+                }
+            }
+        }
+        catch
+        {
+        }
         var root = Path.Combine(Path.GetTempPath(), "tfx", "archive-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(root);
         _archiveTempRoot = root;

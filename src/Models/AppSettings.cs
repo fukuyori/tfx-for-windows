@@ -29,6 +29,22 @@ public sealed class AppSettings
     public List<string> PinnedFolders { get; set; } = [];
     public string TerminalCommand { get; set; } = "";
     public string TerminalArguments { get; set; } = "";
+
+    // ─── PDF preview safety ──────────────────────────────────────────
+    // See docs / CHANGELOG for the threat model. Defaults are chosen so a
+    // freshly installed tfx never opts into the higher-risk paths
+    // (in-process shell thumbnailer / unbounded files) without explicit
+    // consent.
+    public bool EnablePdfPreview { get; set; } = true;
+    public string PdfRendererPath { get; set; } = "";
+    // Default true: the in-proc Windows shell PDF thumbnailer is the same code
+    // path Explorer runs every time the user browses a folder containing PDFs.
+    // Disabling it inside tfx while leaving it active in Explorer offers no real
+    // attack-surface reduction (the user is already exposed through Explorer)
+    // and breaks tfx's ability to preview PDFs it has not seen before. Users
+    // who want to opt out can still set this to false explicitly.
+    public bool AllowShellPdfThumbnail { get; set; } = true;
+    public long PdfPreviewMaxBytes { get; set; } = 500L * 1024 * 1024;
     public List<string> VisibleFileColumns { get; set; } =
     [
         "Name",

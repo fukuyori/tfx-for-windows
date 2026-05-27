@@ -82,7 +82,17 @@ internal static class TerminalLauncher
 
         if (!string.IsNullOrEmpty(args) && args.Contains(PathToken, StringComparison.Ordinal))
         {
-            args = args.Replace(PathToken, workingDirectory, StringComparison.Ordinal);
+            // Always quote the substituted working directory so a folder name
+            // containing spaces, quotes, or `&` / `|` can't break out of the
+            // argument and be re-interpreted as additional arguments or
+            // commands. Escape any embedded `"` first (Windows command-line
+            // rules: double the quote).
+            var safe = "\"" + (workingDirectory ?? string.Empty).Replace("\"", "\"\"") + "\"";
+            // If the template already wraps {path} in quotes, strip those so we
+            // don't end up with nested ""..."" pairs.
+            args = args
+                .Replace("\"" + PathToken + "\"", safe, StringComparison.Ordinal)
+                .Replace(PathToken, safe, StringComparison.Ordinal);
         }
 
         return (exe, args);

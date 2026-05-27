@@ -366,7 +366,8 @@
                         <ScrollViewer x:Name="PreviewScroll">
                             <StackPanel Margin="10,0,10,10">
                                 <TextBlock x:Name="InfoPreview" Foreground="{StaticResource TfxForeground}" TextWrapping="Wrap" />
-                                <Image x:Name="ImagePreview" Stretch="Uniform" Visibility="Collapsed" Margin="0,8,0,0" />
+                                <Image x:Name="ImagePreview" Stretch="Uniform" Visibility="Collapsed" Margin="0,8,0,0"
+                                       RenderOptions.BitmapScalingMode="HighQuality" />
                                 <TextBox x:Name="TextPreview" Background="#0D1013" Foreground="{StaticResource TfxForeground}" BorderThickness="0" FontFamily="Consolas, Yu Gothic UI" TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True" Visibility="Collapsed" Margin="0,8,0,0" />
                             </StackPanel>
                         </ScrollViewer>

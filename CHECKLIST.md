@@ -7,7 +7,7 @@
 
 ## 1. 起動とレイアウト
 
-- [ ] `dotnet run` で起動するとウィンドウタイトルが `tfx 0.5.4 - <パス>` になる
+- [ ] `dotnet run` で起動するとウィンドウタイトルが `tfx 0.6.0 - <パス>` になる
 - [ ] OS の表示言語が日本語の場合、メニュー、ツールチップ、ステータス、プレビュー情報が日本語になる
 - [ ] OS の表示言語が日本語以外の場合、メニュー、ツールチップ、ステータス、プレビュー情報が英語になる
 - [ ] サイドバー（PINNED / FOLDERS）、左ペイン、右ペイン、プレビューペインが正しく配置される
@@ -143,10 +143,18 @@
 - [ ] UTF-8 は BOM あり / BOM なしが Encoding に表示される
 - [ ] テキストプレビューに Encoding と Newline が表示される
 - [ ] 画像ファイル（.png, .jpg, .gif, .bmp ... ）が表示
-- [ ] PDF ファイルは `pdftoppm` または Windows のサムネイルプロバイダーで先頭ページのプレビューが表示される
-- [ ] PDF レンダラーがない環境では、異常終了せず情報表示のみになる
+- [ ] PDF ファイルの先頭ページが鮮明にプレビューされる（外部 `pdftoppm` インストール時は Job Object 隔離で実行、未インストール時は `Windows.Data.Pdf` でフォールバック）
+- [ ] OneDrive / Google Drive 同期下の PDF も問題なくプレビューできる（CFAPI エラー回避）
+- [ ] 一度プレビューした PDF を tfx 再起動後に開いても即時表示される（`%LocalAppData%\tfx\pdf-cache\` ディスクキャッシュヒット）
+- [ ] `PdfPreviewMaxBytes` を超える PDF はスキップされ、情報表示のみとなる（既定 500MB）
+- [ ] `EnablePdfPreview=false` で PDF プレビュー機能を完全 OFF にできる
+- [ ] `PdfRendererPath` で任意の `pdftoppm.exe` を絶対パス指定できる（ベンダ照合に合格すれば）
+- [ ] PDF レンダラーがない環境でも、異常終了せず情報表示のみになる
 - [ ] バイナリファイルは情報のみ
 - [ ] フォルダや `..` 行はメタデータのみ表示
+- [ ] **Markdown プレビュー**: `<script>alert(1)</script>` や `<img src=x onerror=alert(1)>` を含む `.md` を選択しても何も実行されない（生 HTML がストリップされる）
+- [ ] **HTML プレビュー**: `<script>` や `fetch('file:///C:/...')` を含む `.html` を選択しても何も実行されない（WebView2 で JS 無効化）
+- [ ] **巨大テキスト**: 数 GB の `.log` をクリックしても OOM せず、先頭 256 KB のみ表示される
 
 ## 13. ピン留め
 
@@ -197,6 +205,7 @@
 - [ ] VisibleFileColumns
 - [ ] FileColumnOrder
 - [ ] ViewMode（`Details` / `Icons`）
+- [ ] EnablePdfPreview / PdfPreviewMaxBytes / PdfRendererPath / AllowShellPdfThumbnail
 - [ ] 再起動すると前回終了時のパス、アクティブペイン、表示モード、列、サイドバー幅、プレビュー幅、左右ペイン比率、ウィンドウ位置が復元される
 - [ ] ファイルを削除して再起動 → 既定状態に戻る
 
@@ -217,7 +226,7 @@ dotnet run -- "C:\path\to\folder"
 - [ ] `scripts/build-release.ps1` は既存の release フォルダを削除せず、ファイルを上書きして成功する
 - [ ] 出力 EXE のファイルプロパティ → 詳細タブで以下が表示される
   - [ ] 製品名: `tfx for Windows`
-  - [ ] 製品バージョン: `0.5.4`
+  - [ ] 製品バージョン: `0.6.0`
   - [ ] 著作権: `Copyright (c) fukuyori`
 
 ## 19. リグレッション確認

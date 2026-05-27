@@ -122,6 +122,7 @@ internal static class ArchiveBrowser
 
                 var rootDir = Path.Combine(destFolder, name);
                 Directory.CreateDirectory(rootDir);
+                var rootDirFull = Path.GetFullPath(rootDir);
 
                 foreach (var entry in archive.Entries)
                 {
@@ -139,6 +140,14 @@ internal static class ArchiveBrowser
                     }
 
                     var target = Path.Combine(rootDir, rel.Replace('/', Path.DirectorySeparatorChar));
+                    // Zip-Slip guard: reject entries that try to escape the
+                    // per-archive temp folder via `..\` or absolute paths.
+                    // Without this check, `..\..\Windows\System32\evil.exe`
+                    // inside a zip would be written anywhere the user can.
+                    if (!IsPathInside(target, rootDirFull))
+                    {
+                        continue;
+                    }
                     if (full.EndsWith('/'))
                     {
                         Directory.CreateDirectory(target);
@@ -166,7 +175,14 @@ internal static class ArchiveBrowser
                     name = "file";
                 }
 
+                // Single-entry path is also placed under destFolder; SanitizeName
+                // strips invalid filename characters, but we still check the final
+                // resolved path stays inside the temp directory.
                 var target = Path.Combine(destFolder, name);
+                if (!IsPathInside(target, Path.GetFullPath(destFolder)))
+                {
+                    continue;
+                }
                 entry.ExtractToFile(target, overwrite: true);
                 result.Add(target);
             }
@@ -179,6 +195,28 @@ internal static class ArchiveBrowser
     {
         var results = ExtractEntriesToTemp(archiveFile, [entryPath], sessionTempRoot, cancellationToken);
         return results.Count > 0 ? results[0] : throw new FileNotFoundException(entryPath);
+    }
+
+    /// <summary>
+    /// Returns true iff <paramref name="candidate"/>'s fully-resolved path stays
+    /// inside <paramref name="rootFull"/>. Used as a Zip-Slip guard before we
+    /// write any extracted entry to disk.
+    /// </summary>
+    private static bool IsPathInside(string candidate, string rootFull)
+    {
+        string resolved;
+        try
+        {
+            resolved = Path.GetFullPath(candidate);
+        }
+        catch
+        {
+            return false;
+        }
+        var rootWithSep = rootFull.EndsWith(Path.DirectorySeparatorChar)
+            ? rootFull
+            : rootFull + Path.DirectorySeparatorChar;
+        return resolved.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string SanitizeName(string name)
