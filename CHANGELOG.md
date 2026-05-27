@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+
+- **PDF preview speed**: render target reduced from 800 px back to the long-standing 600 px (rasterization cost drops to ~56% with no perceptible quality loss now that the preview Image uses `RenderOptions.BitmapScalingMode="HighQuality"`). `FindPdftoppm` is memoised per session — the first lookup still walks `%PATH%` and the 9 known install paths with `FileVersionInfo` vendor verification, but subsequent renders skip the ~10–100 ms scan entirely.
+- **Pinned-folder highlight tracks the active pane**: clicking a pinned folder, then navigating elsewhere via the file list / address bar / folder tree, used to leave the pinned entry highlighted. Re-clicking the same pin then did nothing because WPF's `SelectionChanged` doesn't fire when the selection doesn't actually change. New `SyncPinnedSelectionToActivePane` is called from `UpdateActivePane` and at the end of `Reload`; it sets the pinned list's `SelectedItem` to the entry that matches the active pane's current folder, or clears it when no pin matches. A `_syncingPinnedSelection` guard prevents the re-entrancy that would otherwise re-trigger `Navigate`.
+
 ## 0.6.0
 
 ### PDF preview overhaul

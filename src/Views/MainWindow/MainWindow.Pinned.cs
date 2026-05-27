@@ -48,11 +48,60 @@ public partial class MainWindow
         SaveSettings();
     }
 
+    // Set true while SyncPinnedSelectionToActivePane is rewriting the
+    // selection so PinnedList_SelectionChanged doesn't ricochet back into a
+    // Navigate() call.
+    private bool _syncingPinnedSelection;
+
     private void PinnedList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_syncingPinnedSelection)
+        {
+            return;
+        }
         if (PinnedList.SelectedItem is string path && Directory.Exists(path))
         {
             Navigate(_activeGrid, path, true);
+        }
+    }
+
+    /// <summary>
+    /// Highlight the pinned entry that matches the active pane's current
+    /// folder (if any), otherwise clear the highlight. Called whenever the
+    /// active pane navigates or the active pane itself switches.
+    ///
+    /// Without this sync the ListBox kept the last-clicked pin highlighted
+    /// even after the user moved elsewhere via the file list / address bar.
+    /// Re-clicking the same pin then did nothing, because <c>SelectionChanged</c>
+    /// doesn't fire when the selection doesn't actually change.
+    /// </summary>
+    private void SyncPinnedSelectionToActivePane()
+    {
+        var activePath = GetCurrentPath(_activeGrid);
+        string? match = null;
+        foreach (var p in _pinned)
+        {
+            if (FsHelpers.SamePath(p, activePath))
+            {
+                match = p;
+                break;
+            }
+        }
+        _syncingPinnedSelection = true;
+        try
+        {
+            if (match is null)
+            {
+                PinnedList.SelectedItem = null;
+            }
+            else if (!ReferenceEquals(PinnedList.SelectedItem, match))
+            {
+                PinnedList.SelectedItem = match;
+            }
+        }
+        finally
+        {
+            _syncingPinnedSelection = false;
         }
     }
 

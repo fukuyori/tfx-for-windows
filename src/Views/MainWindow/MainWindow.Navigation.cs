@@ -94,6 +94,14 @@ public partial class MainWindow
 
             ApplyPendingSelection(grid, pane);
             ApplyGitBadges(pane);
+            // Refresh the pinned-list highlight so it matches the freshly
+            // loaded folder (or clears if the path no longer corresponds to
+            // any pinned entry). Without this the pinned list stays stuck on
+            // the last-clicked entry, making re-click a no-op.
+            if (PaneOf(grid) == ActivePane)
+            {
+                SyncPinnedSelectionToActivePane();
+            }
 
             // First successful reload of the left pane after startup: force
             // focus onto the ".." row (or the first entry at a drive root)
