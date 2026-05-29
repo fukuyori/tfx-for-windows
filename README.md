@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.6.2
+Version: 0.6.3
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -34,7 +34,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Git working-copy integration: when inside a Git repository, file rows show a one-character status badge (M / A / ? / D / R / C / U) in the **Git** column and the current branch appears in the status bar as `⎇ name`
 - USB / removable drive hot detection: the folder-tree drive list refreshes when devices are added or removed (via `WM_DEVICECHANGE`)
 - User-editable `%APPDATA%\tfx\config.toml` for tfx-compatible font, color, shortcut, startup, terminal, and per-extension open-with settings
-- Configurable terminal launcher: "Open Terminal here" picks Windows Terminal / PowerShell automatically by default, or a user-specified executable and argument template configured from **Terminal Settings...** in the context menu or `config.toml` (`{path}` and environment variables are expanded)
+- Configurable terminal launcher: "Open Terminal here" opens at the active pane's folder by default, or uses a user-specified executable and optional argument template from **Terminal Settings...** or `config.toml`
 - Status bar with item counts, selection size, active drive's free space (cached and refreshed in the background to stay responsive on slow network drives), Git branch, and the current version
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
@@ -54,7 +54,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.2 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.3 |
 +---------------------------------------------------------------------+
 ```
 
@@ -84,18 +84,18 @@ File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste 
 | --- | --- |
 | `Enter` | Open selected file / Enter selected folder |
 | `Backspace` | Parent folder |
-| `Ctrl + [` / `Ctrl + ]` | Back / Forward |
-| `Ctrl + Up` | Parent folder |
+| `Alt + Left` / `Alt + Right` | Back / Forward |
+| `Alt + Up` / `Backspace` | Parent folder |
 | `F2` | Inline rename (Details mode) |
 | `Delete` | Move selection to Recycle Bin |
 | `Shift + Delete` | Permanently delete selection |
 | `Ctrl + C` / `Ctrl + X` / `Ctrl + V` | Copy / Cut / Paste |
 | `Ctrl + A` | Select all in active view |
-| `Ctrl + N` | New folder |
-| `Ctrl + Shift + N` | New file |
+| `Ctrl + Shift + N` | New folder |
+| `Ctrl + N` | New file |
 | `Ctrl + K` | Compress selected items to a zip archive |
 | `Ctrl + Shift + E` | Extract selected zip archive(s) |
-| `Ctrl + R` | Reload |
+| `F5` | Reload |
 | `Ctrl + F` | Focus Search (subfolder search — type and press Enter) |
 | `Ctrl + L` / `F4` | Focus address bar (edit path) |
 | `Tab` / `Shift + Tab` | Switch focus to the other file pane (split view only; only when focus is already in a pane) |
@@ -211,40 +211,9 @@ The parent (`..`) row is excluded from counts and size sums.
 
 On startup, tfx creates `%APPDATA%\tfx\config.toml` when it does not already exist. This file uses the same `version = 1` and section names as the macOS tfx configuration guide where the setting makes sense on Windows:
 
-```toml
-version = 1
+See [docs/configuration.md](docs/configuration.md) for the full file format, supported keys, and examples.
 
-[font]
-ui = "system"
-mono = "monospace"
-size = 13
-
-[shortcuts]
-reload = "cmd+r"
-openTerminal = "cmd+t"
-togglePreview = "cmd+p"
-toggleSplit = "cmd+backslash"
-swapPanes = "cmd+shift+x"
-focusSearch = "cmd+f"
-toggleHidden = "cmd+shift+."
-goBack = "cmd+["
-goForward = "cmd+]"
-goUp = "cmd+up"
-
-[startup]
-layout = "split"
-rightFolders = ["~/Downloads", "~/Documents"]
-
-[terminal]
-app = "wt.exe"
-arguments = "-d {path}"
-
-[openWith]
-md = "code"
-pdf = "C:\\Program Files\\SumatraPDF\\SumatraPDF.exe"
-```
-
-For cross-edition compatibility, `cmd` / `command` in shortcut values are accepted and mean `Ctrl` on Windows. Native Windows names such as `ctrl`, `shift`, and `alt` also work. Supported key names include single letters / digits, `.`, `[`, `]`, `backslash`, arrow keys, `enter`, `tab`, `space`, `delete`, `backspace`, and `f1` through `f24`.
+Shortcut values use Windows-native modifier names such as `ctrl`, `shift`, and `alt`. Supported key names include single letters / digits, `.`, `[`, `]`, `backslash`, arrow keys, `enter`, `tab`, `space`, `delete`, `backspace`, and `f1` through `f24`.
 
 Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`. Color keys use the macOS tfx semantic names such as `fileListBackground`, `fileForeground`, `directoryForeground`, `secondaryForeground`, `titleBarBackgroundActive`, `titleBarBackgroundInactive`, `paneBorderInactive`, and `paneBorderKeyboardTarget`; unsupported keys are ignored. `[terminal] app` maps to the Windows executable or app alias, and `[terminal] arguments` is a Windows extension for the argument template. `[openWith]` maps an extension without the leading dot to an executable or app alias used when opening files of that type.
 
@@ -261,8 +230,8 @@ Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[start
 | `ShowPerformanceLogs` | Enable `PerformanceTrace` output to Debug / console. The `TFX_PERFORMANCE_LOGS=1` environment variable also turns this on and wins over the setting. |
 | `Left`, `Top`, `Width`, `Height`, `IsMaximized` | Window placement |
 | `SidebarWidth`, `PreviewWidth`, `LeftPaneRatio` | Pane layout |
-| `TerminalCommand` | Executable to launch when invoking **Open Terminal here**. Empty (default) means auto-detect (`wt.exe` when running inside Windows Terminal, otherwise `powershell.exe`). |
-| `TerminalArguments` | Argument template for the configured terminal command. Supports the `{path}` placeholder (replaced with the active pane's folder) and environment-variable expansion such as `%ProgramFiles%`. |
+| `TerminalCommand` | Executable to launch when invoking **Open Terminal here**. Empty (default) launches `wt.exe` at the active pane's folder and falls back to PowerShell if needed. |
+| `TerminalArguments` | Argument template for the configured terminal command. Supports the `{path}` placeholder (replaced with the active pane's folder) and environment-variable expansion such as `%ProgramFiles%`. If omitted, tfx supplies cwd arguments for `wt.exe`, WezTerm, PowerShell, and pwsh. |
 | `EnablePdfPreview` | Master toggle for the PDF preview pipeline. `false` skips all PDF rendering and shows only file metadata. Default `true`. |
 | `PdfPreviewMaxBytes` | Skip rendering for PDFs larger than this. Default `524288000` (500 MB). Set to `0` for no limit. |
 | `PdfRendererPath` | Absolute path to a user-pinned `pdftoppm.exe`. When set, takes priority over auto-detected installations. Empty (default) falls back to the auto-detection / built-in renderers described under [PDF preview](#pdf-preview). |

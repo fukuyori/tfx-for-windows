@@ -1,9 +1,14 @@
 # Changelog
 
-## 0.6.2
+## 0.6.3
 
 - Added `%APPDATA%\tfx\config.toml` support with tfx-compatible `version = 1` sections for `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`.
-- Shortcut values now accept macOS-style `cmd` / `command` tokens as `Ctrl` on Windows, so shared `config.toml` examples such as `reload = "cmd+r"` work without rewriting.
+- Shortcut defaults and generated `config.toml` now use Windows-native `ctrl` / `alt` / function-key notation, including `F5` reload and Explorer-like `Alt+Left` / `Alt+Right` / `Alt+Up` navigation.
+- Light color themes now work across the WPF shell: toolbar/status chrome, inputs, selected rows, icon view, tree hover/selection, scrollbars, text/CSV preview, and Markdown preview CSS are all theme-resource driven.
+- Theme brushes now use dynamic WPF resources so colors loaded from `config.toml` update existing controls; the native title bar also follows the configured light/dark colors.
+- `[opacity].background` now enables a transparent WPF window surface with custom chrome, and `[opacity].inactivePane` now affects the inactive pane surface instead of being parsed only.
+- The terminal launcher now opens at the active pane's folder even when no terminal arguments are configured; default cwd arguments are supplied for Windows Terminal, WezTerm, PowerShell, and pwsh.
+- `[startup].preview` now supports `show`, `hide`, and `restore` to control whether the preview pane is visible at startup.
 - Terminal and per-extension open-with settings can now be supplied from `config.toml`; the existing `settings.json` remains the persisted session-state file.
 - Added English and Japanese configuration guides plus a standalone Japanese README.
 

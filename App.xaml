@@ -11,11 +11,24 @@
         <SolidColorBrush x:Key="TfxMuted" Color="#8F9BA8" />
         <SolidColorBrush x:Key="TfxAccent" Color="#7DD3FC" />
         <SolidColorBrush x:Key="TfxFocusBorder" Color="#4ADE80" />
+        <SolidColorBrush x:Key="TfxChrome" Color="#0B0E10" />
+        <SolidColorBrush x:Key="TfxInput" Color="#0D1013" />
+        <SolidColorBrush x:Key="TfxHover" Color="#20262B" />
+        <SolidColorBrush x:Key="TfxSelection" Color="#263845" />
+        <SolidColorBrush x:Key="TfxSelectionForeground" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="TfxInactiveSelection" Color="#285A86" />
+        <SolidColorBrush x:Key="TfxDisabledForeground" Color="#59636E" />
+        <SolidColorBrush x:Key="TfxScrollThumb" Color="#3A444D" />
+        <SolidColorBrush x:Key="TfxScrollThumbHover" Color="#4A5661" />
+        <SolidColorBrush x:Key="TfxScrollThumbDragging" Color="#5B6874" />
+        <SolidColorBrush x:Key="TfxAlternatingRow" Color="#14191D" />
+        <SolidColorBrush x:Key="TfxSelectionOverlay" Color="#7DD3FC" Opacity="0.2" />
+        <SolidColorBrush x:Key="TfxHitSurface" Color="#FFFFFF" Opacity="0.01" />
 
         <Style TargetType="Button">
-            <Setter Property="Background" Value="#222A31" />
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
-            <Setter Property="BorderBrush" Value="{StaticResource TfxBorder}" />
+            <Setter Property="Background" Value="{DynamicResource TfxHover}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TfxBorder}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="10,5" />
             <Setter Property="Margin" Value="3,0" />
@@ -25,7 +38,7 @@
 
         <Style x:Key="ToolbarButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="0" />
@@ -48,10 +61,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#20262B" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxHover}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#2D353C" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxBorder}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.38" />
@@ -64,7 +77,7 @@
 
         <Style x:Key="ToolbarToggleButton" TargetType="ToggleButton">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="0" />
@@ -87,14 +100,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#20262B" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxHover}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#0A84FF" />
-                                <Setter Property="Foreground" Value="#FFFFFF" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxSelection}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#1677D2" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxFocusBorder}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.38" />
@@ -106,18 +119,18 @@
         </Style>
 
         <Style TargetType="TextBox">
-            <Setter Property="Background" Value="#0D1013" />
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
-            <Setter Property="BorderBrush" Value="{StaticResource TfxBorder}" />
-            <Setter Property="CaretBrush" Value="{StaticResource TfxAccent}" />
+            <Setter Property="Background" Value="{DynamicResource TfxInput}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TfxBorder}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource TfxAccent}" />
             <Setter Property="FontFamily" Value="Consolas, Yu Gothic UI" />
             <Setter Property="Padding" Value="8,5" />
         </Style>
 
         <Style TargetType="ContextMenu">
-            <Setter Property="Background" Value="{StaticResource TfxPanel}" />
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
-            <Setter Property="BorderBrush" Value="{StaticResource TfxBorder}" />
+            <Setter Property="Background" Value="{DynamicResource TfxPanel}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TfxBorder}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="4" />
             <Setter Property="FontFamily" Value="Consolas, Yu Gothic UI" />
@@ -140,7 +153,7 @@
 
         <Style TargetType="MenuItem">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="MinHeight" Value="26" />
             <Setter Property="FontFamily" Value="Consolas, Yu Gothic UI" />
@@ -162,17 +175,17 @@
                                                   TextElement.Foreground="{TemplateBinding Foreground}" />
                                 <TextBlock Grid.Column="1"
                                            Text="{TemplateBinding InputGestureText}"
-                                           Foreground="{StaticResource TfxMuted}"
+                                           Foreground="{DynamicResource TfxMuted}"
                                            Margin="24,0,0,0"
                                            VerticalAlignment="Center" />
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#263845" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxSelection}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="#59636E" />
+                                <Setter Property="Foreground" Value="{DynamicResource TfxDisabledForeground}" />
                                 <Setter Property="Opacity" Value="0.72" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -186,14 +199,14 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Separator">
-                        <Border Height="1" Background="{StaticResource TfxBorder}" />
+                        <Border Height="1" Background="{DynamicResource TfxBorder}" />
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
         <Style x:Key="TfxScrollBarThumb" TargetType="Thumb">
-            <Setter Property="Background" Value="#3A444D" />
+            <Setter Property="Background" Value="{DynamicResource TfxScrollThumb}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Thumb">
@@ -203,10 +216,10 @@
                                 Margin="2" />
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ThumbBorder" Property="Background" Value="#4A5661" />
+                                <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource TfxScrollThumbHover}" />
                             </Trigger>
                             <Trigger Property="IsDragging" Value="True">
-                                <Setter TargetName="ThumbBorder" Property="Background" Value="#5B6874" />
+                                <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource TfxScrollThumbDragging}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -215,8 +228,8 @@
         </Style>
 
         <Style TargetType="ScrollBar">
-            <Setter Property="Background" Value="#0D1013" />
-            <Setter Property="Foreground" Value="#3A444D" />
+            <Setter Property="Background" Value="{DynamicResource TfxInput}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxScrollThumb}" />
             <Setter Property="Width" Value="10" />
             <Setter Property="MinWidth" Value="10" />
             <Setter Property="Template">
@@ -228,7 +241,7 @@
                                     <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" IsHitTestVisible="False" />
                                 </Track.DecreaseRepeatButton>
                                 <Track.Thumb>
-                                    <Thumb Style="{StaticResource TfxScrollBarThumb}" />
+                                    <Thumb Style="{DynamicResource TfxScrollBarThumb}" />
                                 </Track.Thumb>
                                 <Track.IncreaseRepeatButton>
                                     <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" IsHitTestVisible="False" />
@@ -254,13 +267,13 @@
         </Style>
 
         <Style TargetType="DataGrid">
-            <Setter Property="Background" Value="{StaticResource TfxPanel}" />
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
-            <Setter Property="BorderBrush" Value="{StaticResource TfxBorder}" />
+            <Setter Property="Background" Value="{DynamicResource TfxPanel}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TfxBorder}" />
             <Setter Property="GridLinesVisibility" Value="None" />
             <Setter Property="HeadersVisibility" Value="Column" />
-            <Setter Property="RowBackground" Value="{StaticResource TfxPanel}" />
-            <Setter Property="AlternatingRowBackground" Value="#14191D" />
+            <Setter Property="RowBackground" Value="{DynamicResource TfxPanel}" />
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource TfxAlternatingRow}" />
             <Setter Property="SelectionMode" Value="Extended" />
             <Setter Property="SelectionUnit" Value="FullRow" />
             <Setter Property="AutoGenerateColumns" Value="False" />
@@ -271,41 +284,41 @@
         </Style>
 
         <Style TargetType="DataGridRow">
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
-            <Setter Property="Background" Value="{StaticResource TfxPanel}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
+            <Setter Property="Background" Value="{DynamicResource TfxPanel}" />
             <Setter Property="MinHeight" Value="24" />
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#263845" />
-                    <Setter Property="Foreground" Value="#FFFFFF" />
+                    <Setter Property="Background" Value="{DynamicResource TfxSelection}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="DataGridCell">
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="8,5,16,5" />
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#263845" />
-                    <Setter Property="Foreground" Value="#FFFFFF" />
+                    <Setter Property="Background" Value="{DynamicResource TfxSelection}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#0D1013" />
-            <Setter Property="Foreground" Value="{StaticResource TfxMuted}" />
-            <Setter Property="BorderBrush" Value="{StaticResource TfxBorder}" />
+            <Setter Property="Background" Value="{DynamicResource TfxInput}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxMuted}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TfxBorder}" />
             <Setter Property="BorderThickness" Value="0,0,1,1" />
             <Setter Property="Padding" Value="8,4,16,4" />
             <Setter Property="FontFamily" Value="Consolas, Yu Gothic UI" />
         </Style>
 
         <Style TargetType="TreeViewItem">
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Padding" Value="4,2" />
             <Setter Property="Template">
@@ -324,13 +337,13 @@
                                               Height="18"
                                               Background="Transparent"
                                               BorderThickness="0"
-                                              Foreground="{StaticResource TfxMuted}">
+                                              Foreground="{DynamicResource TfxMuted}">
                                     <ToggleButton.Template>
                                         <ControlTemplate TargetType="ToggleButton">
                                             <Grid Background="Transparent">
                                                 <Path x:Name="ExpanderGlyph"
                                                       Data="M 0 0 L 5 4 L 0 8 Z"
-                                                      Fill="{StaticResource TfxMuted}"
+                                                      Fill="{DynamicResource TfxMuted}"
                                                       Width="5"
                                                       Height="8"
                                                       Stretch="Uniform"
@@ -371,19 +384,19 @@
                                 <Setter TargetName="Expander" Property="Visibility" Value="Hidden" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="SelectionBd" Property="Background" Value="#0A84FF" />
-                                <Setter Property="Foreground" Value="#FFFFFF" />
+                                <Setter TargetName="SelectionBd" Property="Background" Value="{DynamicResource TfxSelection}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="SelectionBd" Property="Background" Value="#263845" />
+                                <Setter TargetName="SelectionBd" Property="Background" Value="{DynamicResource TfxHover}" />
                             </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
                                     <Condition Property="IsSelected" Value="True" />
                                     <Condition Property="IsSelectionActive" Value="False" />
                                 </MultiTrigger.Conditions>
-                                <Setter TargetName="SelectionBd" Property="Background" Value="#285A86" />
-                                <Setter Property="Foreground" Value="#FFFFFF" />
+                                <Setter TargetName="SelectionBd" Property="Background" Value="{DynamicResource TfxInactiveSelection}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -391,20 +404,20 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#0A84FF" />
-                    <Setter Property="Foreground" Value="#FFFFFF" />
+                    <Setter Property="Background" Value="{DynamicResource TfxSelection}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="ListBoxItem">
-            <Setter Property="Foreground" Value="{StaticResource TfxForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Padding" Value="6,3" />
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#263845" />
-                    <Setter Property="Foreground" Value="#FFFFFF" />
+                    <Setter Property="Background" Value="{DynamicResource TfxSelection}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
                 </Trigger>
             </Style.Triggers>
         </Style>

@@ -212,6 +212,20 @@ public sealed class AppConfig
                 config.Errors.Add($"Invalid startup layout: {value}");
             }
         }
+        else if (key.Equals("preview", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseString(value, out var preview) &&
+                (preview.Equals("show", StringComparison.OrdinalIgnoreCase) ||
+                 preview.Equals("hide", StringComparison.OrdinalIgnoreCase) ||
+                 preview.Equals("restore", StringComparison.OrdinalIgnoreCase)))
+            {
+                config.Startup.Preview = preview.ToLowerInvariant();
+            }
+            else
+            {
+                config.Errors.Add($"Invalid startup preview: {value}");
+            }
+        }
         else if (key.Equals("rightFolder", StringComparison.OrdinalIgnoreCase))
         {
             if (TryParseString(value, out var folder))
@@ -261,15 +275,31 @@ public sealed class AppConfig
             return false;
         }
 
-        try
+        var body = value[1..^1];
+        var builder = new StringBuilder(body.Length);
+        for (var i = 0; i < body.Length; i++)
         {
-            parsed = System.Text.Json.JsonSerializer.Deserialize<string>(value) ?? "";
-            return true;
+            var ch = body[i];
+            if (ch != '\\' || i == body.Length - 1)
+            {
+                builder.Append(ch);
+                continue;
+            }
+
+            var next = body[++i];
+            builder.Append(next switch
+            {
+                '"' => '"',
+                '\\' => '\\',
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                _ => "\\" + next
+            });
         }
-        catch
-        {
-            return false;
-        }
+
+        parsed = builder.ToString();
+        return true;
     }
 
     private static bool TryParseStringArray(string value, out List<string> parsed)
@@ -378,20 +408,37 @@ public sealed class AppConfig
         mono = "monospace"
         size = 13
 
-        # macOS tfx-compatible names are accepted. On Windows, cmd/command
-        # shortcuts map to Ctrl so config.toml can be shared between editions.
+        # Windows-native shortcuts.
         [shortcuts]
-        reload = "cmd+r"
-        openTerminal = "cmd+t"
-        togglePreview = "cmd+p"
-        toggleSplit = "cmd+backslash"
-        swapPanes = "cmd+shift+x"
-        focusSearch = "cmd+f"
-        toggleHidden = "cmd+shift+."
-        goBack = "cmd+["
-        goForward = "cmd+]"
-        goUp = "cmd+up"
+        reload = "f5"
+        openTerminal = "ctrl+shift+t"
+        togglePreview = "ctrl+shift+p"
+        toggleSplit = "ctrl+backslash"
+        swapPanes = "ctrl+shift+x"
+        focusSearch = "ctrl+f"
+        toggleHidden = "ctrl+shift+."
+        goBack = "alt+left"
+        goForward = "alt+right"
+        goUp = "alt+up"
+        openItem = "enter"
+        newFolder = "ctrl+shift+n"
+        newFile = "ctrl+n"
+        rename = "f2"
+        moveToTrash = "delete"
+        compressToZip = "ctrl+k"
+        extractZip = "ctrl+shift+e"
+        copyItems = "ctrl+c"
+        cutItems = "ctrl+x"
+        pasteItems = "ctrl+v"
+        selectAll = "ctrl+a"
 
+        # Startup layout:
+        # [startup]
+        # layout = "restore"
+        # preview = "restore"
+        # rightFolder = "~/Downloads"
+        # rightFolders = ["~/Downloads", "~/Documents"]
+        #
         # Windows aliases:
         # [terminal]
         # app = "wt.exe"
@@ -412,6 +459,7 @@ public sealed class TerminalConfig
 public sealed class StartupConfig
 {
     public string? Layout { get; set; }
+    public string? Preview { get; set; }
     public List<string> RightFolders { get; set; } = [];
 }
 
@@ -455,8 +503,6 @@ public readonly record struct AppShortcut(ModifierKeys Modifiers, Key Key)
             var token = raw.ToLowerInvariant();
             switch (token)
             {
-                case "cmd":
-                case "command":
                 case "ctrl":
                 case "control":
                     modifiers |= ModifierKeys.Control;

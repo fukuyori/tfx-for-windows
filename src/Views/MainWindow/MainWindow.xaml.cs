@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Interop;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -14,6 +16,10 @@ namespace Tfx;
 
 public partial class MainWindow : Window
 {
+    private const int WmSysCommand = 0x0112;
+    private const int ScSize = 0xF000;
+    private const int WmszRight = 2;
+
     public ObservableCollection<FileItem> LeftItems { get; } = [];
     public ObservableCollection<FileItem> RightItems { get; } = [];
 
@@ -226,7 +232,6 @@ public partial class MainWindow : Window
         ForwardButton.ToolTip = Loc.F("Forward ({0})", ShortcutText("goForward"));
         ParentButton.ToolTip = Loc.F("Up ({0} / Backspace)", ShortcutText("goUp"));
         TogglePinButton.ToolTip = Loc.T("Pin / unpin current folder");
-        ActiveHeaderPathBorder.ToolTip = Loc.T("Edit current path (Ctrl+L)");
         FocusSearchButton.ToolTip = Loc.F("Focus search ({0})", ShortcutText("focusSearch"));
         ViewModeButton.ToolTip = Loc.T("Switch view mode");
         HiddenButton.ToolTip = Loc.F("Toggle hidden files ({0})", ShortcutText("toggleHidden"));
@@ -325,17 +330,121 @@ public partial class MainWindow : Window
             FontSize = fontSize;
         }
 
-        SetResourceBrush("TfxBackground", ColorToken("fileListBackground", "headerBackground", fallback: Color.FromRgb(16, 19, 22)));
-        SetResourceBrush("TfxPanel", ColorToken("fileListBackground", fallback: Color.FromRgb(23, 27, 31)));
-        SetResourceBrush("TfxPanelActive", ColorToken("titleBarBackgroundActive", "fileListRowSelected", fallback: Color.FromRgb(30, 37, 43)));
+        var backgroundOpacity = OpacityToken("background", 1.0);
+        var inactivePaneOpacity = OpacityToken("inactivePane", backgroundOpacity);
+        Opacity = 1.0;
+
+        SetResourceBrush("TfxBackground", ColorToken("fileListBackground", "headerBackground", fallback: Color.FromRgb(16, 19, 22)), backgroundOpacity);
+        SetResourceBrush("TfxPanel", ColorToken("fileListBackground", fallback: Color.FromRgb(23, 27, 31)), backgroundOpacity);
+        SetResourceBrush("TfxPanelActive", ColorToken("titleBarBackgroundActive", "fileListRowSelected", fallback: Color.FromRgb(30, 37, 43)), backgroundOpacity);
         SetResourceBrush("TfxBorder", ColorToken("paneBorderInactive", fallback: Color.FromRgb(45, 53, 60)));
         SetResourceBrush("TfxForeground", ColorToken("fileForeground", fallback: Color.FromRgb(214, 222, 230)));
         SetResourceBrush("TfxMuted", ColorToken("secondaryForeground", "headerForeground", fallback: Color.FromRgb(143, 155, 168)));
         SetResourceBrush("TfxAccent", ColorToken("directoryForeground", "splitHandleActive", fallback: Color.FromRgb(125, 211, 252)));
         SetResourceBrush("TfxFocusBorder", ColorToken("paneBorderKeyboardTarget", "paneBorderActive", fallback: Color.FromRgb(74, 222, 128)));
+        SetResourceBrush("TfxChrome", ColorToken("headerBackground", fallback: Color.FromRgb(11, 14, 16)), backgroundOpacity);
+        SetResourceBrush("TfxInput", ColorToken("inputBackground", "headerBackground", fallback: Color.FromRgb(13, 16, 19)), backgroundOpacity);
 
-        _activeBrush = new SolidColorBrush(ColorToken("titleBarBackgroundActive", fallback: Color.FromRgb(30, 37, 43)));
-        _inactiveBrush = new SolidColorBrush(ColorToken("titleBarBackgroundInactive", fallback: Color.FromRgb(23, 27, 31)));
+        var hoverColor = ColorToken("fileListRowHovered", "fileListRowDropTarget", fallback: Color.FromRgb(32, 38, 43));
+        var selectionColor = ColorToken("fileListRowSelected", fallback: Color.FromRgb(38, 56, 69));
+        var selectionForeground = ColorToken("fileListRowSelectedForeground", fallback: ContrastText(selectionColor));
+
+        SetResourceBrush("TfxHover", hoverColor);
+        SetResourceBrush("TfxSelection", selectionColor);
+        SetResourceBrush("TfxSelectionForeground", selectionForeground);
+        SetResourceBrush("TfxInactiveSelection", ColorToken("folderTreeSelectedInactive", fallback: selectionColor));
+        SetResourceBrush("TfxDisabledForeground", ColorToken("disabledForeground", "secondaryForeground", fallback: Color.FromRgb(89, 99, 110)));
+        SetResourceBrush("TfxScrollThumb", ColorToken("scrollbarThumb", "paneBorderInactive", fallback: Color.FromRgb(58, 68, 77)));
+        SetResourceBrush("TfxScrollThumbHover", ColorToken("scrollbarThumbHovered", "paneBorderActive", fallback: Color.FromRgb(74, 86, 97)));
+        SetResourceBrush("TfxScrollThumbDragging", ColorToken("scrollbarThumbDragging", "paneBorderKeyboardTarget", fallback: Color.FromRgb(91, 104, 116)));
+        SetResourceBrush("TfxAlternatingRow", ColorToken("fileListRowAlternate", "fileListBackground", fallback: Color.FromRgb(20, 25, 29)));
+        SetResourceBrush("TfxSelectionOverlay", ColorToken("directoryForeground", "splitHandleActive", fallback: Color.FromRgb(125, 211, 252)), 0.2);
+        SetResourceBrush("TfxHitSurface", ColorToken("headerBackground", fallback: Colors.White), 0.01);
+
+        _activeBrush = new SolidColorBrush(ColorToken("titleBarBackgroundActive", fallback: Color.FromRgb(30, 37, 43)))
+        {
+            Opacity = backgroundOpacity,
+        };
+        _inactiveBrush = new SolidColorBrush(ColorToken("titleBarBackgroundInactive", fallback: Color.FromRgb(23, 27, 31)))
+        {
+            Opacity = inactivePaneOpacity,
+        };
+
+        WindowTheme.Apply(this);
+    }
+
+    private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+
+        if (IsInteractiveTitleElement(e.OriginalSource as DependencyObject))
+        {
+            return;
+        }
+
+        if (e.ClickCount == 2)
+        {
+            ToggleMaximizeRestore();
+            return;
+        }
+
+        DragMove();
+    }
+
+    private static bool IsInteractiveTitleElement(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is ButtonBase or TextBox)
+            {
+                return true;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return false;
+    }
+
+    private void Minimize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeRestore_Click(object sender, RoutedEventArgs e)
+    {
+        ToggleMaximizeRestore();
+    }
+
+    private void Close_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void ResizeRight_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized)
+        {
+            return;
+        }
+
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        _ = ReleaseCapture();
+        _ = SendMessage(handle, WmSysCommand, new IntPtr(ScSize + WmszRight), IntPtr.Zero);
+    }
+
+    private void ToggleMaximizeRestore()
+    {
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     }
 
     private Color ColorToken(string key, string? alternate = null, Color? fallback = null)
@@ -353,17 +462,43 @@ public partial class MainWindow : Window
         return fallback ?? Colors.Transparent;
     }
 
-    private void SetResourceBrush(string resourceKey, Color color)
+    private double OpacityToken(string key, double fallback)
+    {
+        if (_config.Opacity.TryGetValue(key, out var opacity))
+        {
+            return Math.Clamp(opacity, 0.0, 1.0);
+        }
+
+        return fallback;
+    }
+
+    private static Color ContrastText(Color background)
+    {
+        var luminance = (0.299 * background.R) + (0.587 * background.G) + (0.114 * background.B);
+        return luminance > 140 ? Colors.Black : Colors.White;
+    }
+
+    private void SetResourceBrush(string resourceKey, Color color, double opacity = 1.0)
     {
         if (Application.Current.Resources[resourceKey] is SolidColorBrush existing && !existing.IsFrozen)
         {
             existing.Color = color;
+            existing.Opacity = opacity;
         }
         else
         {
-            Application.Current.Resources[resourceKey] = new SolidColorBrush(color);
+            Application.Current.Resources[resourceKey] = new SolidColorBrush(color)
+            {
+                Opacity = opacity,
+            };
         }
     }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
 
     private static bool IsPathRestorable(string path)
     {
@@ -454,6 +589,15 @@ public partial class MainWindow : Window
         else if (_config.Startup.Layout == "split")
         {
             _settings.ShowSplit = true;
+        }
+
+        if (_config.Startup.Preview == "show")
+        {
+            _settings.ShowPreview = true;
+        }
+        else if (_config.Startup.Preview == "hide")
+        {
+            _settings.ShowPreview = false;
         }
 
         SetSplitVisible(_settings.ShowSplit);

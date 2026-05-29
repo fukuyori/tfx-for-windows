@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Markdig;
 using Path = System.IO.Path;
@@ -245,10 +246,11 @@ public partial class MainWindow
             if (extension == ".md")
             {
                 string fullHtml;
+                var css = BuildMarkdownCss();
                 try
                 {
                     fullHtml = await Task.Run(
-                        () => BuildMarkdownDocument(Markdown.ToHtml(text, MarkdownPipeline)),
+                        () => BuildMarkdownDocument(Markdown.ToHtml(text, MarkdownPipeline), css),
                         cts.Token);
                 }
                 catch (OperationCanceledException)
@@ -422,7 +424,8 @@ public partial class MainWindow
         {
             try
             {
-                HtmlPreview.CoreWebView2.NavigateToString("<html><body style='background:#0D1013;'></body></html>");
+                var inputColor = CssColor("TfxInput");
+                HtmlPreview.CoreWebView2.NavigateToString($"<html><body style='background:{inputColor};'></body></html>");
             }
             catch
             {
@@ -430,22 +433,26 @@ public partial class MainWindow
         }
     }
 
-    private static string BuildMarkdownDocument(string bodyHtml)
+    private string BuildMarkdownCss()
     {
-        const string css = """
-:root { color-scheme: dark; }
-body { background:#0D1013; color:#D6D9DD; font-family:'Yu Gothic UI', Consolas, sans-serif; padding:16px; line-height:1.55; word-break:break-word; }
-h1,h2,h3,h4,h5,h6 { color:#E8EAED; border-bottom:1px solid #2A2F35; padding-bottom:.2em; margin-top:1.2em; }
-code { background:#171B1F; padding:1px 4px; border-radius:3px; font-family:Consolas, monospace; }
-pre { background:#171B1F; padding:10px; border-radius:4px; overflow:auto; }
+        return $$"""
+:root { color-scheme: {{ColorSchemeForCss()}}; }
+body { background:{{CssColor("TfxInput")}}; color:{{CssColor("TfxForeground")}}; font-family:'Yu Gothic UI', Consolas, sans-serif; padding:16px; line-height:1.55; word-break:break-word; }
+h1,h2,h3,h4,h5,h6 { color:{{CssColor("TfxForeground")}}; border-bottom:1px solid {{CssColor("TfxBorder")}}; padding-bottom:.2em; margin-top:1.2em; }
+code { background:{{CssColor("TfxPanel")}}; padding:1px 4px; border-radius:3px; font-family:Consolas, monospace; }
+pre { background:{{CssColor("TfxPanel")}}; padding:10px; border-radius:4px; overflow:auto; }
 pre code { padding:0; background:transparent; }
-a { color:#7CB7FF; }
+a { color:{{CssColor("TfxAccent")}}; }
 table { border-collapse:collapse; }
-th, td { border:1px solid #2A2F35; padding:4px 8px; }
-blockquote { color:#9AA0A6; border-left:3px solid #2A2F35; padding-left:10px; margin-left:0; }
-hr { border:0; border-top:1px solid #2A2F35; }
+th, td { border:1px solid {{CssColor("TfxBorder")}}; padding:4px 8px; }
+blockquote { color:{{CssColor("TfxMuted")}}; border-left:3px solid {{CssColor("TfxBorder")}}; padding-left:10px; margin-left:0; }
+hr { border:0; border-top:1px solid {{CssColor("TfxBorder")}}; }
 img { max-width:100%; }
 """;
+    }
+
+    private static string BuildMarkdownDocument(string bodyHtml, string css)
+    {
         // Defense-in-depth CSP: even though DisableHtml() strips inline scripts
         // and `javascript:` URLs at the Markdig level, set a strict policy in
         // case some future pipeline change re-enables raw HTML. Allows our own
@@ -453,6 +460,27 @@ img { max-width:100%; }
         // network fetches (so a leak-via-image / fetch is impossible).
         const string csp = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';";
         return $"<!doctype html><html><head><meta charset='utf-8'><meta http-equiv='Content-Security-Policy' content=\"{csp}\"><style>{css}</style></head><body>{bodyHtml}</body></html>";
+    }
+
+    private string ColorSchemeForCss()
+    {
+        if (FindResource("TfxInput") is SolidColorBrush brush)
+        {
+            var luminance = (0.299 * brush.Color.R) + (0.587 * brush.Color.G) + (0.114 * brush.Color.B);
+            return luminance > 140 ? "light" : "dark";
+        }
+
+        return "dark";
+    }
+
+    private string CssColor(string resourceKey)
+    {
+        if (FindResource(resourceKey) is SolidColorBrush brush)
+        {
+            return $"#{brush.Color.R:X2}{brush.Color.G:X2}{brush.Color.B:X2}";
+        }
+
+        return "#000000";
     }
 
     /// <summary>

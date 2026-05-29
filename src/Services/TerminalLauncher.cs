@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 
 namespace Tfx;
 
@@ -70,14 +71,19 @@ internal static class TerminalLauncher
 
         if (trimmedCommand.Length == 0)
         {
-            // Auto-detect: prefer Windows Terminal when present, else PowerShell.
-            exe = Environment.GetEnvironmentVariable("WT_SESSION") is not null ? "wt.exe" : "powershell.exe";
-            args = trimmedArgs;
+            // Prefer Windows Terminal by default; Launch() falls back to
+            // PowerShell if wt.exe is not available.
+            exe = "wt.exe";
+            args = trimmedArgs.Length == 0 ? "-d {path}" : trimmedArgs;
         }
         else
         {
             exe = Environment.ExpandEnvironmentVariables(trimmedCommand);
             args = Environment.ExpandEnvironmentVariables(trimmedArgs);
+            if (args.Length == 0)
+            {
+                args = DefaultArgumentsFor(exe);
+            }
         }
 
         if (!string.IsNullOrEmpty(args) && args.Contains(PathToken, StringComparison.Ordinal))
@@ -96,5 +102,17 @@ internal static class TerminalLauncher
         }
 
         return (exe, args);
+    }
+
+    private static string DefaultArgumentsFor(string executable)
+    {
+        var fileName = Path.GetFileNameWithoutExtension(executable).ToLowerInvariant();
+        return fileName switch
+        {
+            "wt" => "-d {path}",
+            "wezterm" or "wezterm-gui" => "start --cwd {path}",
+            "powershell" or "pwsh" => "-NoExit -Command Set-Location -LiteralPath {path}",
+            _ => string.Empty
+        };
     }
 }
