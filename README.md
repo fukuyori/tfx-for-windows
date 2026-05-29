@@ -2,7 +2,9 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.6.1
+Version: 0.6.2
+
+[English](README.md) | [日本語](README.ja.md)
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
@@ -12,6 +14,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Author: fukuyori (<self@spumoni.org>)
 - Release notes: [CHANGELOG.md](CHANGELOG.md)
 - Development roadmap: [docs/roadmap.md](docs/roadmap.md)
+- Configuration guide: [docs/configuration.md](docs/configuration.md) / [日本語](docs/configuration.ja.md)
 - Contributing guide: [docs/contributing.md](docs/contributing.md)
 
 ---
@@ -30,7 +33,8 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Recursive subfolder search: type a query in the search box and press **Enter** to walk the current folder's subtree on a background thread, streaming matches into the active pane with live status-bar progress; **Esc** cancels and restores the real listing
 - Git working-copy integration: when inside a Git repository, file rows show a one-character status badge (M / A / ? / D / R / C / U) in the **Git** column and the current branch appears in the status bar as `⎇ name`
 - USB / removable drive hot detection: the folder-tree drive list refreshes when devices are added or removed (via `WM_DEVICECHANGE`)
-- Configurable terminal launcher: "Open Terminal here" picks Windows Terminal / PowerShell automatically by default, or a user-specified executable and argument template configured from **Terminal Settings...** in the context menu (`{path}` and environment variables are expanded)
+- User-editable `%APPDATA%\tfx\config.toml` for tfx-compatible font, color, shortcut, startup, terminal, and per-extension open-with settings
+- Configurable terminal launcher: "Open Terminal here" picks Windows Terminal / PowerShell automatically by default, or a user-specified executable and argument template configured from **Terminal Settings...** in the context menu or `config.toml` (`{path}` and environment variables are expanded)
 - Status bar with item counts, selection size, active drive's free space (cached and refreshed in the background to stay responsive on slow network drives), Git branch, and the current version
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
@@ -50,7 +54,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.1 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.2 |
 +---------------------------------------------------------------------+
 ```
 
@@ -203,9 +207,50 @@ The parent (`..`) row is excluded from counts and size sums.
 
 ---
 
-## Settings
+## Configuration
 
-Saved automatically to `%APPDATA%\tfx\settings.json` on every change and on close.
+On startup, tfx creates `%APPDATA%\tfx\config.toml` when it does not already exist. This file uses the same `version = 1` and section names as the macOS tfx configuration guide where the setting makes sense on Windows:
+
+```toml
+version = 1
+
+[font]
+ui = "system"
+mono = "monospace"
+size = 13
+
+[shortcuts]
+reload = "cmd+r"
+openTerminal = "cmd+t"
+togglePreview = "cmd+p"
+toggleSplit = "cmd+backslash"
+swapPanes = "cmd+shift+x"
+focusSearch = "cmd+f"
+toggleHidden = "cmd+shift+."
+goBack = "cmd+["
+goForward = "cmd+]"
+goUp = "cmd+up"
+
+[startup]
+layout = "split"
+rightFolders = ["~/Downloads", "~/Documents"]
+
+[terminal]
+app = "wt.exe"
+arguments = "-d {path}"
+
+[openWith]
+md = "code"
+pdf = "C:\\Program Files\\SumatraPDF\\SumatraPDF.exe"
+```
+
+For cross-edition compatibility, `cmd` / `command` in shortcut values are accepted and mean `Ctrl` on Windows. Native Windows names such as `ctrl`, `shift`, and `alt` also work. Supported key names include single letters / digits, `.`, `[`, `]`, `backslash`, arrow keys, `enter`, `tab`, `space`, `delete`, `backspace`, and `f1` through `f24`.
+
+Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`. Color keys use the macOS tfx semantic names such as `fileListBackground`, `fileForeground`, `directoryForeground`, `secondaryForeground`, `titleBarBackgroundActive`, `titleBarBackgroundInactive`, `paneBorderInactive`, and `paneBorderKeyboardTarget`; unsupported keys are ignored. `[terminal] app` maps to the Windows executable or app alias, and `[terminal] arguments` is a Windows extension for the argument template. `[openWith]` maps an extension without the leading dot to an executable or app alias used when opening files of that type.
+
+`config.toml` is intended for user-editable preferences. Session state is still saved automatically to `%APPDATA%\tfx\settings.json` on every change and on close.
+
+## Settings
 
 | Key | Description |
 | --- | --- |

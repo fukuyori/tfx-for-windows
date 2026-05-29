@@ -62,6 +62,11 @@ public partial class MainWindow
             return;
         }
 
+        if (TryOpenWithConfiguredApp(item.FullPath))
+        {
+            return;
+        }
+
         try
         {
             Process.Start(new ProcessStartInfo(item.FullPath) { UseShellExecute = true });
@@ -69,6 +74,28 @@ public partial class MainWindow
         catch (Exception ex)
         {
             SetStatus(ex.Message);
+        }
+    }
+
+    private bool TryOpenWithConfiguredApp(string path)
+    {
+        var extension = AppConfig.NormalizeExtension(Path.GetExtension(path));
+        if (extension.Length == 0 || !_config.OpenWith.TryGetValue(extension, out var app) || string.IsNullOrWhiteSpace(app))
+        {
+            return false;
+        }
+
+        try
+        {
+            var expandedApp = Environment.ExpandEnvironmentVariables(AppConfig.ExpandUserPath(app));
+            var safePath = "\"" + path.Replace("\"", "\"\"") + "\"";
+            Process.Start(new ProcessStartInfo(expandedApp, safePath) { UseShellExecute = true });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            SetStatus(Loc.F("Open with failed: {0}", ex.Message));
+            return true;
         }
     }
 

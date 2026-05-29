@@ -7,14 +7,44 @@ namespace Tfx;
 
 public partial class MainWindow
 {
+    private static readonly Dictionary<string, string> DefaultShortcutText = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["reload"] = "cmd+r",
+        ["openTerminal"] = "cmd+t",
+        ["togglePreview"] = "cmd+p",
+        ["toggleSplit"] = "cmd+backslash",
+        ["swapPanes"] = "cmd+shift+x",
+        ["focusSearch"] = "cmd+f",
+        ["toggleHidden"] = "cmd+shift+.",
+        ["goBack"] = "cmd+[",
+        ["goForward"] = "cmd+]",
+        ["goUp"] = "cmd+up",
+        ["openItem"] = "enter",
+        ["newFolder"] = "cmd+n",
+        ["newFile"] = "cmd+shift+n",
+        ["rename"] = "f2",
+        ["moveToTrash"] = "delete",
+        ["compressToZip"] = "cmd+k",
+        ["extractZip"] = "cmd+shift+e",
+        ["copyItems"] = "cmd+c",
+        ["cutItems"] = "cmd+x",
+        ["pasteItems"] = "cmd+v",
+        ["selectAll"] = "cmd+a",
+    };
+
     private bool InArchiveContext => ArchivePath.Contains(GetCurrentPath(_activeGrid));
+
+    private bool IsShortcut(string action, KeyEventArgs e) =>
+        _shortcuts.TryGetValue(action, out var shortcut) && shortcut.Matches(e);
+
+    private string ShortcutText(string action) =>
+        _shortcuts.TryGetValue(action, out var shortcut) ? shortcut.DisplayText : "";
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
-        var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
 
-        if (ctrl && e.Key == Key.F)
+        if (IsShortcut("focusSearch", e))
         {
             SearchBox.Focus();
             SearchBox.SelectAll();
@@ -25,47 +55,47 @@ public partial class MainWindow
             GetActivePathBar().EnterEditMode();
             e.Handled = true;
         }
-        else if (ctrl && shift && e.Key == Key.N)
+        else if (IsShortcut("newFile", e))
         {
             if (!InArchiveContext) NewFile();
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.N)
+        else if (IsShortcut("newFolder", e))
         {
             if (!InArchiveContext) NewFolder();
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.K)
+        else if (IsShortcut("compressToZip", e))
         {
             if (!InArchiveContext) CompressSelection();
             e.Handled = true;
         }
-        else if (ctrl && shift && e.Key == Key.E)
+        else if (IsShortcut("extractZip", e))
         {
             if (!InArchiveContext) ExtractSelectedArchives();
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.R)
+        else if (IsShortcut("reload", e))
         {
             Reload(_activeGrid);
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.C)
+        else if (IsShortcut("copyItems", e))
         {
             CopySelection(false);
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.X)
+        else if (IsShortcut("cutItems", e))
         {
             if (!InArchiveContext) CopySelection(true);
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.V)
+        else if (IsShortcut("pasteItems", e))
         {
             if (!InArchiveContext) PasteIntoActivePane();
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.A)
+        else if (IsShortcut("selectAll", e))
         {
             if (_settings.ViewMode == ViewMode.Icons)
             {
@@ -77,47 +107,47 @@ public partial class MainWindow
             }
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.Oem4)
+        else if (IsShortcut("goBack", e))
         {
             NavigateBack();
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.Oem6)
+        else if (IsShortcut("goForward", e))
         {
             NavigateForward();
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.Up)
+        else if (IsShortcut("goUp", e))
         {
             NavigateParent();
             e.Handled = true;
         }
-        else if (ctrl && shift && e.Key == Key.T)
+        else if (IsShortcut("openTerminal", e))
         {
             if (!InArchiveContext) OpenTerminal();
             e.Handled = true;
         }
-        else if (ctrl && shift && e.Key == Key.OemPeriod)
+        else if (IsShortcut("toggleHidden", e))
         {
             ToggleHidden();
             e.Handled = true;
         }
-        else if (ctrl && !shift && (e.Key == Key.OemBackslash || e.Key == Key.Oem5))
+        else if (IsShortcut("toggleSplit", e))
         {
             ToggleSplit();
             e.Handled = true;
         }
-        else if (ctrl && shift && e.Key == Key.P)
+        else if (IsShortcut("togglePreview", e))
         {
             TogglePreview();
             e.Handled = true;
         }
-        else if (ctrl && shift && e.Key == Key.X)
+        else if (IsShortcut("swapPanes", e))
         {
             SwapPanes();
             e.Handled = true;
         }
-        else if (e.Key == Key.Delete)
+        else if (IsShortcut("moveToTrash", e))
         {
             if (!InArchiveContext)
             {
@@ -132,7 +162,7 @@ public partial class MainWindow
             }
             e.Handled = true;
         }
-        else if (e.Key == Key.F2 && _activeGrid.SelectedItem is FileItem renameItem && !renameItem.IsParent)
+        else if (IsShortcut("rename", e) && _activeGrid.SelectedItem is FileItem renameItem && !renameItem.IsParent)
         {
             if (!InArchiveContext) StartRename(_activeGrid, renameItem);
             e.Handled = true;

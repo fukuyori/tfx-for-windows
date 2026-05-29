@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Path = System.IO.Path;
@@ -21,10 +22,13 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<string> _pinned = [];
     private readonly List<FileColumnDefinition> _fileColumns = [];
     private readonly string _settingsPath;
-    private readonly Brush _activeBrush = new SolidColorBrush(Color.FromRgb(30, 37, 43));
-    private readonly Brush _inactiveBrush = new SolidColorBrush(Color.FromRgb(23, 27, 31));
+    private readonly string _configPath;
+    private Brush _activeBrush = new SolidColorBrush(Color.FromRgb(30, 37, 43));
+    private Brush _inactiveBrush = new SolidColorBrush(Color.FromRgb(23, 27, 31));
 
     private AppSettings _settings = new();
+    private AppConfig _config = new();
+    private readonly Dictionary<string, AppShortcut> _shortcuts = new(StringComparer.OrdinalIgnoreCase);
     private DataGrid _activeGrid;
     private Popup? _columnsPopup;
     private StackPanel? _columnsPanel;
@@ -68,8 +72,11 @@ public partial class MainWindow : Window
         var appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "tfx");
         Directory.CreateDirectory(appData);
         _settingsPath = Path.Combine(appData, "settings.json");
+        _configPath = Path.Combine(appData, "config.toml");
 
         LoadSettings();
+        LoadConfig();
+        ApplyLocalization();
         PerformanceTrace.SetEnabled(_settings.ShowPerformanceLogs);
         InitializeFileColumns();
         LoadPinned();
@@ -79,7 +86,7 @@ public partial class MainWindow : Window
         _suspendSettingsSave = true;
         var initial = ResolveInitialPath();
         Navigate(LeftGrid, initial, false);
-        Navigate(RightGrid, _settings.RightPath, false);
+        Navigate(RightGrid, ResolveInitialRightPath(), false);
         ApplyLayoutSettings();
         // Always land on the left pane at startup so the user opens onto
         // the left listing with the ".." row preselected (set by Navigate
@@ -94,7 +101,14 @@ public partial class MainWindow : Window
         // path focuses the ".." row when items finish loading. Add a belt-and-
         // braces follow-up at ApplicationIdle so focus is guaranteed to land on
         // the left pane even if WPF was still arranging the window.
-        Loaded += (_, _) => Dispatcher.BeginInvoke(EnsureInitialLeftFocus, DispatcherPriority.ApplicationIdle);
+        Loaded += (_, _) =>
+        {
+            if (_config.Errors.Count > 0)
+            {
+                SetStatus(Loc.F("Config warning: {0}", _config.Errors[0]));
+            }
+            Dispatcher.BeginInvoke(EnsureInitialLeftFocus, DispatcherPriority.ApplicationIdle);
+        };
     }
 
     private int _initialFocusAttempts;
@@ -150,6 +164,20 @@ public partial class MainWindow : Window
         return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     }
 
+    private string ResolveInitialRightPath()
+    {
+        if (_config.Startup.Layout == "split")
+        {
+            var configured = _config.Startup.RightFolders.FirstOrDefault(IsPathRestorable);
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured;
+            }
+        }
+
+        return _settings.RightPath;
+    }
+
     private static bool TryGetMeaningfulWorkingDirectory(out string path)
     {
         path = "";
@@ -194,20 +222,20 @@ public partial class MainWindow : Window
 
     private void ApplyLocalization()
     {
-        BackButton.ToolTip = Loc.T("Back (Ctrl+[)");
-        ForwardButton.ToolTip = Loc.T("Forward (Ctrl+])");
-        ParentButton.ToolTip = Loc.T("Up (Ctrl+Up / Backspace)");
+        BackButton.ToolTip = Loc.F("Back ({0})", ShortcutText("goBack"));
+        ForwardButton.ToolTip = Loc.F("Forward ({0})", ShortcutText("goForward"));
+        ParentButton.ToolTip = Loc.F("Up ({0} / Backspace)", ShortcutText("goUp"));
         TogglePinButton.ToolTip = Loc.T("Pin / unpin current folder");
         ActiveHeaderPathBorder.ToolTip = Loc.T("Edit current path (Ctrl+L)");
-        FocusSearchButton.ToolTip = Loc.T("Focus search (Ctrl+F)");
+        FocusSearchButton.ToolTip = Loc.F("Focus search ({0})", ShortcutText("focusSearch"));
         ViewModeButton.ToolTip = Loc.T("Switch view mode");
-        HiddenButton.ToolTip = Loc.T("Toggle hidden files (Ctrl+Shift+.)");
-        TerminalButton.ToolTip = Loc.T("Open Terminal here (Ctrl+Shift+T)");
-        ReloadButton.ToolTip = Loc.T("Reload (Ctrl+R)");
-        PreviewButton.ToolTip = Loc.T("Toggle preview (Ctrl+Shift+P)");
+        HiddenButton.ToolTip = Loc.F("Toggle hidden files ({0})", ShortcutText("toggleHidden"));
+        TerminalButton.ToolTip = Loc.F("Open Terminal here ({0})", ShortcutText("openTerminal"));
+        ReloadButton.ToolTip = Loc.F("Reload ({0})", ShortcutText("reload"));
+        PreviewButton.ToolTip = Loc.F("Toggle preview ({0})", ShortcutText("togglePreview"));
         RenderedToggle.ToolTip = Loc.T("Show rendered preview");
-        SplitButton.ToolTip = Loc.T("Toggle split pane (Ctrl+\\)");
-        SwapPanesButton.ToolTip = Loc.T("Swap left and right panes (Ctrl+Shift+X)");
+        SplitButton.ToolTip = Loc.F("Toggle split pane ({0})", ShortcutText("toggleSplit"));
+        SwapPanesButton.ToolTip = Loc.F("Swap left and right panes ({0})", ShortcutText("swapPanes"));
         ColumnsButton.ToolTip = Loc.T("Columns");
         PinnedHeader.Text = Loc.T("PINNED");
         FoldersHeader.Text = Loc.T("FOLDERS");
@@ -236,6 +264,104 @@ public partial class MainWindow : Window
         if (!IsPathRestorable(_settings.RightPath))
         {
             _settings.RightPath = _settings.LeftPath;
+        }
+    }
+
+    private void LoadConfig()
+    {
+        _config = AppConfig.LoadOrCreate(_configPath);
+
+        if (!string.IsNullOrWhiteSpace(_config.Terminal.Command))
+        {
+            _settings.TerminalCommand = _config.Terminal.Command;
+        }
+
+        if (_config.Terminal.Arguments is not null)
+        {
+            _settings.TerminalArguments = _config.Terminal.Arguments;
+        }
+
+        InitializeShortcuts();
+        ApplyConfigTheme();
+    }
+
+    private void InitializeShortcuts()
+    {
+        _shortcuts.Clear();
+        foreach (var (action, text) in DefaultShortcutText)
+        {
+            if (AppShortcut.TryParse(text, out var shortcut, out _))
+            {
+                _shortcuts[action] = shortcut;
+            }
+        }
+
+        var seen = _shortcuts.ToDictionary(pair => pair.Value, pair => pair.Key);
+        foreach (var (action, shortcut) in _config.Shortcuts)
+        {
+            if (seen.TryGetValue(shortcut, out var existing) && !existing.Equals(action, StringComparison.OrdinalIgnoreCase))
+            {
+                _config.Errors.Add($"Shortcut conflict: {action} and {existing} both use {shortcut.DisplayText}");
+                continue;
+            }
+            if (_shortcuts.TryGetValue(action, out var previous))
+            {
+                seen.Remove(previous);
+            }
+            _shortcuts[action] = shortcut;
+            seen[shortcut] = action;
+        }
+    }
+
+    private void ApplyConfigTheme()
+    {
+        if (!string.IsNullOrWhiteSpace(_config.FontUi))
+        {
+            FontFamily = new FontFamily(_config.FontUi);
+        }
+
+        if (_config.FontSize is { } fontSize)
+        {
+            FontSize = fontSize;
+        }
+
+        SetResourceBrush("TfxBackground", ColorToken("fileListBackground", "headerBackground", fallback: Color.FromRgb(16, 19, 22)));
+        SetResourceBrush("TfxPanel", ColorToken("fileListBackground", fallback: Color.FromRgb(23, 27, 31)));
+        SetResourceBrush("TfxPanelActive", ColorToken("titleBarBackgroundActive", "fileListRowSelected", fallback: Color.FromRgb(30, 37, 43)));
+        SetResourceBrush("TfxBorder", ColorToken("paneBorderInactive", fallback: Color.FromRgb(45, 53, 60)));
+        SetResourceBrush("TfxForeground", ColorToken("fileForeground", fallback: Color.FromRgb(214, 222, 230)));
+        SetResourceBrush("TfxMuted", ColorToken("secondaryForeground", "headerForeground", fallback: Color.FromRgb(143, 155, 168)));
+        SetResourceBrush("TfxAccent", ColorToken("directoryForeground", "splitHandleActive", fallback: Color.FromRgb(125, 211, 252)));
+        SetResourceBrush("TfxFocusBorder", ColorToken("paneBorderKeyboardTarget", "paneBorderActive", fallback: Color.FromRgb(74, 222, 128)));
+
+        _activeBrush = new SolidColorBrush(ColorToken("titleBarBackgroundActive", fallback: Color.FromRgb(30, 37, 43)));
+        _inactiveBrush = new SolidColorBrush(ColorToken("titleBarBackgroundInactive", fallback: Color.FromRgb(23, 27, 31)));
+    }
+
+    private Color ColorToken(string key, string? alternate = null, Color? fallback = null)
+    {
+        if (_config.Colors.TryGetValue(key, out var color))
+        {
+            return color;
+        }
+
+        if (alternate is not null && _config.Colors.TryGetValue(alternate, out var alternateColor))
+        {
+            return alternateColor;
+        }
+
+        return fallback ?? Colors.Transparent;
+    }
+
+    private void SetResourceBrush(string resourceKey, Color color)
+    {
+        if (Application.Current.Resources[resourceKey] is SolidColorBrush existing && !existing.IsFrozen)
+        {
+            existing.Color = color;
+        }
+        else
+        {
+            Application.Current.Resources[resourceKey] = new SolidColorBrush(color);
         }
     }
 
@@ -319,6 +445,15 @@ public partial class MainWindow : Window
         if (_settings.SidebarWidth >= SidebarColumn.MinWidth)
         {
             SidebarColumn.Width = new GridLength(_settings.SidebarWidth);
+        }
+
+        if (_config.Startup.Layout == "single")
+        {
+            _settings.ShowSplit = false;
+        }
+        else if (_config.Startup.Layout == "split")
+        {
+            _settings.ShowSplit = true;
         }
 
         SetSplitVisible(_settings.ShowSplit);

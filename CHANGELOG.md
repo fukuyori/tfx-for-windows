@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.2
+
+- Added `%APPDATA%\tfx\config.toml` support with tfx-compatible `version = 1` sections for `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`.
+- Shortcut values now accept macOS-style `cmd` / `command` tokens as `Ctrl` on Windows, so shared `config.toml` examples such as `reload = "cmd+r"` work without rewriting.
+- Terminal and per-extension open-with settings can now be supplied from `config.toml`; the existing `settings.json` remains the persisted session-state file.
+- Added English and Japanese configuration guides plus a standalone Japanese README.
+
 ## 0.6.1
 
 - **PDF preview speed**: render target reduced from 800 px back to the long-standing 600 px (rasterization cost drops to ~56% with no perceptible quality loss now that the preview Image uses `RenderOptions.BitmapScalingMode="HighQuality"`). `FindPdftoppm` is memoised per session — the first lookup still walks `%PATH%` and the 9 known install paths with `FileVersionInfo` vendor verification, but subsequent renders skip the ~10–100 ms scan entirely.
