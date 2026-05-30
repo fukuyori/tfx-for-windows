@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.6.3
+Version: 0.6.4
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -34,6 +34,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Git working-copy integration: when inside a Git repository, file rows show a one-character status badge (M / A / ? / D / R / C / U) in the **Git** column and the current branch appears in the status bar as `⎇ name`
 - USB / removable drive hot detection: the folder-tree drive list refreshes when devices are added or removed (via `WM_DEVICECHANGE`)
 - User-editable `%APPDATA%\tfx\config.toml` for tfx-compatible font, color, shortcut, startup, terminal, and per-extension open-with settings
+- Light and translucent themes from `config.toml`, including custom WPF chrome for transparent windows
 - Configurable terminal launcher: "Open Terminal here" opens at the active pane's folder by default, or uses a user-specified executable and optional argument template from **Terminal Settings...** or `config.toml`
 - Status bar with item counts, selection size, active drive's free space (cached and refreshed in the background to stay responsive on slow network drives), Git branch, and the current version
 - Japanese / English UI based on the OS UI language
@@ -46,15 +47,15 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 
 ```text
 +-- Toolbar -----------------------------------------------------------+
-| Back Forward Up Folder Pin | <active path> [Search] | View Hidden   |
-| Terminal Explorer Select Reload Preview Split Columns                |
+| Back Forward Up Pin |      drag area      [Search] | View Hidden    |
+| Terminal Reload Preview Split Swap Columns | Min Max Close           |
 +--------------+----------------+----------------+--------------------+
 | PINNED       | Address bar    | Address bar    | PREVIEW            |
 | folder list  | Left file view | Right file view| info / image / text|
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.3 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.4 |
 +---------------------------------------------------------------------+
 ```
 
@@ -69,12 +70,15 @@ Buttons use **Segoe Fluent Icons** with **Segoe MDL2 Assets** fallback. Hover fo
 | Group | Buttons |
 | --- | --- |
 | Navigation | Back, Forward, Up, Pin / unpin current folder |
-| Path / search | Active path, Search, Focus search |
+| Drag / search | Empty drag area, Search, Focus search |
 | View | View mode (Details / Icons), Toggle hidden files |
 | Utility | Open Terminal here, Reload, Preview toggle, Split toggle, Swap panes, Columns |
+| Window | Minimize, maximize / restore, close |
 | Status bar | Item count / selection size, current Git branch (if inside a working copy), free space on the active drive, version |
 
 File operations such as New Folder, New File, Rename, Zip, Copy, Cut, and Paste are available from the keyboard and context menu.
+
+The native title bar is replaced by custom chrome when transparency is enabled. Drag the empty area in the top toolbar to move the window, double-click it to maximize or restore, and drag the right edge to resize the window width.
 
 ---
 
@@ -142,11 +146,11 @@ After any drag-out (move or copy by external app), tfx refreshes both panes auto
 
 ## Address bar
 
-Each pane has its own.
+Each pane has its own address bar.
 
 - **Breadcrumb mode** (default): clickable path segments separated by ` > `. Click any segment to jump there.
 - When a breadcrumb path is too long for the bar, the right end of the path remains visible and the left side is clipped.
-- **Edit mode**: click the active path in the top bar, double-click the breadcrumb bar, click the empty area of the bar, or press `Ctrl + L` / `F4`. Type a path and press Enter to navigate. Environment variables such as `%USERPROFILE%` and `%TEMP%` are expanded. `Esc` cancels.
+- **Edit mode**: double-click the breadcrumb bar, click the empty area of the bar, or press `Ctrl + L` / `F4`. Type a path and press Enter to navigate. Environment variables such as `%USERPROFILE%` and `%TEMP%` are expanded. `Esc` cancels.
 
 ---
 
@@ -215,7 +219,7 @@ See [docs/configuration.md](docs/configuration.md) for the full file format, sup
 
 Shortcut values use Windows-native modifier names such as `ctrl`, `shift`, and `alt`. Supported key names include single letters / digits, `.`, `[`, `]`, `backslash`, arrow keys, `enter`, `tab`, `space`, `delete`, `backspace`, and `f1` through `f24`.
 
-Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`. Color keys use the macOS tfx semantic names such as `fileListBackground`, `fileForeground`, `directoryForeground`, `secondaryForeground`, `titleBarBackgroundActive`, `titleBarBackgroundInactive`, `paneBorderInactive`, and `paneBorderKeyboardTarget`; unsupported keys are ignored. `[terminal] app` maps to the Windows executable or app alias, and `[terminal] arguments` is a Windows extension for the argument template. `[openWith]` maps an extension without the leading dot to an executable or app alias used when opening files of that type.
+Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`. Color keys use the macOS tfx semantic names and are mapped onto WPF theme resources, including toolbar chrome, selection colors, inputs, scrollbars, and Markdown preview CSS. `[opacity].background` controls the transparent window surface. `[startup]` can force single/split layout and preview pane visibility. `[terminal] app` maps to the Windows executable or app alias, and `[terminal] arguments` is optional because tfx supplies cwd arguments for Windows Terminal, WezTerm, PowerShell, and pwsh. `[openWith]` maps an extension without the leading dot to an executable or app alias used when opening files of that type.
 
 `config.toml` is intended for user-editable preferences. Session state is still saved automatically to `%APPDATA%\tfx\settings.json` on every change and on close.
 

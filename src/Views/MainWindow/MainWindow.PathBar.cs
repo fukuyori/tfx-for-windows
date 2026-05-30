@@ -33,6 +33,13 @@ public partial class MainWindow
         var prefix = string.IsNullOrEmpty(_appVersion) ? "tfx" : $"tfx {_appVersion}";
         Title = $"{prefix} - {GetCurrentPath(_activeGrid)}";
         VersionStatusText.Text = _appVersion;
+
+        // Dim the Back / Forward arrows when the active tab has no history in
+        // that direction. The ToolbarButton style renders IsEnabled=false at
+        // Opacity 0.38, giving the muted look without hiding the buttons.
+        var tab = ActiveTab(ActivePane);
+        BackButton.IsEnabled = tab.Back.Count > 0;
+        ForwardButton.IsEnabled = tab.Forward.Count > 0;
     }
 
     private PathBar GetActivePathBar() => _activeGrid == LeftGrid ? LeftPathBar : RightPathBar;

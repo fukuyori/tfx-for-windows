@@ -26,13 +26,16 @@ public partial class MainWindow
             SearchBox.Text = "";
         }
 
+        var pane0 = PaneOf(grid);
+        var tab = ActiveTab(pane0);
         var current = GetCurrentPath(grid);
         if (pushHistory && IsNavigablePath(current) && !string.Equals(current, path, StringComparison.OrdinalIgnoreCase))
         {
-            _back.Add(current);
-            _forward.Clear();
+            tab.Back.Add(current);
+            tab.Forward.Clear();
         }
 
+        tab.Path = path;
         if (grid == LeftGrid)
         {
             _leftPath = path;
@@ -41,6 +44,7 @@ public partial class MainWindow
         {
             _rightPath = path;
         }
+        RebuildTabStrip(pane0);
 
         Reload(grid, selectName);
         UpdatePathText();
@@ -424,29 +428,31 @@ public partial class MainWindow
 
     private void NavigateBack()
     {
-        if (_back.Count == 0)
+        var tab = ActiveTab(ActivePane);
+        if (tab.Back.Count == 0)
         {
             return;
         }
 
         var current = GetCurrentPath(_activeGrid);
-        var path = _back[^1];
-        _back.RemoveAt(_back.Count - 1);
-        _forward.Add(current);
+        var path = tab.Back[^1];
+        tab.Back.RemoveAt(tab.Back.Count - 1);
+        tab.Forward.Add(current);
         Navigate(_activeGrid, path, false);
     }
 
     private void NavigateForward()
     {
-        if (_forward.Count == 0)
+        var tab = ActiveTab(ActivePane);
+        if (tab.Forward.Count == 0)
         {
             return;
         }
 
         var current = GetCurrentPath(_activeGrid);
-        var path = _forward[^1];
-        _forward.RemoveAt(_forward.Count - 1);
-        _back.Add(current);
+        var path = tab.Forward[^1];
+        tab.Forward.RemoveAt(tab.Forward.Count - 1);
+        tab.Back.Add(current);
         Navigate(_activeGrid, path, false);
     }
 

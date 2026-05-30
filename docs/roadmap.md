@@ -4,7 +4,7 @@ This document defines the development order for `tfx-for-windows`. It is adapted
 
 Each item in §1 and §2 carries an `Upstream:` line that points back to the corresponding section in the upstream roadmap when one exists, so the two documents can be cross-referenced as upstream evolves.
 
-Project documentation is written in English by default. `README.md` is the English README; a `README.ja.md` is planned to mirror it for Japanese.
+Project documentation is written in English by default. `README.md` is the English README; `README.ja.md` is maintained as the Japanese README.
 
 ---
 
@@ -16,7 +16,7 @@ Project documentation is written in English by default. `README.md` is the Engli
 - Allow dragging files from the file view onto folders in the folder tree.
 - Treat pinned folders as shortcuts. Only their order in the `PINNED` section can be changed.
 - Store user-editable settings under `%APPDATA%\tfx\`.
-- Use TOML for declarative configuration, Lua for dynamic extension, and `settings.json` for UI state such as window placement and pane widths. (TOML and Lua are planned; see §2.)
+- Use `config.toml` for declarative configuration, Lua for future dynamic extension, and `settings.json` for UI state such as window placement and pane widths. (Lua remains planned; see §2.16.)
 - Sandbox Lua in the initial implementation. Do not allow file mutation or external command execution.
 
 ---
@@ -78,11 +78,25 @@ Upstream: none — these are platform-specific or are Windows-side equivalents o
 - Zip drag-out: zip entries are extracted on demand and surfaced through a `FileDrop` payload so Explorer or other applications can accept the drop. Effect is restricted to `Copy` to prevent accidental Move on the virtual source.
 - `SHOpenWithDialog` P/Invoke wrapper (`ShellOpenWith`) for the native "Open with" dialog.
 
+### 1.6 0.6.3 — Configuration, Theme Surfaces, and Custom Chrome
+
+Upstream: covers material from §2.6 (Built-in Color Themes), §2.8 (Configuration Foundation), §2.9 (Shortcut Organization), §2.10 (Theme Customization via TOML), §2.11 (Extension-Based Behavior), and replaces the Windows-side terminal hand-off from §2.4.
+
+- `%APPDATA%\tfx\config.toml` v1 support with `[font]`, `[colors]`, `[opacity]`, `[startup]`, `[shortcuts]`, `[terminal]`, and `[openWith]`.
+- Windows-native shortcut notation through `[shortcuts]` (`ctrl`, `alt`, `shift`, `win`, function keys, arrows, punctuation keys). Legacy `cmd` / `command` aliases are intentionally not accepted.
+- Runtime theme resources now follow `[colors]`, including light-mode palettes, active/inactive pane colors, selection colors, scrollbars, Markdown preview CSS, and custom chrome colors.
+- `[opacity].background` applies to the WPF window surfaces instead of `Window.Opacity`, so text and icons remain readable while the background can be translucent or fully transparent.
+- Custom transparent chrome replaces the standard title bar: the top empty toolbar area is draggable, double-click toggles maximize/restore, and the right window edge remains resizable even when `background = 0.0`.
+- `[startup].layout`, `[startup].rightFolder` / `rightFolders`, and `[startup].preview` control initial split/single layout and preview-pane visibility.
+- `Open Terminal here` uses the active file pane folder by default. If `[terminal]` is omitted it starts Windows Terminal (`wt.exe -d {path}`) with a PowerShell fallback; configured apps such as WezTerm get sensible default arguments when only `app` is provided.
+- English and Japanese configuration guides are maintained (`docs/configuration.md`, `docs/configuration.ja.md`), including three distinctive color samples and one explicit light-mode sample.
+- Manual 0.6.3 checks are complete for transparent dragging / right-edge resizing at `background = 0.0`, light-mode color application, WezTerm `[terminal] app` handling, and `[startup] layout / preview` behavior.
+
 ---
 
 ## 2. Upcoming Work
 
-Items are listed in recommended execution order, weighted by **importance**, **relevance to the Windows port**, **effort**, and **risk**. Item numbers reflect priority — they are not strict dependency markers. Each item carries its own dependencies in prose. The next concrete starting point is §2.1.
+Items are listed in recommended execution order, weighted by **importance**, **relevance to the Windows port**, **effort**, and **risk**. Item numbers reflect priority — they are not strict dependency markers. Each item carries its own dependencies in prose. The next concrete sequence is §2.7 Pane Tabs, then §2.9 Built-in Terminal Pane.
 
 ### Phase A — Foundation Backfill
 
@@ -211,7 +225,7 @@ Done when:
 
 #### 2.7 Pane Tabs
 
-Status: **On hold.** Deferred per user direction; revisit after the remaining Phase B / Phase C items have shipped.
+Status: **Done in 0.6.4.** Per-pane tabs implemented in `src/Models/PaneTab.cs` + `src/Views/MainWindow/MainWindow.Tabs.cs`: each tab owns its path, back/forward history, and remembered selection (fixing the former global shared-history bug). Tab strip shows when a pane has 2+ tabs; `Ctrl+T` / `Ctrl+W` / `Ctrl+Shift+[` / `Ctrl+Shift+]` plus context-menu "New Tab" / "Open in New Tab". Tab lists persist per pane in `settings.json` (additive keys) and restore on startup, dropping tabs whose folders no longer exist. Closing the right pane's last tab collapses to single-pane; the left pane always keeps one tab. Move this section under §1 with a version tag at the next consolidation pass.
 
 Upstream: §2.3 (Pane Tabs).
 
@@ -232,14 +246,16 @@ Done when:
 
 #### 2.8 Built-in Color Themes
 
+Status: **Partially completed in 0.6.3; remaining work on hold.** User-defined `[colors]` in `config.toml` now drives the live WPF theme resources, Markdown preview CSS, custom chrome colors, selection colors, scrollbar colors, and light-mode palettes. The remaining work is an in-app theme picker and named built-in presets.
+
 Upstream: §2.6 (Built-in Color Themes). The macOS color tokens map directly; XAML `ResourceDictionary` replaces the Swift theme token table.
 
-Goal: ship 3–4 themes before user-defined TOML themes (§2.14), so visible variety lands before configuration plumbing. Direct port of upstream §2.6.
+Goal: ship visible theme variety and eventually expose named presets from the UI. Direct port of upstream §2.6.
 
 Tasks:
 
-- Define a theme token table (pane background, sidebar, selected rows, drop targets, active borders, status line, preview backgrounds, accents).
-- Refactor `App.xaml` brushes into a swappable `ResourceDictionary` set. Implement 3–4 hardcoded themes (e.g., terminal-classic dark, light, solarized-ish, monokai-ish).
+- Continue expanding the theme token table only where real UI surfaces still need coverage.
+- Promote the documented color samples into named built-in themes if an in-app theme picker is added.
 - Add a "Theme" submenu / settings entry that switches the active resource dictionary at runtime.
 
 Done when:
@@ -249,20 +265,20 @@ Done when:
 
 #### 2.9 Built-in Terminal Pane
 
-Status: **Replaced by external terminal launcher configuration in 0.5.2.** Embedding ConPTY + a VT emulator inside the window adds substantial surface area (input modes, resize, color schemes, paste behavior, accessibility) for a feature that overlaps almost entirely with Windows Terminal. Instead, `AppSettings.TerminalCommand` and `AppSettings.TerminalArguments` (configurable via **Terminal Settings...** in the file-pane context menu) let users point "Open Terminal here" / `Ctrl+Shift+T` at any shell or terminal binary (wt.exe, pwsh, Git Bash, Cmder, VS Code `code -r "{path}"`, etc.). Arguments support the `{path}` placeholder and environment-variable expansion; failures fall back to `powershell.exe`. The built-in pane variant may be revisited if there is concrete demand that the launcher hand-off cannot satisfy. Move this section under §1 with a version tag at the next release bump.
+Status: **Next (§2.7 Pane Tabs shipped in 0.6.4).** The external terminal launcher remains supported and stays the default hand-off path, but the built-in terminal pane is the current implementation target now that pane tabs are done. Decision: ConPTY (`CreatePseudoConsole`) self-hosted via P/Invoke, output drawn to a WPF text control, minimal VT-escape handling first. The 0.5.2 settings UI introduced configurable terminal commands, and 0.6.3 adds `config.toml` `[terminal]` support plus active-pane working-directory defaults; those paths should remain intact while the built-in pane is added.
 
 Upstream: §2.4 (Built-in Terminal Pane). Library evaluation differs: SwiftTerm on macOS vs `Microsoft.Terminal.Wpf` / ConPTY samples on Windows.
 
-Goal (deferred): collapsible shell pane at the bottom of the window. Aligns with the project's terminal-inspired identity. Direct port of upstream §2.4.
+Goal: collapsible shell pane at the bottom of the window. Aligns with the project's terminal-inspired identity. Direct port of upstream §2.4.
 
-Tasks (deferred):
+Tasks:
 
 - Evaluate ConPTY-based options before writing custom: `Microsoft.Terminal.Wpf`, [WPF.ConPTY.Terminal samples](https://github.com/microsoft/terminal), or community packages.
 - Default shell from `%ComSpec%` / PowerShell preference; working directory follows the active pane (toggleable, default on).
 - Commands: toggle terminal pane (`Ctrl+\`` proposed), focus terminal pane, run command on selected files.
 - Persist visibility, height, font size in `AppSettings`.
 
-Done when (deferred):
+Done when:
 
 - The terminal pane can be toggled on / off through a menu item and a keyboard shortcut.
 - Active pane folder changes drive a `cd` in the terminal when the follow-folder setting is on.
@@ -311,7 +327,9 @@ Done when:
 
 #### 2.12 Configuration Foundation (TOML)
 
-Upstream: §2.8 (Configuration Foundation). Adapted: `%APPDATA%\tfx\` replaces `~/Library/Application Support/tfx/`; `Tomlyn` replaces the macOS-side TOML parser choice.
+Status: **Partially completed in 0.6.3; remaining polish on hold.** The app creates `%APPDATA%\tfx\config.toml` on demand and merges v1 TOML-style overrides for `[font]`, `[colors]`, `[opacity]`, `[startup]`, `[shortcuts]`, `[terminal]`, and `[openWith]` on top of built-in defaults. `settings.json` continues to own window placement, splitter widths, view state, and other runtime UI state. The current parser is a small purpose-built subset instead of a full TOML library; full TOML parsing, split config files, migration policy, and richer error UI remain future work.
+
+Upstream: §2.8 (Configuration Foundation). Adapted: `%APPDATA%\tfx\` replaces `~/Library/Application Support/tfx/`; a full TOML parser can still be introduced if the configuration surface grows beyond the current v1 subset.
 
 Goal: user-editable declarative configuration so later items can build on it. Direct port of upstream §2.8.
 
@@ -321,7 +339,7 @@ Configuration directory:
 %APPDATA%\tfx\
 ```
 
-Planned layout:
+Possible future layout:
 
 ```text
 config.toml
@@ -332,10 +350,10 @@ scripts/*.lua
 markdown/preview.css
 ```
 
-Tasks:
+Remaining tasks:
 
-- Adopt `Tomlyn` (NuGet) for parsing.
-- Define `version = N` at the top of every TOML file; carry forward at least one prior version's migration code (§3.5).
+- Decide whether to adopt a full TOML parser such as `Tomlyn` once nested tables, arrays, or comments-preserving rewrites become necessary.
+- Define migration rules for future `version = N` changes; carry forward at least one prior version's migration code (§3.5).
 - Built-in defaults remain in code; TOML overrides are merged on top.
 - Keep `settings.json` for window placement / splitter widths / view state; TOML covers declarative configuration only.
 
@@ -347,6 +365,8 @@ Done when:
 
 #### 2.13 Shortcut Organization
 
+Status: **Done for config overrides in 0.6.3.** Shortcut definitions are centralized in the action map and can be overridden through `[shortcuts]` in `config.toml`. User-defined conflicts are reported, and unsupported macOS-style `cmd` / `command` aliases are rejected so Windows documentation stays unambiguous. A visual shortcut editor remains optional future UI work.
+
 Upstream: §2.9 (Shortcut Organization). Direct port. Depends on §2.12.
 
 Done when:
@@ -356,6 +376,8 @@ Done when:
 
 #### 2.14 Theme Customization via TOML
 
+Status: **Partially completed in 0.6.3.** `[colors]` in `config.toml` overrides the live theme tokens, including light-mode colors and translucent backgrounds. `docs/configuration.md` and `docs/configuration.ja.md` include three distinctive color samples. Named `themes/*.toml` files and an in-app theme picker remain deferred.
+
 Upstream: §2.10 (Theme Customization via TOML). Direct port. Depends on §2.12 and §2.8.
 
 Done when:
@@ -364,6 +386,8 @@ Done when:
 - Missing tokens fall back to the active built-in default.
 
 #### 2.15 Extension-Based Behavior
+
+Status: **Partially completed in 0.6.3; remaining work on hold.** `[openWith]` supports per-extension external openers with `{path}` substitution. Per-extension preview selection and Lua-backed rule precedence remain future work.
 
 Upstream: §2.11 (Extension-Based Behavior). Direct port. Depends on §2.12.
 
@@ -399,15 +423,15 @@ Done when:
 
 Upstream: §2.13 (Markdown Preview Extensions). Direct port. Targets: ruby text, KaTeX / MathJax, Mermaid, custom inline / block syntax, CSS customization. Implementation is straightforward because the existing renderer is already WebView2, so CDN-loaded or bundled scripts can be injected into the HTML template the same way the dark-mode CSS is injected today.
 
-Priority: lower than §2.16. Address once §2.12 lands and concrete user demand surfaces.
+Priority: lower than §2.16. Address once the remaining extension hooks land and concrete user demand surfaces.
 
 ### Items Skipped or Replaced
 
 | Upstream | Decision | Reason |
 | --- | --- | --- |
-| §2.1 macOS Tags | **Skipped** | Windows lacks an OS-level tag system that interoperates with Explorer or other applications. Internal-only virtual tags can be reconsidered after §2.12 lands. |
+| §2.1 macOS Tags | **Skipped** | Windows lacks an OS-level tag system that interoperates with Explorer or other applications. Internal-only virtual tags can be reconsidered after configuration and extension APIs mature. |
 | §2.7 Sparkle | **Replaced by §2.11 Velopack** | Windows-native auto-update stack. |
-| §2.4 Built-in Terminal Pane | **Replaced by configurable external terminal launcher (0.5.2)** | `AppSettings.TerminalCommand` / `TerminalArguments` invoke any shell (wt / pwsh / Git Bash / `code -r "{path}"` / …) with `{path}` and env-var expansion. The built-in pane variant tracked in §2.9 may be revisited if launcher hand-off proves insufficient. |
+| §2.4 Built-in Terminal Pane | **Planned after §2.7; external launcher remains supported** | `AppSettings.TerminalCommand` / `TerminalArguments` and `[terminal]` in `config.toml` invoke any shell (wt / WezTerm / pwsh / Git Bash / `code -r "{path}"` / …) with `{path}` and env-var expansion. The built-in pane variant is now tracked as the next major item after pane tabs. |
 | §2.5 POSIX permissions | **Replaced by §2.10 NTFS ACL** | Different security model. |
 | §3.3 distribution (TestFlight / Mac App Store) | **Replaced by GitHub Releases + `winget`** | See §3.3 below. |
 
@@ -459,7 +483,8 @@ Initial budgets. Revise once §2.5 produces real numbers from typical hardware.
 
 - `AppSettings` (JSON) is additive: new fields ship with defaults; existing fields are never removed without an explicit migration step.
 - The JSON file lives at `%APPDATA%\tfx\settings.json`. Document every persisted key in `README.md` (current behavior) and migrate documentation to `docs/detailed-design.md` once that file exists.
-- Future TOML configuration files (§2.12) carry a top-level `version = N`. The loader migrates older versions forward and keeps at least one prior version's migration code on hand.
+- `config.toml` v1 (§2.12) is additive: unknown keys are ignored, supported keys override built-in defaults, and runtime state stays in `settings.json`.
+- Future TOML versions carry a top-level `version = N`. The loader migrates older versions forward and keeps at least one prior version's migration code on hand once the schema advances beyond v1.
 - Pinned folders, window state, and other user data are read-merge-write: never destructively rewritten on load when fields are missing.
 
 ---
@@ -477,20 +502,22 @@ This becomes a reactive checklist once §2.5 ships. Until then, ad-hoc measureme
 
 ## 5. Documentation Work
 
+Status: **0.6.3 docs are aligned; new documentation projects are on hold.**
+
 Tasks:
 
 - Add `docs/contributing.md` with the test, benchmark, CI, and (eventually) release commands.
 - Add `docs/detailed-design.md` describing the partial-class layout, settings schema, archive virtual-path scheme, and drag-drop event flow.
 - Add `docs/code-organization.md` describing the `Pane` abstraction, `MainWindow.*.cs` split rules, and where each concern lives.
-- Create `README.ja.md` mirroring `README.md` once the English README stabilizes for the next release.
+- Keep `README.md` and `README.ja.md` aligned for feature behavior, version labels, and release notes links.
 - Keep `CHANGELOG.md` aligned with `Tfx.csproj` `<Version>` on every version bump.
 - Keep `CHECKLIST.md` aligned with the current feature set (it currently lists the manual smoke-test items used before each release).
-- Add sample configuration files once §2.12 lands.
+- Keep `docs/configuration.md` and `docs/configuration.ja.md` aligned with the implemented `config.toml` schema, including shortcut grammar, terminal examples, startup behavior, and color samples.
 
 Done when:
 
 - The roadmap, detailed design, and README do not contradict each other.
-- Users can start basic customization from the configuration examples once §2.12 ships.
+- Users can start basic customization from the configuration examples.
 - New contributors can run tests and benchmarks and understand the release process from the documentation.
 
 ---
@@ -508,6 +535,7 @@ Quick lookup between this Windows roadmap and the upstream macOS roadmap [`fukuy
 | §1.3 0.3.2 (Responsiveness) | §1.1 | `LoadDrives` background pass is Windows-specific. |
 | §1.4 0.4.0 (Code Organization) | §1.4 | `MainWindow.*.cs` partials ↔ Swift feature folders. |
 | §1.5 Windows-specific | — | WebView2 / `SHOpenWithDialog` / Zip drag-out / `MiddleEllipsisTextBlock`. |
+| §1.6 0.6.3 (Configuration, Theme Surfaces, Custom Chrome) | §2.4, §2.6, §2.8, §2.9, §2.10, §2.11 | `config.toml` v1, color / opacity tokens, startup controls, external terminal defaults, shortcut overrides, and custom transparent chrome. |
 
 ### 6.2 Upcoming Work
 
@@ -519,15 +547,15 @@ Quick lookup between this Windows roadmap and the upstream macOS roadmap [`fukuy
 | §2.4 Subfolder Search | §1.7 (partial) | Direct port. |
 | §2.5 Performance Measurement Infrastructure | §1.14 | `TFX_PERFORMANCE_LOGS` env var name preserved. |
 | §2.6 Git Status Indicators | §2.2 | Direct port; `Process.Start` for `git status`. |
-| §2.7 Pane Tabs | §2.3 | **On hold.** Direct port. |
-| §2.8 Built-in Color Themes | §2.6 | XAML `ResourceDictionary` ↔ Swift theme token table. |
-| §2.9 Built-in Terminal Pane | §2.4 | **Replaced** by configurable external launcher (`AppSettings.TerminalCommand` / `TerminalArguments`) in 0.5.2. |
+| §2.7 Pane Tabs | §2.3 | **Next.** Direct port. |
+| §2.8 Built-in Color Themes | §2.6 | **Partially completed in 0.6.3; remaining work on hold.** Runtime color tokens and light-mode samples shipped; in-app theme picker remains. |
+| §2.9 Built-in Terminal Pane | §2.4 | **Planned after §2.7.** Configurable external launcher remains supported. |
 | §2.10 NTFS ACL / Owner Editing | §2.5 | **On hold.** NTFS ACL ↔ POSIX bits; UAC `runas` ↔ `AuthorizationServices`. |
 | §2.11 Auto-Update | §2.7 | **On hold.** Velopack / `NetSparkle` ↔ Sparkle 2. |
-| §2.12 Configuration Foundation (TOML) | §2.8 | `Tomlyn`; `%APPDATA%\tfx\` ↔ `~/Library/Application Support/tfx/`. |
-| §2.13 Shortcut Organization | §2.9 | Direct port. |
-| §2.14 Theme Customization via TOML | §2.10 | Direct port. |
-| §2.15 Extension-Based Behavior | §2.11 | Direct port. |
+| §2.12 Configuration Foundation (TOML) | §2.8 | **Partially completed in 0.6.3; remaining polish on hold.** `%APPDATA%\tfx\config.toml` v1; full parser / split files / migrations remain. |
+| §2.13 Shortcut Organization | §2.9 | **Completed for config overrides in 0.6.3.** Optional visual editor remains. |
+| §2.14 Theme Customization via TOML | §2.10 | **Partially completed in 0.6.3; remaining work on hold.** `[colors]` tokens and samples shipped; named theme files / picker remain. |
+| §2.15 Extension-Based Behavior | §2.11 | **Partially completed in 0.6.3; remaining work on hold.** `[openWith]` shipped; preview hooks and Lua precedence remain. |
 | §2.16 Lua Extension API | §2.12 | `MoonSharp` ↔ upstream Lua-host choice. |
 | §2.17 Markdown Preview Extensions | §2.13 | WebView2-based; CDN / bundled scripts injected into the existing HTML template. |
 | (skipped) | §2.1 macOS Tags | No OS-level Windows equivalent. |
@@ -540,4 +568,4 @@ Quick lookup between this Windows roadmap and the upstream macOS roadmap [`fukuy
 | §3.2 Reliability and Quality Gates | §3.2 | Direct port. |
 | §3.3 Distribution Plan | §3.3 | TestFlight / Mac App Store removed; GitHub Releases + Velopack + `winget` added. |
 | §3.4 OS and Hardware Compatibility | §3.4 | Windows 11 primary / Windows 10 22H2 supported; x64 first; WebView2 Runtime caveat. |
-| §3.5 Data and Configuration Migration | §3.5 | `AppSettings.json` (existing) + TOML versioning (planned, §2.12). |
+| §3.5 Data and Configuration Migration | §3.5 | `settings.json` for UI state + `config.toml` v1 for declarative settings. Future TOML migrations remain planned. |

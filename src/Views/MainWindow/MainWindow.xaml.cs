@@ -23,8 +23,6 @@ public partial class MainWindow : Window
     public ObservableCollection<FileItem> LeftItems { get; } = [];
     public ObservableCollection<FileItem> RightItems { get; } = [];
 
-    private readonly List<string> _back = [];
-    private readonly List<string> _forward = [];
     private readonly ObservableCollection<string> _pinned = [];
     private readonly List<FileColumnDefinition> _fileColumns = [];
     private readonly string _settingsPath;
@@ -93,6 +91,7 @@ public partial class MainWindow : Window
         var initial = ResolveInitialPath();
         Navigate(LeftGrid, initial, false);
         Navigate(RightGrid, ResolveInitialRightPath(), false);
+        InitializeTabs();
         ApplyLayoutSettings();
         // Always land on the left pane at startup so the user opens onto
         // the left listing with the ".." row preselected (set by Navigate
@@ -518,6 +517,10 @@ public partial class MainWindow : Window
 
         _settings.LeftPath = _leftPath;
         _settings.RightPath = _rightPath;
+        _settings.LeftTabs = _leftTabs.Select(t => t.Path).ToList();
+        _settings.RightTabs = _rightTabs.Select(t => t.Path).ToList();
+        _settings.LeftActiveTab = _leftActiveTabIndex;
+        _settings.RightActiveTab = _rightActiveTabIndex;
         _settings.ActivePane = _activeGrid == RightGrid ? "Right" : "Left";
         var showPreview = PreviewColumn.Width.Value > 0;
         var showSplit = RightPaneColumn.Width.Value > 0;

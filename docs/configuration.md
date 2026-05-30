@@ -176,6 +176,8 @@ disabledItem = 0.45
 | `inactivePane` | Applies to the inactive file-pane surface. If omitted, `background` is used. |
 | `disabledItem` | Accepted for tfx compatibility. WPF disabled-control opacity is still defined by the application styles. |
 
+When `background = 0.0`, tfx keeps a nearly invisible hit-test surface for the custom title/drag area and right-edge resize handle, so the window can still be moved and resized.
+
 ### `[startup]`
 
 Controls the pane layout used at startup.

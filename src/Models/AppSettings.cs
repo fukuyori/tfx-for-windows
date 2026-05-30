@@ -26,6 +26,12 @@ public sealed class AppSettings
     public double SidebarWidth { get; set; } = 260;
     public double PreviewWidth { get; set; } = 320;
     public double LeftPaneRatio { get; set; } = 0.5;
+    // Per-pane tab paths + active index (additive; empty lists fall back to
+    // LeftPath / RightPath so older settings.json files keep working).
+    public List<string> LeftTabs { get; set; } = [];
+    public List<string> RightTabs { get; set; } = [];
+    public int LeftActiveTab { get; set; }
+    public int RightActiveTab { get; set; }
     public List<string> PinnedFolders { get; set; } = [];
     public string TerminalCommand { get; set; } = "";
     public string TerminalArguments { get; set; } = "";

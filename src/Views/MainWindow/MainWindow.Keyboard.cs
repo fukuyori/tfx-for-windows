@@ -30,6 +30,10 @@ public partial class MainWindow
         ["cutItems"] = "ctrl+x",
         ["pasteItems"] = "ctrl+v",
         ["selectAll"] = "ctrl+a",
+        ["newTab"] = "ctrl+t",
+        ["closeTab"] = "ctrl+w",
+        ["nextTab"] = "ctrl+shift+]",
+        ["prevTab"] = "ctrl+shift+[",
     };
 
     private bool InArchiveContext => ArchivePath.Contains(GetCurrentPath(_activeGrid));
@@ -147,6 +151,26 @@ public partial class MainWindow
             SwapPanes();
             e.Handled = true;
         }
+        else if (IsShortcut("newTab", e))
+        {
+            NewTabInActivePane();
+            e.Handled = true;
+        }
+        else if (IsShortcut("closeTab", e))
+        {
+            CloseActiveTab();
+            e.Handled = true;
+        }
+        else if (IsShortcut("nextTab", e))
+        {
+            CycleTab(1);
+            e.Handled = true;
+        }
+        else if (IsShortcut("prevTab", e))
+        {
+            CycleTab(-1);
+            e.Handled = true;
+        }
         else if (IsShortcut("moveToTrash", e))
         {
             if (!InArchiveContext)
@@ -201,6 +225,33 @@ public partial class MainWindow
     {
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var inTextBox = Keyboard.FocusedElement is TextBox;
+
+        // Alt+Left / Alt+Right / Alt+Up navigation. WPF delivers Alt combos as
+        // Key.System (real key in SystemKey), and the DataGrid / ListBox can
+        // consume arrow keys via bubbling before the bubbling Window_KeyDown
+        // ever runs. Handling them here in the tunneling preview pass — which
+        // fires on the Window before any pane control — makes them reliable.
+        if (!inTextBox && e.Key == Key.System && e.SystemKey is Key.Left or Key.Right or Key.Up)
+        {
+            if (IsShortcut("goBack", e))
+            {
+                NavigateBack();
+                e.Handled = true;
+                return;
+            }
+            if (IsShortcut("goForward", e))
+            {
+                NavigateForward();
+                e.Handled = true;
+                return;
+            }
+            if (IsShortcut("goUp", e))
+            {
+                NavigateParent();
+                e.Handled = true;
+                return;
+            }
+        }
 
         if (e.Key == Key.Tab && !inTextBox)
         {

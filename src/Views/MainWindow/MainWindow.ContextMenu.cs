@@ -186,6 +186,18 @@ public partial class MainWindow
         newFile.Click += (_, _) => NewFile();
         menu.Items.Add(newFile);
 
+        var newTab = new MenuItem { Header = Loc.T("New Tab"), InputGestureText = ShortcutText("newTab") };
+        newTab.Click += (_, _) => NewTabInActivePane();
+        menu.Items.Add(newTab);
+
+        var selectedDir = oneSelected && selection[0].IsDirectory ? selection[0] : null;
+        if (selectedDir is not null && !inArchive)
+        {
+            var openInNewTab = new MenuItem { Header = Loc.T("Open in New Tab") };
+            openInNewTab.Click += (_, _) => OpenNewTab(ActivePane, selectedDir.FullPath);
+            menu.Items.Add(openInNewTab);
+        }
+
         var openTerminal = new MenuItem { Header = Loc.T("Open Terminal here"), InputGestureText = ShortcutText("openTerminal"), IsEnabled = !inArchive };
         openTerminal.Click += (_, _) => OpenTerminal();
         menu.Items.Add(openTerminal);

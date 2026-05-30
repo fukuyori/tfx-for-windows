@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.4
+
+### Pane tabs (roadmap §2.7)
+
+- Each pane now carries multiple tabs, each with its own current folder, back / forward history, and remembered selection. `src/Models/PaneTab.cs` holds the per-tab state; `src/Views/MainWindow/MainWindow.Tabs.cs` owns the `_leftTabs` / `_rightTabs` lists and active-index tracking.
+- This also fixes a latent bug: back / forward history used to be a single global stack shared by both panes (`_back` / `_forward`). History is now genuinely per-tab, so `Alt+Left` / `Alt+Right` only walk the active tab's own history.
+- A tab strip appears above each pane's address bar, shown only when that pane has 2 or more tabs. Click a tab to switch; click the `×` (or middle-click) to close. The active tab's folder name is highlighted.
+- Keyboard: `Ctrl+T` new tab (at the active pane's current folder), `Ctrl+W` close tab, `Ctrl+Shift+]` next tab, `Ctrl+Shift+[` previous tab. All four are remappable via `config.toml` `[shortcuts]` (`newTab` / `closeTab` / `nextTab` / `prevTab`); the shortcut parser now understands `[` and `]` key tokens.
+- Context menu: "New Tab" always available; "Open in New Tab" appears when a single folder is selected.
+- Closing the last tab of the right pane collapses it to single-pane view (split off); the left pane always keeps at least one tab.
+- Tab lists (paths + active index per pane) persist in `settings.json` (`LeftTabs` / `RightTabs` / `LeftActiveTab` / `RightActiveTab`, additive — older files keep working) and are restored on startup, dropping any tab whose folder no longer exists.
+
 ## 0.6.3
 
 - Added `%APPDATA%\tfx\config.toml` support with tfx-compatible `version = 1` sections for `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`.

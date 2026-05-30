@@ -8,7 +8,16 @@
       "Bash(git restore *)",
       "Bash(cat \"%APPDATA%\\\\tfx\\\\settings.json\" 2>/dev/null | head -40)",
       "PowerShell($p = \"$env:APPDATA\\\\tfx\\\\settings.json\"; if \\(Test-Path $p\\) { Get-Content $p | Select-String -Pattern \"Pdf|Thumbnail\" } else { \"no settings.json\" })",
-      "PowerShell($p = \"$env:APPDATA\\\\tfx\\\\settings.json\"; Write-Host \"Path: $p\"; Write-Host \"Exists: $\\(Test-Path $p\\)\"; if \\(Test-Path $p\\) { Get-Content -Raw $p })"
+      "PowerShell($p = \"$env:APPDATA\\\\tfx\\\\settings.json\"; Write-Host \"Path: $p\"; Write-Host \"Exists: $\\(Test-Path $p\\)\"; if \\(Test-Path $p\\) { Get-Content -Raw $p })",
+      "Bash(grep -n \"\\\\\"t\\\\\"\\\\|\\\\\"w\\\\\"\\\\|\\\\\"\\\\\\\\[\\\\\"\\\\|\\\\\"\\\\\\\\]\\\\\"\\\\|bracket\\\\|Oem\\\\|=> Key\\\\|case \\\\\"\\\\|Key\\\\.[A-Z]\" \"D:/home/source/csharp/tfx-for-windows/src/Models/AppConfig.cs\")",
+      "Bash(timeout 12 dotnet run --project Tfx.csproj)",
+      "Bash(awk '/ToolbarButton/{f=1} f{print NR\": \"$0} /IsEnabled.*False|Opacity.*0\\\\.3/{if\\(f\\)c++} f&&/<\\\\/Style>/{print \"---STYLE END---\"; exit}' App.xaml)",
+      "Bash(git merge *)",
+      "PowerShell(Get-Content \"src/Views/MainWindow/MainWindow.xaml\" | Select-Object -Skip 322 -First 55 | ForEach-Object -Begin {$n=323} -Process { \"{0}: {1}\" -f $n,$_; $n++ })",
+      "Bash(git --no-pager log --oneline -6 --no-color)",
+      "Bash(git reset *)",
+      "Bash(git --no-pager status --short)",
+      "Bash(git branch *)"
     ]
   }
 }

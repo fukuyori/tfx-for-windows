@@ -217,6 +217,13 @@
 
                 <Border x:Name="LeftPaneBorder" Grid.Column="0" Background="{DynamicResource TfxPanelActive}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="1" Margin="8">
                     <DockPanel>
+                        <ItemsControl x:Name="LeftTabStrip" DockPanel.Dock="Top" Margin="6,4,6,0" Visibility="Collapsed">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
                         <local:PathBar x:Name="LeftPathBar" DockPanel.Dock="Top" Margin="6,6,6,4" PathRequested="LeftPathBar_PathRequested" />
                         <Grid>
                         <DataGrid x:Name="LeftGrid" ItemsSource="{Binding LeftItems}" IsReadOnly="True" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
@@ -291,6 +298,13 @@
 
                 <Border x:Name="RightPaneBorder" Grid.Column="2" Background="{DynamicResource TfxPanel}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="1" Margin="8">
                     <DockPanel>
+                        <ItemsControl x:Name="RightTabStrip" DockPanel.Dock="Top" Margin="6,4,6,0" Visibility="Collapsed">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
                         <local:PathBar x:Name="RightPathBar" DockPanel.Dock="Top" Margin="6,6,6,4" PathRequested="RightPathBar_PathRequested" />
                         <Grid>
                         <DataGrid x:Name="RightGrid" ItemsSource="{Binding RightItems}" IsReadOnly="True" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
