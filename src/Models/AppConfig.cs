@@ -486,6 +486,7 @@ public sealed class AppConfig
         nextTab = "ctrl+shift+]"
         prevTab = "ctrl+shift+["
         toggleTerminal = "ctrl+j"
+        quit = "ctrl+q"
 
         # Startup layout:
         # [startup]

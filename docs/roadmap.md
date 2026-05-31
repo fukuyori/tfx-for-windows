@@ -49,7 +49,7 @@ Upstream: §1.9 (Live Refresh and Reload) — `FileSystemWatcher` instead of `Di
 
 - **Auto-refresh**: each pane subscribes to a `FileSystemWatcher` on its current folder with debounce, plus a periodic fallback poll for missed events. Refresh skips while renaming, dragging, rubber-band selecting, the context menu is open, or the current path is inside a zip. Reloads use a diff (add / remove / move) against the existing list so scroll position and selection survive.
 - **Context menu**: "Open with..." invokes the standard Windows dialog via P/Invoked `SHOpenWithDialog`. Item order rearranged to follow Windows 11 conventions (open / locate / pin → clipboard + copy path → archive → current-folder actions → destructive operations at the bottom).
-- **Initial folder resolution**: command-line argument → meaningful current working directory (skipped when the CWD equals the executable's own directory, `System32`, or `Windows`) → saved path → user profile. Launching `Tfx.exe` from a terminal opens the terminal's current folder.
+- **Initial folder resolution**: command-line argument → meaningful current working directory (skipped when the CWD equals the executable's own directory, `System32`, or `Windows`) → saved path → user profile. Launching `Tfx.exe` from a terminal opens the terminal's current folder. When the left folder comes from an explicit source (command-line arg or meaningful CWD), it opens as a single fresh tab rather than restoring the saved tab set, so the requested startup folder wins (fixed in 0.6.7 — pane tabs in 0.6.4 had let the saved-tab restore override it); the right pane always restores its saved tabs.
 - **Browse inside `.zip`**: virtual path scheme `<zip>::<inner>` makes zips navigable like folders. Subfolders inside the archive are navigable, files extract on demand to `%TEMP%\tfx\archive-<id>\…` when opened or dragged out, and the breadcrumb bar shows each zip level as a clickable segment. The temp folder is removed on close. Zip-internal editing (rename, delete, paste, new file/folder) is structurally disabled when inside an archive.
 
 ### 1.3 0.3.2 — Responsiveness Pass
@@ -275,7 +275,7 @@ Tasks:
 
 - Evaluate ConPTY-based options before writing custom: `Microsoft.Terminal.Wpf`, [WPF.ConPTY.Terminal samples](https://github.com/microsoft/terminal), or community packages.
 - Default shell from `%ComSpec%` / PowerShell preference; working directory follows the active pane (toggleable, default on).
-- Commands: toggle terminal pane (`Ctrl+\`` proposed), focus terminal pane, run command on selected files.
+- Commands: toggle terminal pane (`Ctrl+J`; default avoids `` Ctrl+` `` because the backtick key is IME-bound at the 半角/全角 position on JP keyboards), click-to-focus the pane. Deferred: focus-terminal shortcut, run-command-on-selected-files.
 - Persist visibility, height, font size in `AppSettings`.
 
 Done when:
@@ -431,7 +431,7 @@ Priority: lower than §2.16. Address once the remaining extension hooks land and
 | --- | --- | --- |
 | §2.1 macOS Tags | **Skipped** | Windows lacks an OS-level tag system that interoperates with Explorer or other applications. Internal-only virtual tags can be reconsidered after configuration and extension APIs mature. |
 | §2.7 Sparkle | **Replaced by §2.11 Velopack** | Windows-native auto-update stack. |
-| §2.4 Built-in Terminal Pane | **Planned after §2.7; external launcher remains supported** | `AppSettings.TerminalCommand` / `TerminalArguments` and `[terminal]` in `config.toml` invoke any shell (wt / WezTerm / pwsh / Git Bash / `code -r "{path}"` / …) with `{path}` and env-var expansion. The built-in pane variant is now tracked as the next major item after pane tabs. |
+| §2.4 Built-in Terminal Pane | **Done in 0.6.5 (see §2.9); external launcher remains supported** | `AppSettings.TerminalCommand` / `TerminalArguments` and `[terminal]` in `config.toml` invoke any shell (wt / WezTerm / pwsh / Git Bash / `code -r "{path}"` / …) with `{path}` and env-var expansion. The built-in pane (xterm.js in WebView2) shipped in 0.6.5; the external launcher stays the default hand-off. |
 | §2.5 POSIX permissions | **Replaced by §2.10 NTFS ACL** | Different security model. |
 | §3.3 distribution (TestFlight / Mac App Store) | **Replaced by GitHub Releases + `winget`** | See §3.3 below. |
 

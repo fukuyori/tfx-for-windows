@@ -38,7 +38,15 @@
       "Bash(grep -n \"OemTilde\\\\|backtick\\\\|grave\\\\|\\\\`\" src/Models/AppConfig.cs)",
       "Bash(grep -rln 'ctrl+`\\\\|toggleTerminal\\\\|Ctrl+`' docs/ CHANGELOG.md CHECKLIST.md README.md README.ja.md)",
       "Bash(grep -rln 'Ctrl+`\\\\|ctrl+`' README.md README.ja.md CHANGELOG.md CHECKLIST.md docs/roadmap.md)",
-      "Bash(cd \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\" && git commit --amend -F .git/COMMIT_TMP_MSG.txt && rm .git/COMMIT_TMP_MSG.txt && echo \"---\" && git log --oneline -2)"
+      "Bash(cd \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\" && git commit --amend -F .git/COMMIT_TMP_MSG.txt && rm .git/COMMIT_TMP_MSG.txt && echo \"---\" && git log --oneline -2)",
+      "Bash(grep -rn 'Ctrl+\\\\\\\\`\\\\|ペインタブがない\\\\|tabs are not implemented' docs/configuration.md docs/configuration.ja.md)",
+      "Bash(grep -rn 'Ctrl+\\\\\\\\`' docs/configuration.md docs/configuration.ja.md)",
+      "Bash(awk 'NR>=430 && NR<=436' docs/roadmap.md)",
+      "Bash(awk 'NR>=48 && NR<=55' docs/roadmap.md)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(grep -n \"toggleTerminal.*ctrl+j\\\\|| \\\\`toggleTerminal\\\\`\" docs/configuration.md docs/configuration.ja.md)",
+      "Bash(powershell -Command \"Get-ChildItem Assets/terminal | Select-Object Name,Length\")",
+      "Bash(grep -n 'bytesToB64\\(\"\\\\\\\\\\\\\\\\x03\"\\)' bin/Debug/net10.0-windows10.0.19041.0/Assets/terminal/terminal.html)"
     ]
   }
 }

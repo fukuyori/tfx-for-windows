@@ -31,6 +31,15 @@ public partial class MainWindow
         else
         {
             TerminalRow.Height = new GridLength(0);
+            // Warm up the WebView2 + xterm.js page in the background once the UI
+            // is idle. The first open is otherwise slow because creating the
+            // WebView2 runtime process and loading/parsing xterm happens only on
+            // demand. Pre-loading it here means opening the pane just has to spawn
+            // the shell. The _terminalPaneOpen guard keeps the warm-up resize from
+            // starting a shell before the user actually opens the pane.
+            Dispatcher.BeginInvoke(
+                () => _ = EnsureTerminalWebViewAsync(),
+                DispatcherPriority.ApplicationIdle);
         }
     }
 
@@ -137,6 +146,15 @@ public partial class MainWindow
                 e.Cancel = true;
             }
         };
+        // Allow the xterm page to read the clipboard for Ctrl+V paste. Only the
+        // clipboard-read permission is granted; everything else stays default.
+        core.PermissionRequested += (_, e) =>
+        {
+            if (e.PermissionKind == CoreWebView2PermissionKind.ClipboardRead)
+            {
+                e.State = CoreWebView2PermissionState.Allow;
+            }
+        };
 
         core.Navigate("https://tfx.terminal/terminal.html");
         return true;
@@ -184,6 +202,11 @@ public partial class MainWindow
                 break;
             case "error":
                 SetStatus(Loc.F("Terminal failed to start: {0}", msg.message ?? "script error"));
+                break;
+            case "log":
+                // Temporary: surfaces terminal key-handling diagnostics in the
+                // status bar so Ctrl+C routing can be verified.
+                SetStatus(msg.message ?? "");
                 break;
         }
     }
@@ -403,4 +426,78 @@ public partial class MainWindow
         _settings.ShowTerminalPane = false;
         SaveSettings();
     }
+
+    /// <summary>
+    /// Sends an interrupt (Ctrl+C / ETX, 0x03) to the running shell. Exposed as a
+    /// header button because the keyboard Ctrl+C inside the WebView2 terminal is
+    /// not reliably delivered on all setups.
+    /// </summary>
+    private void TerminalInterrupt_Click(object sender, RoutedEventArgs e)
+    {
+        _terminalPty?.WriteBytes([0x03]);
+        Terminal.Focus();
+        PostToTerminal(new { type = "focus" });
+    }
+
+    // ─── Drag & drop: files dropped onto the terminal insert their paths ─────
+    // The WebView2's own AllowExternalDrop is off (set in XAML) so the drop
+    // reaches WPF here rather than the web page — the page (a browser context)
+    // can't read full paths for security reasons, but the WPF FileDrop data can.
+
+    /// <summary>
+    /// Shows / hides the drop overlay Popup that sits on top of the WebView2
+    /// during a drag. The Popup has its own HWND (a same-HWND WPF element can't
+    /// receive a drop over the native WebView2 child window). Only shown when the
+    /// pane is open and a shell is running, and sized to match the WebView2.
+    /// </summary>
+    private void ShowTerminalDropOverlay(bool show)
+    {
+        if (show && _terminalPaneOpen && _terminalPty is not null
+            && Terminal.ActualWidth > 0 && Terminal.ActualHeight > 0)
+        {
+            TerminalDropOverlayBorder.Width = Terminal.ActualWidth;
+            TerminalDropOverlayBorder.Height = Terminal.ActualHeight;
+            TerminalDropOverlay.IsOpen = true;
+        }
+        else
+        {
+            TerminalDropOverlay.IsOpen = false;
+        }
+    }
+
+    private void Terminal_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Writes the dropped files' full paths to the shell as if typed at the
+    /// prompt. Paths containing spaces are double-quoted (valid for both cmd and
+    /// PowerShell); multiple paths are space-separated with a trailing space.
+    /// </summary>
+    private void Terminal_FileDrop(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+        TerminalDropOverlay.IsOpen = false;
+        if (_terminalPty is null || !e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            return;
+        }
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] paths || paths.Length == 0)
+        {
+            return;
+        }
+
+        var text = string.Join(" ", paths.Select(QuoteShellPath)) + " ";
+        _terminalPty.Write(text);
+        Terminal.Focus();
+        PostToTerminal(new { type = "focus" });
+    }
+
+    /// <summary>Double-quotes a path if it contains whitespace.</summary>
+    private static string QuoteShellPath(string path) =>
+        path.Any(char.IsWhiteSpace) ? $"\"{path}\"" : path;
 }

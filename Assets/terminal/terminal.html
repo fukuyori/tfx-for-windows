@@ -93,6 +93,38 @@
     term.open(document.getElementById("terminal"));
     fit();
 
+    // Copy / paste / interrupt key handling. In a browser context Ctrl+C is
+    // taken by the native copy action, so without this an interrupt would never
+    // reach the shell. Return false = handled here (don't let xterm/browser act).
+    term.attachCustomKeyEventHandler(function (e) {
+      if (e.type !== "keydown" || !e.ctrlKey || e.altKey || e.metaKey) {
+        return true;
+      }
+      var k = (e.key || "").toLowerCase();
+      var isC = k === "c" || e.keyCode === 67;
+      var isV = k === "v" || e.keyCode === 86;
+      if (e.shiftKey) {
+        if (isC) { copySelection(); e.preventDefault(); return false; }
+        if (isV) { pasteClipboard(); e.preventDefault(); return false; }
+        return true;
+      }
+      if (isC) {
+        post({ type: "log", message: "Ctrl+C handler reached" });
+        // Selection present → copy it; otherwise send SIGINT (Ctrl+C = ETX 0x03).
+        if (term.hasSelection()) {
+          copySelection();
+          term.clearSelection();
+        } else {
+          post({ type: "input", dataB64: bytesToB64("") });
+          post({ type: "log", message: "Ctrl+C interrupt (0x03) sent" });
+        }
+        e.preventDefault();
+        return false;
+      }
+      if (isV) { pasteClipboard(); e.preventDefault(); return false; }
+      return true;
+    });
+
     // Keystrokes / pasted text → host (base64 so binary control bytes survive).
     term.onData(function (data) {
       post({ type: "input", dataB64: bytesToB64(data) });
@@ -124,6 +156,27 @@
       bin += String.fromCharCode(utf8[i]);
     }
     return btoa(bin);
+  }
+
+  // Copy the current selection to the clipboard (Ctrl+C with selection /
+  // Ctrl+Shift+C). navigator.clipboard works because the page is served from
+  // an https origin (the tfx.terminal virtual host).
+  function copySelection() {
+    if (term && term.hasSelection() && navigator.clipboard) {
+      navigator.clipboard.writeText(term.getSelection());
+    }
+  }
+
+  // Paste clipboard text into the shell (Ctrl+V / Ctrl+Shift+V). Reading the
+  // clipboard requires the host to allow the ClipboardRead permission.
+  function pasteClipboard() {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (text) {
+        if (text) {
+          post({ type: "input", dataB64: bytesToB64(text) });
+        }
+      }).catch(function () { /* permission denied / empty */ });
+    }
   }
 
   function write(bytes) {

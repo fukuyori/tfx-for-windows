@@ -211,7 +211,7 @@ layout = "split"
 rightFolder = "~/Downloads"
 ```
 
-`rightFolders` accepts a list. Windows currently uses the first valid folder as the right-pane startup folder; pane tabs are not implemented in this port.
+`rightFolders` accepts a list. Windows currently uses the first valid folder as the right-pane startup folder.
 
 ```toml
 [startup]
@@ -286,6 +286,7 @@ Supported action keys:
 | `nextTab` | `ctrl+shift+]` | Switch to the next tab. |
 | `prevTab` | `ctrl+shift+[` | Switch to the previous tab. |
 | `toggleTerminal` | `ctrl+j` | Show or hide the built-in terminal pane. (Default avoids `` ctrl+` `` because the `` ` `` key is hard to reach / IME-bound on Japanese keyboards; you can set it to `` ctrl+` `` here if your layout allows.) |
+| `quit` | `ctrl+q` | Quit the application (saves the session and tears down the terminal). Ignored while the terminal pane is focused so the shell keeps `Ctrl+Q`; `Alt+F4` always closes the window. |
 
 The `` ` `` (backtick / grave) key token is accepted for `toggleTerminal`; `[` and `]` are accepted for the tab-cycle shortcuts.
 
@@ -293,7 +294,7 @@ If two actions resolve to the same shortcut, the later conflicting override is i
 
 ### `[terminal]`
 
-Configures both the **external** terminal (toolbar button / `openTerminal` shortcut) and the appearance of the **built-in** terminal pane (`Ctrl+\`` / toolbar toggle).
+Configures both the **external** terminal (toolbar button / `openTerminal` shortcut) and the appearance of the **built-in** terminal pane (`toggleTerminal`, default `Ctrl+J` / toolbar toggle).
 
 ```toml
 [terminal]
@@ -321,7 +322,7 @@ arguments = "-r {path}"
 
 #### Built-in terminal appearance
 
-The `app` / `arguments` keys above configure the **external** terminal. The keys below style the **built-in** terminal pane (toggled with `Ctrl+\`` or the toolbar button):
+The `app` / `arguments` keys above configure the **external** terminal. The keys below style the **built-in** terminal pane (toggled with `toggleTerminal`, default `Ctrl+J`, or the toolbar button):
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -350,6 +351,16 @@ brightBlack = "#5A5A5A"   # PSReadLine history-prediction "ghost" text
 If `background` is **omitted**, the terminal surface is transparent and follows the tfx window's translucency (`[opacity] background`). Set it to a `#RRGGBB` value to force an opaque background.
 
 `brightBlack` is the color PowerShell's PSReadLine uses for its inline history prediction. The built-in default is already dimmed (`#5A5A5A`); lower it (e.g. `#3C3C3C`) to make the suggestion preview more subtle, or raise it to make it more visible.
+
+Dragging files or folders from a file pane onto the terminal types their full paths at the prompt (space-separated; paths with spaces are double-quoted).
+
+#### Built-in terminal operations
+
+- **Interrupt** — the `^C` button in the terminal pane header sends an interrupt (Ctrl+C / ETX `0x03`) to the running command. This is the dependable way to interrupt because the in-page keyboard `Ctrl+C` isn't delivered to the shell on all setups.
+- **Copy** — `Ctrl+C` with a selection, or `Ctrl+Shift+C`, copies the selection to the clipboard. `Ctrl+C` with no selection sends the interrupt instead.
+- **Paste** — `Ctrl+V` or `Ctrl+Shift+V` pastes clipboard text into the shell.
+- **Insert paths** — drag files / folders from a file pane onto the terminal to type their paths (see above).
+- **Close** — the `×` button, `Ctrl+J`, or typing `exit` closes the pane. Reopening starts a fresh shell.
 
 ### `[openWith]`
 

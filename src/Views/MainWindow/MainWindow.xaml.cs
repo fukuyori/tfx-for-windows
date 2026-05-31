@@ -96,10 +96,10 @@ public partial class MainWindow : Window
         LoadDrives();
 
         _suspendSettingsSave = true;
-        var initial = ResolveInitialPath();
+        var initial = ResolveInitialPath(out var explicitLeftStart);
         Navigate(LeftGrid, initial, false);
         Navigate(RightGrid, ResolveInitialRightPath(), false);
-        InitializeTabs();
+        InitializeTabs(explicitLeftStart);
         ApplyLayoutSettings();
         // Always land on the left pane at startup so the user opens onto
         // the left listing with the ".." row preselected (set by Navigate
@@ -156,8 +156,18 @@ public partial class MainWindow : Window
         FocusPane(Pane.Left);
     }
 
-    private string ResolveInitialPath()
+    /// <summary>
+    /// Resolves the left pane's startup folder. <paramref name="explicitStart"/>
+    /// is set when the folder came from an explicit source — a command-line path
+    /// argument or a meaningful current working directory (e.g. launching
+    /// <c>Tfx.exe</c> from a terminal) — as opposed to falling back to the saved
+    /// session path. Callers use it to decide whether to honour the startup
+    /// folder over restoring the previously saved tab set.
+    /// </summary>
+    private string ResolveInitialPath(out bool explicitStart)
     {
+        explicitStart = true;
+
         var args = Environment.GetCommandLineArgs().Skip(1);
         var firstDirectoryArg = args.FirstOrDefault(Directory.Exists);
         if (!string.IsNullOrWhiteSpace(firstDirectoryArg))
@@ -169,6 +179,8 @@ public partial class MainWindow : Window
         {
             return cwd;
         }
+
+        explicitStart = false;
 
         if (IsPathRestorable(_settings.LeftPath))
         {

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.7
+
+### Terminal copy / paste / interrupt
+
+- Added an **Interrupt** button to the terminal pane header that sends Ctrl+C / ETX (`0x03`) to the running shell. The in-WebView2 keyboard `Ctrl+C` isn't reliably delivered on all setups, so the button is the dependable way to interrupt a running command.
+- The built-in terminal also handles **`Ctrl+C`**, **`Ctrl+V`**, and their `Ctrl+Shift+` variants in the page where the key event is received: `Ctrl+C` copies when there's a selection and sends the interrupt when there isn't; `Ctrl+Shift+C` always copies; `Ctrl+V` / `Ctrl+Shift+V` paste. Clipboard read for paste is enabled by granting only the WebView2 `ClipboardRead` permission.
+
+### Drop files onto the terminal to insert their paths
+
+- Dragging files / folders from a file pane onto the built-in terminal now **types their full paths at the prompt** (space-separated, double-quoted when a path contains spaces — valid for both cmd and PowerShell). The WebView2's own external-drop handling is disabled so the drop reaches WPF, which can read the full `FileDrop` paths; a browser context can't expose them for security reasons. The shell is focused after the drop.
+
+### Faster terminal first-open
+
+- The built-in terminal pane now **warms up the WebView2 + xterm.js page in the background** once the UI goes idle at startup (when the pane isn't already shown). Previously the first open was slow because creating the WebView2 runtime process and loading/parsing xterm (~550 KB of JS) happened only on demand; pre-loading it means opening the pane just has to spawn the shell. The `_terminalPaneOpen` guard keeps the warm-up's resize message from starting a shell before the pane is actually opened.
+
+### Quit shortcut
+
+- Added a remappable **`quit`** shortcut (default `Ctrl+Q`) that closes the window — running `Window_Closing` so the session is saved and the terminal is torn down. It is ignored while the built-in terminal pane is focused so the shell keeps `Ctrl+Q` (XON/XOFF flow control); `Alt+F4` continues to close the window unconditionally. Configurable via `config.toml` `[shortcuts]` `quit`.
+
+### Startup folder fix
+
+- **Command-line path / working directory now wins at startup again.** Launching `Tfx.exe <folder>` or starting it from a terminal (a "meaningful" current working directory) is supposed to open that folder in the left pane, but since pane tabs landed in 0.6.4 the saved-tab restore ran *after* `ResolveInitialPath` and overwrote `_leftPath` with the previously saved tab, so the requested folder was discarded. `ResolveInitialPath` now reports whether the folder came from an explicit source (command-line arg or meaningful CWD); when it did, the left pane opens it as a single fresh tab and skips the saved-tab restore. Normal launches (Explorer / Start menu — working directory not meaningful) still restore the saved tab set, and the right pane always restores its saved tabs.
+
 ## 0.6.6
 
 ### Terminal pane lifecycle refinements

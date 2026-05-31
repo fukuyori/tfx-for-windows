@@ -225,6 +225,7 @@ internal sealed class ConPty : IDisposable
         }
     }
 
+    /// <summary>Resizes the pseudo console grid (called when the terminal view is resized).</summary>
     public void Resize(short columns, short rows)
     {
         if (_hpc == IntPtr.Zero || _disposed)
@@ -236,6 +237,10 @@ internal sealed class ConPty : IDisposable
         ResizePseudoConsole(_hpc, new COORD { X = columns, Y = rows });
     }
 
+    /// <summary>
+    /// Closes the pseudo console (which signals the child to exit), then releases
+    /// pipes and kills the child process tree if it is still alive. Idempotent.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)

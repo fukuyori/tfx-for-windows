@@ -153,7 +153,7 @@
                             </Grid>
                         </Viewbox>
                     </Button>
-                    <ToggleButton x:Name="TerminalPaneButton" Style="{StaticResource ToolbarToggleButton}" Click="TerminalPane_Click" ToolTip="Toggle terminal pane (Ctrl+`)" Content="&#xE756;" />
+                    <ToggleButton x:Name="TerminalPaneButton" Style="{StaticResource ToolbarToggleButton}" Click="TerminalPane_Click" ToolTip="Toggle terminal pane (Ctrl+J)" Content="&#xE756;" />
                     <Button Style="{StaticResource ToolbarButton}" x:Name="ColumnsButton" Click="Columns_Click" ToolTip="Columns" Content="&#xE713;" />
                 </StackPanel>
                 <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="8,0,0,0">
@@ -454,10 +454,36 @@
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Background="{DynamicResource TfxChrome}" LastChildFill="True">
                     <Button x:Name="TerminalCloseButton" DockPanel.Dock="Right" Style="{StaticResource ToolbarButton}"
-                            Click="TerminalClose_Click" ToolTip="Close terminal (Ctrl+`)" Content="&#xE8BB;" Margin="0,2,4,2" />
+                            Click="TerminalClose_Click" ToolTip="Close terminal (Ctrl+J)" Content="&#xE8BB;" Margin="0,2,4,2" />
+                    <Button x:Name="TerminalInterruptButton" DockPanel.Dock="Left"
+                            Click="TerminalInterrupt_Click" ToolTip="Interrupt (send Ctrl+C)"
+                            Content="^C" FontFamily="Consolas, Yu Gothic UI" FontWeight="Bold"
+                            Foreground="{DynamicResource TfxForeground}"
+                            Background="{DynamicResource TfxInput}"
+                            BorderBrush="{DynamicResource TfxBorder}"
+                            BorderThickness="1" Padding="8,1" Margin="8,3,0,3" Cursor="Hand" />
                     <TextBlock Text="TERMINAL" Foreground="{DynamicResource TfxMuted}" Margin="10,4" VerticalAlignment="Center" />
                 </DockPanel>
-                <wv2:WebView2 x:Name="Terminal" DefaultBackgroundColor="Transparent" />
+                <Grid x:Name="TerminalContent">
+                    <wv2:WebView2 x:Name="Terminal" DefaultBackgroundColor="Transparent"
+                                  AllowExternalDrop="False" />
+                    <!-- Shown only while a tfx drag is in progress. WebView2 is a
+                         native child window and its HWND swallows OLE drop targeting,
+                         so a same-HWND WPF element can't receive the drop. A Popup
+                         has its OWN HWND, so it can sit over the WebView2 and accept
+                         the drop. Sized to the WebView2 in ShowTerminalDropOverlay. -->
+                    <Popup x:Name="TerminalDropOverlay" StaysOpen="True"
+                           AllowsTransparency="True" Placement="Relative"
+                           PlacementTarget="{Binding ElementName=Terminal}">
+                        <Border x:Name="TerminalDropOverlayBorder" AllowDrop="True"
+                                Background="#3007AACC" BorderBrush="#7DD3FC" BorderThickness="2"
+                                DragOver="Terminal_DragOver" Drop="Terminal_FileDrop">
+                            <TextBlock Text="Drop to paste path" Foreground="#FFFFFF"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       FontFamily="Consolas, Yu Gothic UI" FontSize="14" />
+                        </Border>
+                    </Popup>
+                </Grid>
             </DockPanel>
         </Border>
         </Grid>

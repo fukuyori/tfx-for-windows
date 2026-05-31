@@ -135,7 +135,20 @@ public partial class MainWindow
         var allowedEffects = hasArchive
             ? DragDropEffects.Copy
             : DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link;
-        var effect = DragDrop.DoDragDrop(source, data, allowedEffects);
+
+        // Show the terminal drop overlay (if the pane is open) so files can be
+        // dropped onto the shell. WebView2 is a native child window that swallows
+        // WPF drops, so a WPF overlay must sit on top of it during the drag.
+        ShowTerminalDropOverlay(true);
+        DragDropEffects effect;
+        try
+        {
+            effect = DragDrop.DoDragDrop(source, data, allowedEffects);
+        }
+        finally
+        {
+            ShowTerminalDropOverlay(false);
+        }
 
         CompleteFileDrag(effect, suppressNextContextMenu: isRightDrag);
     }

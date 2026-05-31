@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.6.6
+Version: 0.6.7
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -36,6 +36,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - User-editable `%APPDATA%\tfx\config.toml` for tfx-compatible font, color, shortcut, startup, terminal, and per-extension open-with settings
 - Light and translucent themes from `config.toml`, including custom WPF chrome for transparent windows
 - Configurable terminal launcher: "Open Terminal here" opens at the active pane's folder by default, or uses a user-specified executable and optional argument template from **Terminal Settings...** or `config.toml`
+- Built-in terminal pane (xterm.js in WebView2, toggled with `Ctrl+J`): a real ConPTY shell docked at the window bottom — configurable shell / font / colors via `config.toml [terminal]`, a header `^C` interrupt button, copy / paste, and drag files from a pane onto it to insert their paths. Each open starts a fresh shell
 - Status bar with item counts, selection size, active drive's free space (cached and refreshed in the background to stay responsive on slow network drives), Git branch, and the current version
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
@@ -55,7 +56,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.6 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.7 |
 +---------------------------------------------------------------------+
 ```
 
@@ -266,6 +267,8 @@ dotnet run -- "C:\path\to\folder"
 ```
 
 The initial folder for the left pane is resolved in this order: (1) the first command-line argument if it is a valid directory, (2) the current working directory at startup when it is meaningful (not the executable's own folder, `System32`, or `Windows`), so launching `Tfx.exe` from a terminal opens the terminal's current folder, and (3) the previously saved path. If none apply, the user profile folder is used.
+
+When the left pane's folder comes from an explicit source — case (1) or (2) above — it opens as a single fresh tab and the previously saved tab set is *not* restored, so the requested startup folder always wins. Normal launches (Explorer / Start menu), where the working directory is not meaningful, fall through to case (3) and restore the saved tabs as before. The right pane always restores its saved tabs.
 
 Publish a self-contained single-file Windows executable:
 

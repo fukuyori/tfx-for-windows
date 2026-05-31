@@ -58,9 +58,24 @@ public partial class MainWindow
     /// Called once during construction after the initial Navigate calls have
     /// set those paths. Optionally restores additional tabs from settings.
     /// </summary>
-    private void InitializeTabs()
+    private void InitializeTabs(bool explicitLeftStart = false)
     {
-        SeedPaneTabs(Pane.Left, _settings.LeftTabs, _settings.LeftActiveTab, _leftPath);
+        // When the left pane's folder came from an explicit source (a command-
+        // line path or a meaningful working directory), open it as a single
+        // fresh tab instead of restoring the saved tab set — otherwise the
+        // restored active tab would override the requested startup folder. The
+        // right pane always restores its saved tabs. Normal launches (Explorer
+        // / Start menu), where the working directory is not meaningful, fall
+        // through to the usual saved-tab restore.
+        if (explicitLeftStart)
+        {
+            SeedPaneTabs(Pane.Left, [], 0, _leftPath);
+        }
+        else
+        {
+            SeedPaneTabs(Pane.Left, _settings.LeftTabs, _settings.LeftActiveTab, _leftPath);
+        }
+
         SeedPaneTabs(Pane.Right, _settings.RightTabs, _settings.RightActiveTab, _rightPath);
     }
 

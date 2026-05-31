@@ -35,6 +35,7 @@ public partial class MainWindow
         ["nextTab"] = "ctrl+shift+]",
         ["prevTab"] = "ctrl+shift+[",
         ["toggleTerminal"] = "ctrl+j",
+        ["quit"] = "ctrl+q",
     };
 
     private bool InArchiveContext => ArchivePath.Contains(GetCurrentPath(_activeGrid));
@@ -197,6 +198,14 @@ public partial class MainWindow
         else if (IsShortcut("toggleTerminal", e))
         {
             ToggleTerminalPane();
+            e.Handled = true;
+        }
+        else if (IsShortcut("quit", e))
+        {
+            // Closing the window runs Window_Closing (saves session, tears down
+            // the terminal). Skipped while the terminal is focused so the shell
+            // keeps Ctrl+Q (XON/XOFF flow control).
+            Close();
             e.Handled = true;
         }
         else if (IsShortcut("moveToTrash", e))
