@@ -153,6 +153,7 @@
                             </Grid>
                         </Viewbox>
                     </Button>
+                    <ToggleButton x:Name="TerminalPaneButton" Style="{StaticResource ToolbarToggleButton}" Click="TerminalPane_Click" ToolTip="Toggle terminal pane (Ctrl+`)" Content="&#xE756;" />
                     <Button Style="{StaticResource ToolbarButton}" x:Name="ColumnsButton" Click="Columns_Click" ToolTip="Columns" Content="&#xE713;" />
                 </StackPanel>
                 <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="8,0,0,0">
@@ -182,6 +183,13 @@
         </StatusBar>
 
         <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" MinHeight="120" />
+                <RowDefinition x:Name="TerminalSplitterRow" Height="Auto" />
+                <RowDefinition x:Name="TerminalRow" Height="0" MinHeight="0" />
+            </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="SidebarColumn" Width="260" MinWidth="180" />
                 <ColumnDefinition Width="5" />
@@ -193,7 +201,38 @@
             <Border Grid.Column="0" Background="{DynamicResource TfxPanel}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,0,1,0">
                 <DockPanel>
                     <TextBlock x:Name="PinnedHeader" DockPanel.Dock="Top" Text="PINNED" Foreground="{DynamicResource TfxMuted}" Margin="10,10,10,4" />
-                    <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Padding="0,0,0,12" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="PinnedList_SelectionChanged" PreviewMouseMove="PinnedList_PreviewMouseMove" PreviewMouseRightButtonDown="PinnedList_PreviewMouseRightButtonDown" ContextMenuOpening="PinnedList_ContextMenuOpening" DragOver="PinnedList_DragOver" Drop="PinnedList_Drop" AllowDrop="True">
+                    <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Padding="4,0,4,12" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="PinnedList_SelectionChanged" PreviewMouseMove="PinnedList_PreviewMouseMove" PreviewMouseRightButtonDown="PinnedList_PreviewMouseRightButtonDown" ContextMenuOpening="PinnedList_ContextMenuOpening" DragOver="PinnedList_DragOver" Drop="PinnedList_Drop" AllowDrop="True">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="Margin" Value="0,1" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="Bd"
+                                                    Background="{TemplateBinding Background}"
+                                                    CornerRadius="4"
+                                                    Padding="6,4"
+                                                    SnapsToDevicePixels="True">
+                                                <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Stretch" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxHover}" />
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxSelection}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <local:MiddleEllipsisTextBlock FullText="{Binding}"
@@ -404,12 +443,53 @@
                 </DockPanel>
             </Border>
         </Grid>
+
+        <GridSplitter x:Name="TerminalSplitter" Grid.Row="1" Height="6" HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch" Background="{DynamicResource TfxBorder}"
+                      Cursor="SizeNS" ResizeBehavior="PreviousAndNext" ResizeDirection="Rows"
+                      Visibility="Collapsed" />
+
+        <Border x:Name="TerminalHost" Grid.Row="2" Visibility="Collapsed"
+                Background="#0C0C0C" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <DockPanel DockPanel.Dock="Top" Background="{DynamicResource TfxChrome}" LastChildFill="True">
+                    <Button x:Name="TerminalCloseButton" DockPanel.Dock="Right" Style="{StaticResource ToolbarButton}"
+                            Click="TerminalClose_Click" ToolTip="Close terminal (Ctrl+`)" Content="&#xE8BB;" Margin="0,2,4,2" />
+                    <TextBlock Text="TERMINAL" Foreground="{DynamicResource TfxMuted}" Margin="10,4" VerticalAlignment="Center" />
+                </DockPanel>
+                <wv2:WebView2 x:Name="Terminal" DefaultBackgroundColor="Transparent" />
+            </DockPanel>
+        </Border>
+        </Grid>
     </DockPanel>
-    <Border Width="8"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Stretch"
-            Background="{DynamicResource TfxHitSurface}"
-            Cursor="SizeWE"
+
+    <!-- Window resize handles for the custom (chromeless) window: four edges +
+         four corners. Corners are declared last so they win hit-testing where
+         they overlap the edge strips. -->
+    <Border Height="6" VerticalAlignment="Top" HorizontalAlignment="Stretch" Margin="8,0"
+            Background="{DynamicResource TfxHitSurface}" Cursor="SizeNS"
+            MouseLeftButtonDown="ResizeTop_MouseLeftButtonDown" />
+    <Border Height="6" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="8,0"
+            Background="{DynamicResource TfxHitSurface}" Cursor="SizeNS"
+            MouseLeftButtonDown="ResizeBottom_MouseLeftButtonDown" />
+    <Border Width="6" HorizontalAlignment="Left" VerticalAlignment="Stretch" Margin="0,8"
+            Background="{DynamicResource TfxHitSurface}" Cursor="SizeWE"
+            MouseLeftButtonDown="ResizeLeft_MouseLeftButtonDown" />
+    <Border Width="6" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,8"
+            Background="{DynamicResource TfxHitSurface}" Cursor="SizeWE"
             MouseLeftButtonDown="ResizeRight_MouseLeftButtonDown" />
+
+    <Border Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Top"
+            Background="{DynamicResource TfxHitSurface}" Cursor="SizeNWSE"
+            MouseLeftButtonDown="ResizeTopLeft_MouseLeftButtonDown" />
+    <Border Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Top"
+            Background="{DynamicResource TfxHitSurface}" Cursor="SizeNESW"
+            MouseLeftButtonDown="ResizeTopRight_MouseLeftButtonDown" />
+    <Border Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+            Background="{DynamicResource TfxHitSurface}" Cursor="SizeNESW"
+            MouseLeftButtonDown="ResizeBottomLeft_MouseLeftButtonDown" />
+    <Border Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+            Background="{DynamicResource TfxHitSurface}" Cursor="SizeNWSE"
+            MouseLeftButtonDown="ResizeBottomRight_MouseLeftButtonDown" />
     </Grid>
 </Window>

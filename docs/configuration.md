@@ -281,12 +281,19 @@ Supported action keys:
 | `cutItems` | `ctrl+x` | Cut selected items. |
 | `pasteItems` | `ctrl+v` | Paste into the active folder. |
 | `selectAll` | `ctrl+a` | Select all visible items. |
+| `newTab` | `ctrl+t` | Open a new tab in the active pane. |
+| `closeTab` | `ctrl+w` | Close the active tab. |
+| `nextTab` | `ctrl+shift+]` | Switch to the next tab. |
+| `prevTab` | `ctrl+shift+[` | Switch to the previous tab. |
+| `toggleTerminal` | `ctrl+j` | Show or hide the built-in terminal pane. (Default avoids `` ctrl+` `` because the `` ` `` key is hard to reach / IME-bound on Japanese keyboards; you can set it to `` ctrl+` `` here if your layout allows.) |
+
+The `` ` `` (backtick / grave) key token is accepted for `toggleTerminal`; `[` and `]` are accepted for the tab-cycle shortcuts.
 
 If two actions resolve to the same shortcut, the later conflicting override is ignored and tfx reports a status warning.
 
 ### `[terminal]`
 
-Overrides the external terminal used by the toolbar button and `openTerminal` shortcut.
+Configures both the **external** terminal (toolbar button / `openTerminal` shortcut) and the appearance of the **built-in** terminal pane (`Ctrl+\`` / toolbar toggle).
 
 ```toml
 [terminal]
@@ -312,7 +319,37 @@ app = "code"
 arguments = "-r {path}"
 ```
 
-tfx for Windows does not currently implement a built-in terminal pane. This setting launches an external terminal/application.
+#### Built-in terminal appearance
+
+The `app` / `arguments` keys above configure the **external** terminal. The keys below style the **built-in** terminal pane (toggled with `Ctrl+\`` or the toolbar button):
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `shell` | string | (auto) | Shell command line for the built-in pane, e.g. `"pwsh.exe -NoLogo"`. When omitted, tfx uses Windows PowerShell, falling back to `%ComSpec%` / cmd. Environment variables are expanded. |
+| `font` | string | (built-in) | Font family for the built-in pane. `monospace` resolves to `Cascadia Mono, Consolas, Yu Gothic UI`. |
+| `fontSize` | number | (session) | Font size (`8`–`40`). `size` is an accepted alias. Takes precedence over the persisted size. |
+| color keys | string `#RRGGBB` | Campbell | Palette overrides (see below). |
+
+`shell` selects the shell for the **built-in** terminal pane only — it's independent of `app` (which launches the **external** terminal). Example: `shell = "pwsh.exe -NoLogo"` to use PowerShell 7.
+
+The terminal supports 16-color, xterm 256-color, and 24-bit truecolor SGR sequences. If `background` is omitted, the terminal surface stays transparent so the window's `[opacity] background` translucency shows through; set `background` to force an opaque color.
+
+Recognized color keys (all quoted `#RRGGBB`): `background`, `foreground`, `cursor`, and the 16 ANSI slots `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `brightBlack`, `brightRed`, `brightGreen`, `brightYellow`, `brightBlue`, `brightMagenta`, `brightCyan`, `brightWhite`.
+
+```toml
+[terminal]
+shell = "pwsh.exe -NoLogo"
+font = "Cascadia Mono"
+fontSize = 14
+foreground = "#CCCCCC"
+cursor = "#7DD3FC"
+brightBlack = "#5A5A5A"   # PSReadLine history-prediction "ghost" text
+# background = "#0C0C0C"   # omit to let window translucency show through
+```
+
+If `background` is **omitted**, the terminal surface is transparent and follows the tfx window's translucency (`[opacity] background`). Set it to a `#RRGGBB` value to force an opaque background.
+
+`brightBlack` is the color PowerShell's PSReadLine uses for its inline history prediction. The built-in default is already dimmed (`#5A5A5A`); lower it (e.g. `#3C3C3C`) to make the suggestion preview more subtle, or raise it to make it more visible.
 
 ### `[openWith]`
 

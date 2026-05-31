@@ -36,6 +36,11 @@ public sealed class AppSettings
     public string TerminalCommand { get; set; } = "";
     public string TerminalArguments { get; set; } = "";
 
+    // Built-in terminal pane (§2.9). Visibility + layout persist across runs.
+    public bool ShowTerminalPane { get; set; }
+    public double TerminalPaneHeight { get; set; } = 220;
+    public double TerminalPaneFontSize { get; set; } = 14;
+
     // ─── PDF preview safety ──────────────────────────────────────────
     // See docs / CHANGELOG for the threat model. Defaults are chosen so a
     // freshly installed tfx never opts into the higher-risk paths

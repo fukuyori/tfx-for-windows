@@ -18,7 +18,15 @@ public partial class MainWindow : Window
 {
     private const int WmSysCommand = 0x0112;
     private const int ScSize = 0xF000;
+    // WM_SYSCOMMAND SC_SIZE direction codes (WMSZ_*).
+    private const int WmszLeft = 1;
     private const int WmszRight = 2;
+    private const int WmszTop = 3;
+    private const int WmszTopLeft = 4;
+    private const int WmszTopRight = 5;
+    private const int WmszBottom = 6;
+    private const int WmszBottomLeft = 7;
+    private const int WmszBottomRight = 8;
 
     public ObservableCollection<FileItem> LeftItems { get; } = [];
     public ObservableCollection<FileItem> RightItems { get; } = [];
@@ -101,6 +109,7 @@ public partial class MainWindow : Window
         _suspendSettingsSave = false;
 
         InitializeAutoRefresh();
+        InitializeTerminalPane();
 
         // Reload from Navigate(LeftGrid, ...) is async; the ApplyPendingSelection
         // path focuses the ".." row when items finish loading. Add a belt-and-
@@ -423,7 +432,16 @@ public partial class MainWindow : Window
         Close();
     }
 
-    private void ResizeRight_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void ResizeLeft_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => StartEdgeResize(WmszLeft, e);
+    private void ResizeRight_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => StartEdgeResize(WmszRight, e);
+    private void ResizeTop_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => StartEdgeResize(WmszTop, e);
+    private void ResizeBottom_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => StartEdgeResize(WmszBottom, e);
+    private void ResizeTopLeft_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => StartEdgeResize(WmszTopLeft, e);
+    private void ResizeTopRight_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => StartEdgeResize(WmszTopRight, e);
+    private void ResizeBottomLeft_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => StartEdgeResize(WmszBottomLeft, e);
+    private void ResizeBottomRight_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => StartEdgeResize(WmszBottomRight, e);
+
+    private void StartEdgeResize(int direction, MouseButtonEventArgs e)
     {
         if (WindowState == WindowState.Maximized)
         {
@@ -438,7 +456,7 @@ public partial class MainWindow : Window
 
         e.Handled = true;
         _ = ReleaseCapture();
-        _ = SendMessage(handle, WmSysCommand, new IntPtr(ScSize + WmszRight), IntPtr.Zero);
+        _ = SendMessage(handle, WmSysCommand, new IntPtr(ScSize + direction), IntPtr.Zero);
     }
 
     private void ToggleMaximizeRestore()
@@ -789,6 +807,16 @@ public partial class MainWindow : Window
         catch
         {
         }
+        try
+        {
+            Terminal?.CoreWebView2?.Stop();
+        }
+        catch
+        {
+        }
+
+        // Tear down the terminal shell so no orphaned pseudo console lingers.
+        ShutdownTerminal();
 
         CleanupArchiveTemp();
     }

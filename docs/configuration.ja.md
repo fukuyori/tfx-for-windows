@@ -275,12 +275,19 @@ openTerminal = "ctrl+shift+t"
 | `cutItems` | `ctrl+x` | Cut。 |
 | `pasteItems` | `ctrl+v` | Paste。 |
 | `selectAll` | `ctrl+a` | すべて選択。 |
+| `newTab` | `ctrl+t` | アクティブペインに新しいタブを開く。 |
+| `closeTab` | `ctrl+w` | アクティブタブを閉じる。 |
+| `nextTab` | `ctrl+shift+]` | 次のタブへ切り替え。 |
+| `prevTab` | `ctrl+shift+[` | 前のタブへ切り替え。 |
+| `toggleTerminal` | `ctrl+j` | 内蔵ターミナルペインの表示切替。（既定は `` ctrl+` `` を避けています。日本語キーボードでは `` ` `` キーが「半角/全角」位置で IME に取られ届かないためです。US 配列等で問題なければ `` ctrl+` `` を指定できます。） |
+
+`toggleTerminal` には `` ` ``（バッククォート）キー、タブ切替には `[` / `]` キーが使えます。
 
 2 つのアクションが同じショートカットになる場合、後から来た衝突設定を無視し、ステータス警告を表示します。
 
 ### `[terminal]`
 
-ツールバーと `openTerminal` ショートカットで起動する外部ターミナルを設定します。
+**外部**ターミナル（ツールバーボタン / `openTerminal` ショートカット）と、**内蔵**ターミナルペイン（`Ctrl+\`` / ツールバーのトグル）の見た目の両方を設定します。
 
 ```toml
 [terminal]
@@ -292,7 +299,33 @@ arguments = "start --cwd {path}"
 
 `[terminal]` を省略した場合、tfx は `wt.exe` をアクティブペインのフォルダーで開きます。Windows Terminal が使えない場合は PowerShell にフォールバックします。`app` だけを設定して `arguments` を省略した場合も、`wt.exe`、WezTerm、PowerShell、pwsh にはフォルダーを開く既定引数を自動で補います。
 
-Windows 版には現在、内蔵ターミナルペインはありません。この設定は外部ターミナル / アプリを起動します。
+#### 内蔵ターミナルの見た目
+
+上の `app` / `arguments` は**外部**ターミナル用です。以下のキーは**内蔵**ターミナルペイン（`Ctrl+\`` / ツールバーのトグル）のスタイルを設定します:
+
+| キー | 型 | 既定 | 説明 |
+| --- | --- | --- | --- |
+| `shell` | string | (自動) | 内蔵ペインで起動するシェルのコマンドライン。自動検出は PowerShell → `%ComSpec%` / cmd の順。例: `"pwsh.exe -NoLogo"`。 |
+| `font` | string | (組込) | 内蔵ペインのフォントファミリー。`monospace` は `Cascadia Mono, Consolas, Yu Gothic UI` に解決。 |
+| `fontSize` | number | (セッション) | フォントサイズ（`8`〜`40`）。`size` も使用可。永続値より優先。 |
+| 色キー | string `#RRGGBB` | Campbell | パレット上書き（下記）。 |
+
+256 色（xterm）および 24bit トゥルーカラーのエスケープシーケンスを描画します。指定できる名前付き色キー（すべて `#RRGGBB` を引用）: `background`, `foreground`, `cursor`, および 16 の ANSI スロット `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `brightBlack`, `brightRed`, `brightGreen`, `brightYellow`, `brightBlue`, `brightMagenta`, `brightCyan`, `brightWhite`。
+
+```toml
+[terminal]
+shell = "pwsh.exe -NoLogo"
+font = "Cascadia Mono"
+fontSize = 14
+foreground = "#CCCCCC"
+cursor = "#7DD3FC"
+brightBlack = "#5A5A5A"   # PSReadLine の履歴予測（ゴースト）テキスト
+# background = "#0C0C0C"   # 省略するとウィンドウの透過に追従
+```
+
+`background` を**省略**すると、ターミナル面は透明になり tfx ウィンドウの透過設定（`[opacity] background`）に追従します。`#RRGGBB` を指定すると不透明な背景色になります。
+
+`brightBlack` は PowerShell の PSReadLine がインライン履歴予測に使う色です。既定でやや抑えめ（`#5A5A5A`）にしてありますが、さらに暗く（例: `#3C3C3C`）すれば予測表示をより目立たなくでき、明るくすれば見やすくなります。
 
 ### `[openWith]`
 

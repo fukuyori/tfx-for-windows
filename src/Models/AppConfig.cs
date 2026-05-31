@@ -176,8 +176,50 @@ public sealed class AppConfig
         }
     }
 
+    // Recognized [terminal] color keys (case-insensitive). Names match the
+    // common ANSI slot naming so users coming from Windows Terminal / iTerm
+    // schemes feel at home.
+    private static readonly string[] TerminalColorKeys =
+    [
+        "background", "foreground", "cursor",
+        "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
+        "brightBlack", "brightRed", "brightGreen", "brightYellow",
+        "brightBlue", "brightMagenta", "brightCyan", "brightWhite",
+    ];
+
     private static void ParseTerminal(AppConfig config, string key, string value)
     {
+        // fontSize is numeric; everything else is a quoted string.
+        if (key.Equals("fontSize", StringComparison.OrdinalIgnoreCase) ||
+            key.Equals("size", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseDouble(value, out var size) && size is >= 8 and <= 40)
+            {
+                config.Terminal.FontSize = size;
+            }
+            else
+            {
+                config.Errors.Add($"Invalid terminal fontSize: {value}");
+            }
+            return;
+        }
+
+        // Color keys.
+        var colorKey = Array.Find(TerminalColorKeys,
+            k => k.Equals(key, StringComparison.OrdinalIgnoreCase));
+        if (colorKey is not null)
+        {
+            if (TryParseColor(value, out var color))
+            {
+                config.Terminal.Colors[colorKey] = color;
+            }
+            else
+            {
+                config.Errors.Add($"Invalid terminal color for {key}: {value}");
+            }
+            return;
+        }
+
         if (!TryParseString(value, out var parsed))
         {
             config.Errors.Add($"Invalid terminal value for {key}: {value}");
@@ -193,6 +235,14 @@ public sealed class AppConfig
                  key.Equals("args", StringComparison.OrdinalIgnoreCase))
         {
             config.Terminal.Arguments = parsed;
+        }
+        else if (key.Equals("font", StringComparison.OrdinalIgnoreCase))
+        {
+            config.Terminal.Font = ResolveFontAlias(parsed, ui: false);
+        }
+        else if (key.Equals("shell", StringComparison.OrdinalIgnoreCase))
+        {
+            config.Terminal.Shell = Environment.ExpandEnvironmentVariables(parsed);
         }
     }
 
@@ -431,6 +481,11 @@ public sealed class AppConfig
         cutItems = "ctrl+x"
         pasteItems = "ctrl+v"
         selectAll = "ctrl+a"
+        newTab = "ctrl+t"
+        closeTab = "ctrl+w"
+        nextTab = "ctrl+shift+]"
+        prevTab = "ctrl+shift+["
+        toggleTerminal = "ctrl+j"
 
         # Startup layout:
         # [startup]
@@ -439,10 +494,17 @@ public sealed class AppConfig
         # rightFolder = "~/Downloads"
         # rightFolders = ["~/Downloads", "~/Documents"]
         #
-        # Windows aliases:
+        # External terminal (toolbar / openTerminal) and built-in pane:
         # [terminal]
-        # app = "wt.exe"
+        # app = "wt.exe"             # external terminal launched by the toolbar
         # arguments = "-d {path}"
+        # shell = "pwsh.exe -NoLogo" # shell for the BUILT-IN terminal pane
+        # font = "Cascadia Mono"
+        # fontSize = 14
+        # background = "#0C0C0C"     # omit to let the window translucency show through
+        # foreground = "#CCCCCC"
+        # cursor = "#7DD3FC"
+        # brightBlack = "#5A5A5A"    # PSReadLine history-prediction ghost text
         #
         # [openWith]
         # md = "code"
@@ -454,6 +516,26 @@ public sealed class TerminalConfig
 {
     public string? Command { get; set; }
     public string? Arguments { get; set; }
+
+    // Shell command line for the BUILT-IN terminal pane (separate from the
+    // external `app`/`arguments` used by the toolbar). Null = auto-detect
+    // (PowerShell, then %ComSpec%). e.g. "pwsh.exe -NoLogo".
+    public string? Shell { get; set; }
+
+    // Built-in terminal pane appearance. All optional — null means "use the
+    // built-in default". Font / size are separate from the file-pane font so
+    // the terminal can be tuned independently.
+    public string? Font { get; set; }
+    public double? FontSize { get; set; }
+
+    /// <summary>
+    /// Color overrides keyed by name: background, foreground, cursor, and the
+    /// 16 ANSI slots (black, red, green, yellow, blue, magenta, cyan, white,
+    /// brightBlack … brightWhite). brightBlack is what PowerShell's PSReadLine
+    /// uses for its history-prediction "ghost" text, so lowering it dims the
+    /// suggestion preview.
+    /// </summary>
+    public Dictionary<string, Color> Colors { get; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed class StartupConfig
@@ -563,6 +645,7 @@ public readonly record struct AppShortcut(ModifierKeys Modifiers, Key Key)
             "/" => Key.Oem2,
             "-" => Key.OemMinus,
             "=" => Key.OemPlus,
+            "`" or "backtick" or "grave" => Key.OemTilde,
             _ => Key.None
         };
 
@@ -615,6 +698,7 @@ public readonly record struct AppShortcut(ModifierKeys Modifiers, Key Key)
             Key.OemMinus => "-",
             Key.OemPlus => "=",
             Key.Oem5 => "\\",
+            Key.OemTilde => "`",
             Key.Back => "Backspace",
             Key.Return or Key.Enter => "Enter",
             _ => key.ToString()

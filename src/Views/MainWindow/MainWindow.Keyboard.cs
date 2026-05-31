@@ -34,6 +34,7 @@ public partial class MainWindow
         ["closeTab"] = "ctrl+w",
         ["nextTab"] = "ctrl+shift+]",
         ["prevTab"] = "ctrl+shift+[",
+        ["toggleTerminal"] = "ctrl+j",
     };
 
     private bool InArchiveContext => ArchivePath.Contains(GetCurrentPath(_activeGrid));
@@ -44,8 +45,30 @@ public partial class MainWindow
     private string ShortcutText(string action) =>
         _shortcuts.TryGetValue(action, out var shortcut) ? shortcut.DisplayText : "";
 
+    /// <summary>
+    /// True while keyboard focus is inside the built-in terminal pane. The
+    /// terminal owns all keystrokes (they're written to the shell), so the
+    /// window-level shortcut handlers must not intercept anything — except the
+    /// terminal-toggle shortcut itself, which still needs to close the pane.
+    /// </summary>
+    private bool IsFocusInTerminal()
+    {
+        var focused = Keyboard.FocusedElement as DependencyObject;
+        return IsInside(focused, Terminal);
+    }
+
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
+        if (IsFocusInTerminal())
+        {
+            if (IsShortcut("toggleTerminal", e))
+            {
+                ToggleTerminalPane();
+                e.Handled = true;
+            }
+            return;
+        }
+
         var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
 
         if (IsShortcut("focusSearch", e))
@@ -171,6 +194,11 @@ public partial class MainWindow
             CycleTab(-1);
             e.Handled = true;
         }
+        else if (IsShortcut("toggleTerminal", e))
+        {
+            ToggleTerminalPane();
+            e.Handled = true;
+        }
         else if (IsShortcut("moveToTrash", e))
         {
             if (!InArchiveContext)
@@ -223,6 +251,14 @@ public partial class MainWindow
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // When the terminal has focus it consumes every key itself (forwarded
+        // to the shell). Don't let the window-level navigation / selection
+        // shortcuts steal Enter, arrows, Tab, etc.
+        if (IsFocusInTerminal())
+        {
+            return;
+        }
+
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var inTextBox = Keyboard.FocusedElement is TextBox;
 

@@ -12,7 +12,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    <Version>0.6.4</Version>
+    <Version>0.6.5</Version>
     <DefaultItemExcludes>$(DefaultItemExcludes);Tfx.Tests\**;Tfx.Core\**;artifacts\**</DefaultItemExcludes>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>fukuyori</Authors>
@@ -28,6 +28,15 @@
 
   <ItemGroup>
     <Resource Include="Assets\AppIcon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- xterm.js terminal assets: copied next to the exe and loaded into the
+         WebView2-hosted terminal pane via a virtual host mapping. -->
+    <Content Include="Assets\terminal\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Assets\terminal\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

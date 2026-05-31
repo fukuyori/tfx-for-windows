@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self' https://tfx.terminal; script-src 'self' https://tfx.terminal 'unsafe-inline'; style-src 'self' https://tfx.terminal 'unsafe-inline'; img-src data:;" />
+<link rel="stylesheet" href="xterm.css" />
+<script src="xterm.js"></script>
+<script src="addon-fit.js"></script>
+<script src="addon-unicode11.js"></script>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: transparent;
+  }
+  #terminal {
+    height: 100%;
+    width: 100%;
+    padding: 4px;
+    box-sizing: border-box;
+  }
+  /* The xterm viewport keeps its own background; we set it from the theme. */
+</style>
+</head>
+<body>
+<div id="terminal"></div>
+<script>
+(function () {
+  "use strict";
+
+  // ─── State ────────────────────────────────────────────────────────────
+  var term = null;
+  var fitAddon = null;
+  var pending = [];   // output buffered before the terminal is ready
+  var ready = false;
+
+  // Host → page messages arrive as JSON strings via chrome.webview.
+  // { type: "init", options: {...} }       initialize xterm with theme/font
+  // { type: "output", dataB64: "..." }     base64-encoded raw PTY bytes
+  // { type: "fit" }                        re-fit to the WebView size
+  function post(obj) {
+    if (window.chrome && window.chrome.webview) {
+      window.chrome.webview.postMessage(JSON.stringify(obj));
+    }
+  }
+
+  // Decode base64 → Uint8Array (xterm.write accepts Uint8Array directly,
+  // which avoids UTF-8 / surrogate mangling we'd get going through a JS string).
+  function b64ToBytes(b64) {
+    var bin = atob(b64);
+    var len = bin.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+      bytes[i] = bin.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  function init(options) {
+    try {
+      initInner(options);
+    } catch (err) {
+      post({ type: "error", message: String(err && err.stack || err) });
+    }
+  }
+
+  function initInner(options) {
+    options = options || {};
+    var theme = options.theme || {};
+    term = new Terminal({
+      fontFamily: options.fontFamily || "Cascadia Mono, Consolas, monospace",
+      fontSize: options.fontSize || 14,
+      cursorBlink: true,
+      allowProposedApi: true,
+      allowTransparency: options.allowTransparency !== false,
+      scrollback: options.scrollback || 5000,
+      theme: theme
+    });
+
+    fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+
+    try {
+      var unicode = new Unicode11Addon.Unicode11Addon();
+      term.loadAddon(unicode);
+      term.unicode.activeVersion = "11";
+    } catch (e) { /* unicode addon optional */ }
+
+    term.open(document.getElementById("terminal"));
+    fit();
+
+    // Keystrokes / pasted text → host (base64 so binary control bytes survive).
+    term.onData(function (data) {
+      post({ type: "input", dataB64: bytesToB64(data) });
+    });
+
+    // Resize (cols/rows) → host so it can resize the pseudo console.
+    term.onResize(function (size) {
+      post({ type: "resize", cols: size.cols, rows: size.rows });
+    });
+
+    ready = true;
+    // Flush any output that arrived before init.
+    for (var i = 0; i < pending.length; i++) {
+      term.write(pending[i]);
+    }
+    pending = [];
+
+    // Tell the host the initial size so the PTY starts matching the view.
+    post({ type: "resize", cols: term.cols, rows: term.rows });
+    post({ type: "ready" });
+    term.focus();
+  }
+
+  // UTF-8 encode a JS string then base64 (for onData → host).
+  function bytesToB64(str) {
+    var utf8 = new TextEncoder().encode(str);
+    var bin = "";
+    for (var i = 0; i < utf8.length; i++) {
+      bin += String.fromCharCode(utf8[i]);
+    }
+    return btoa(bin);
+  }
+
+  function write(bytes) {
+    if (ready && term) {
+      term.write(bytes);
+    } else {
+      pending.push(bytes);
+    }
+  }
+
+  function fit() {
+    if (fitAddon) {
+      try { fitAddon.fit(); } catch (e) { /* ignore pre-layout fit */ }
+    }
+  }
+
+  // Refit on container resize.
+  var resizeObserver = new ResizeObserver(function () { fit(); });
+  resizeObserver.observe(document.getElementById("terminal"));
+
+  // Host → page dispatcher.
+  if (window.chrome && window.chrome.webview) {
+    window.chrome.webview.addEventListener("message", function (e) {
+      var msg;
+      try { msg = JSON.parse(e.data); } catch (err) { return; }
+      switch (msg.type) {
+        case "init": init(msg.options); break;
+        case "output": write(b64ToBytes(msg.dataB64)); break;
+        case "fit": fit(); break;
+        case "focus": if (term) term.focus(); break;
+        case "reset":
+          // The shell was torn down (pane closed). Clear the screen and re-fit;
+          // the resulting onResize tells the host to spawn a fresh PTY next open.
+          if (term) {
+            term.reset();
+            pending = [];
+            fit();
+            post({ type: "resize", cols: term.cols, rows: term.rows });
+          }
+          break;
+      }
+    });
+  }
+
+  // Signal that the page is loaded and waiting for an "init" message.
+  post({ type: "loaded" });
+})();
+</script>
+</body>
+</html>

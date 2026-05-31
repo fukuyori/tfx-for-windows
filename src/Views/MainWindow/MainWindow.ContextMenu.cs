@@ -202,6 +202,10 @@ public partial class MainWindow
         openTerminal.Click += (_, _) => OpenTerminal();
         menu.Items.Add(openTerminal);
 
+        var toggleTerminalPane = new MenuItem { Header = Loc.T("Toggle terminal pane"), InputGestureText = ShortcutText("toggleTerminal") };
+        toggleTerminalPane.Click += (_, _) => ToggleTerminalPane();
+        menu.Items.Add(toggleTerminalPane);
+
         var terminalSettings = new MenuItem { Header = Loc.T("Terminal Settings...") };
         terminalSettings.Click += (_, _) => OpenTerminalSettings();
         menu.Items.Add(terminalSettings);

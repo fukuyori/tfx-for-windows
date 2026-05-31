@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.5
+
+### Built-in terminal pane (roadmap §2.9)
+
+- Collapsible terminal pane docked at the bottom of the window, toggled with `Ctrl+J` or the file-pane context-menu "Toggle terminal pane". Resize its height by dragging the splitter; close it with the header `×` or `Ctrl+J`. (The default is `Ctrl+J` rather than `Ctrl+\`` because on Japanese keyboards the `` ` `` key sits at the IME-bound 半角/全角 position and never reaches the app; remap via `config.toml` `[shortcuts]` `toggleTerminal` if desired.)
+- Rendering uses **xterm.js** (the terminal engine VS Code uses) hosted in a WebView2 control, loading bundled assets from `Assets/terminal/` via a local virtual host (no network/CDN). This replaces an initial self-written VT parser, giving full 24-bit + xterm-256 color, correct CJK / wide-character width, scrollback, and proper full-screen TUI rendering (vim, less, etc.).
+- Shell I/O flows through tfx's own ConPTY wrapper (`src/Services/ConPty.cs`, `CreatePseudoConsole` via P/Invoke): PTY output → base64 → xterm `write`; xterm `onData` → ConPTY stdin; fit-addon resize → `ResizePseudoConsole`.
+- The shell starts in the active pane's folder when the pane opens (startup cwd only). Shell, font, font size, and the full ANSI palette are configurable from `config.toml` `[terminal]` (`shell` / `font` / `fontSize` / `background` / `foreground` / `cursor` / 16 ANSI slots); omitting `background` keeps the terminal transparent so window translucency shows through. Defaults to `powershell.exe -NoLogo`, falling back to `%ComSpec%` / cmd. Typing `exit` closes the pane.
+- Closing the pane disposes the running shell while keeping the xterm page alive; reopening clears the screen (`reset`) and spawns a **fresh shell**, so each open starts clean. Click anywhere in the pane to focus it. The shell is also torn down on app exit so no orphaned pseudo console lingers.
+- Persists visibility and height in `settings.json` (`ShowTerminalPane` / `TerminalPaneHeight`, additive). The shortcut parser learns the `` ` `` (backtick) key token.
+
 ## 0.6.4
 
 ### Pane tabs (roadmap §2.7)

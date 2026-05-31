@@ -17,7 +17,27 @@
       "Bash(git --no-pager log --oneline -6 --no-color)",
       "Bash(git reset *)",
       "Bash(git --no-pager status --short)",
-      "Bash(git branch *)"
+      "Bash(git branch *)",
+      "Bash(awk 'NR>=183 && NR<=192 {print NR\": \"$0}' src/Views/MainWindow/MainWindow.xaml)",
+      "Bash(awk 'NR>=403 && NR<=416 {print NR\": \"$0}' src/Views/MainWindow/MainWindow.xaml)",
+      "Bash(grep -iE \"error|cs[0-9]{3,4}\")",
+      "Bash(awk 'NR>=124 && NR<=165 {print NR\": \"$0}' src/Views/MainWindow/MainWindow.xaml)",
+      "Bash(awk '/DefaultToml/,/^        \"\"\";/' src/Models/AppConfig.cs)",
+      "Bash(grep -n \"newTab\\\\|closeTab\\\\|nextTab\\\\|prevTab\\\\|toggleTerminal\" src/Models/AppConfig.cs docs/configuration.md docs/configuration.ja.md)",
+      "Bash(echo \"=== exit $? ===\")",
+      "Bash(grep -n '### `\\\\[terminal\\\\]`' docs/configuration.md docs/configuration.ja.md)",
+      "Bash(awk 'NR>=399 && NR<=460 {print NR\": \"$0}' src/Controls/TerminalView.cs)",
+      "Bash(grep -rln \"ResizeRight\" src/)",
+      "Bash(grep -rln \"WmszRight\\\\|ScSize\" src/)",
+      "Bash(awk 'NR>=195 && NR<=215 {printf \"%d: %s\\\\n\", NR, $0}' src/Views/MainWindow/MainWindow.xaml)",
+      "Bash(awk 'NR>=428 && NR<=445 {printf \"%d| %s\\\\n\", NR, $0}' src/Controls/TerminalView.cs)",
+      "Bash(awk 'NR>=582 && NR<=590 {printf \"%d| %s\\\\n\", NR, $0}' src/Controls/TerminalView.cs)",
+      "Bash(awk 'NR>=458 && NR<=470 {printf \"%d| %s\\\\n\", NR, $0}' src/Controls/TerminalView.cs)",
+      "Bash(awk 'NR>=458 && NR<=475 {printf \"%d| %s\\\\n\", NR, $0}' src/Controls/TerminalView.cs)",
+      "Bash(awk 'NR>=458 && NR<=475' src/Controls/TerminalView.cs)",
+      "Bash(grep -n \"OemTilde\\\\|backtick\\\\|grave\\\\|\\\\`\" src/Models/AppConfig.cs)",
+      "Bash(grep -rln 'ctrl+`\\\\|toggleTerminal\\\\|Ctrl+`' docs/ CHANGELOG.md CHECKLIST.md README.md README.ja.md)",
+      "Bash(grep -rln 'Ctrl+`\\\\|ctrl+`' README.md README.ja.md CHANGELOG.md CHECKLIST.md docs/roadmap.md)"
     ]
   }
 }
