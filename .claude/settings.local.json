@@ -37,7 +37,8 @@
       "Bash(awk 'NR>=458 && NR<=475' src/Controls/TerminalView.cs)",
       "Bash(grep -n \"OemTilde\\\\|backtick\\\\|grave\\\\|\\\\`\" src/Models/AppConfig.cs)",
       "Bash(grep -rln 'ctrl+`\\\\|toggleTerminal\\\\|Ctrl+`' docs/ CHANGELOG.md CHECKLIST.md README.md README.ja.md)",
-      "Bash(grep -rln 'Ctrl+`\\\\|ctrl+`' README.md README.ja.md CHANGELOG.md CHECKLIST.md docs/roadmap.md)"
+      "Bash(grep -rln 'Ctrl+`\\\\|ctrl+`' README.md README.ja.md CHANGELOG.md CHECKLIST.md docs/roadmap.md)",
+      "Bash(cd \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\" && git commit --amend -F .git/COMMIT_TMP_MSG.txt && rm .git/COMMIT_TMP_MSG.txt && echo \"---\" && git log --oneline -2)"
     ]
   }
 }

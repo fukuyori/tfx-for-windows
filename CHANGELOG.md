@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.6
+
+### Terminal pane lifecycle refinements
+
+- **Fresh shell on reopen**: closing the terminal pane now disposes the running shell while keeping the xterm.js page alive; reopening clears the screen (a `reset` message to the page) and spawns a brand-new shell, so each open starts clean instead of resuming the previous session. A `_terminalPaneOpen` guard prevents the page's reset-fit resize message from spawning a shell while the pane is closed.
+- **Clean teardown on app exit**: `Window_Closing` now stops the terminal WebView2 and calls `ShutdownTerminal()`, so no orphaned pseudo console / shell process lingers after tfx closes. Internally the teardown is split into `DisposeTerminalIfAny()` (PTY only, for pane close) and `ShutdownTerminal()` (PTY + readiness flags, for app exit).
+- **Click anywhere to focus**: clicking inside the terminal pane moves keyboard focus to the terminal.
+
 ## 0.6.5
 
 ### Built-in terminal pane (roadmap §2.9)
@@ -8,7 +16,6 @@
 - Rendering uses **xterm.js** (the terminal engine VS Code uses) hosted in a WebView2 control, loading bundled assets from `Assets/terminal/` via a local virtual host (no network/CDN). This replaces an initial self-written VT parser, giving full 24-bit + xterm-256 color, correct CJK / wide-character width, scrollback, and proper full-screen TUI rendering (vim, less, etc.).
 - Shell I/O flows through tfx's own ConPTY wrapper (`src/Services/ConPty.cs`, `CreatePseudoConsole` via P/Invoke): PTY output → base64 → xterm `write`; xterm `onData` → ConPTY stdin; fit-addon resize → `ResizePseudoConsole`.
 - The shell starts in the active pane's folder when the pane opens (startup cwd only). Shell, font, font size, and the full ANSI palette are configurable from `config.toml` `[terminal]` (`shell` / `font` / `fontSize` / `background` / `foreground` / `cursor` / 16 ANSI slots); omitting `background` keeps the terminal transparent so window translucency shows through. Defaults to `powershell.exe -NoLogo`, falling back to `%ComSpec%` / cmd. Typing `exit` closes the pane.
-- Closing the pane disposes the running shell while keeping the xterm page alive; reopening clears the screen (`reset`) and spawns a **fresh shell**, so each open starts clean. Click anywhere in the pane to focus it. The shell is also torn down on app exit so no orphaned pseudo console lingers.
 - Persists visibility and height in `settings.json` (`ShowTerminalPane` / `TerminalPaneHeight`, additive). The shortcut parser learns the `` ` `` (backtick) key token.
 
 ## 0.6.4

@@ -96,7 +96,7 @@ Upstream: covers material from §2.6 (Built-in Color Themes), §2.8 (Configurati
 
 ## 2. Upcoming Work
 
-Items are listed in recommended execution order, weighted by **importance**, **relevance to the Windows port**, **effort**, and **risk**. Item numbers reflect priority — they are not strict dependency markers. Each item carries its own dependencies in prose. §2.7 Pane Tabs (0.6.4) and §2.9 Built-in Terminal Pane (0.6.5) are now done; remaining active items are the deferred §2.8 polish and the Phase C configuration/extensibility work.
+Items are listed in recommended execution order, weighted by **importance**, **relevance to the Windows port**, **effort**, and **risk**. Item numbers reflect priority — they are not strict dependency markers. Each item carries its own dependencies in prose. §2.7 Pane Tabs (0.6.4) and §2.9 Built-in Terminal Pane (0.6.5, lifecycle refined in 0.6.6) are now done; remaining active items are the deferred §2.8 polish and the Phase C configuration/extensibility work.
 
 ### Phase A — Foundation Backfill
 
@@ -265,7 +265,7 @@ Done when:
 
 #### 2.9 Built-in Terminal Pane
 
-Status: **Done in 0.6.5.** Collapsible terminal pane docked at the window bottom, rendered by **xterm.js** (the VS Code terminal engine) hosted in WebView2, with shell I/O through tfx's own ConPTY wrapper (`src/Services/ConPty.cs`). A first attempt used a self-written VT parser (`TerminalView.cs` / `TerminalPalette.cs`); it was replaced by xterm.js to get correct CJK width, 24-bit + 256 color, scrollback, and full-screen TUI support (vim/less). xterm assets are bundled under `Assets/terminal/` and served from a local virtual host (no CDN). Toggle via the toolbar button / `Ctrl+\`` / context-menu; resize by splitter; close with header `×` or `exit`. Shell, font, size, and the full ANSI palette come from `config.toml [terminal]` (`shell` / `font` / `fontSize` / colors); omitting `background` keeps the surface transparent. Started in the active pane's folder (startup cwd only). Visibility / height persist in `settings.json`. The external launcher (§0.5.2) stays the default hand-off path. Deferred: live folder-follow `cd`, run-command-on-selected-files. Move this section under §1 at the next consolidation pass.
+Status: **Done in 0.6.5; lifecycle refined in 0.6.6.** Collapsible terminal pane docked at the window bottom, rendered by **xterm.js** (the VS Code terminal engine) hosted in WebView2, with shell I/O through tfx's own ConPTY wrapper (`src/Services/ConPty.cs`). A first attempt used a self-written VT parser (`TerminalView.cs` / `TerminalPalette.cs`); it was replaced by xterm.js to get correct CJK width, 24-bit + 256 color, scrollback, and full-screen TUI support (vim/less). xterm assets are bundled under `Assets/terminal/` and served from a local virtual host (no CDN). Toggle via the toolbar button / `Ctrl+J` / context-menu (default is `Ctrl+J` rather than `Ctrl+\`` because the backtick key is IME-bound at the 半角/全角 position on JP keyboards; remappable via `[shortcuts] toggleTerminal`); resize by splitter; close with header `×` or `exit`. Shell, font, size, and the full ANSI palette come from `config.toml [terminal]` (`shell` / `font` / `fontSize` / colors); omitting `background` keeps the surface transparent. Started in the active pane's folder (startup cwd only). Visibility / height persist in `settings.json`. **0.6.6** lifecycle: closing the pane disposes the shell but keeps the xterm page; reopening resets the screen and spawns a fresh shell; clicking in the pane focuses it; the shell is torn down on app exit so no orphaned pseudo console lingers. The external launcher (§0.5.2) stays the default hand-off path. Deferred: live folder-follow `cd`, run-command-on-selected-files. Move this section under §1 at the next consolidation pass.
 
 Upstream: §2.4 (Built-in Terminal Pane). Library evaluation differs: SwiftTerm on macOS vs `Microsoft.Terminal.Wpf` / ConPTY samples on Windows.
 
@@ -549,7 +549,7 @@ Quick lookup between this Windows roadmap and the upstream macOS roadmap [`fukuy
 | §2.6 Git Status Indicators | §2.2 | Direct port; `Process.Start` for `git status`. |
 | §2.7 Pane Tabs | §2.3 | **Done in 0.6.4.** Direct port; per-tab history. |
 | §2.8 Built-in Color Themes | §2.6 | **Partially completed in 0.6.3; remaining work on hold.** Runtime color tokens and light-mode samples shipped; in-app theme picker remains. |
-| §2.9 Built-in Terminal Pane | §2.4 | **Done in 0.6.5.** Self-hosted ConPTY pane at window bottom; external launcher remains the default hand-off. |
+| §2.9 Built-in Terminal Pane | §2.4 | **Done in 0.6.5; lifecycle refined in 0.6.6.** Self-hosted ConPTY pane at window bottom (xterm.js in WebView2); fresh shell on reopen, clean teardown on exit; external launcher remains the default hand-off. |
 | §2.10 NTFS ACL / Owner Editing | §2.5 | **On hold.** NTFS ACL ↔ POSIX bits; UAC `runas` ↔ `AuthorizationServices`. |
 | §2.11 Auto-Update | §2.7 | **On hold.** Velopack / `NetSparkle` ↔ Sparkle 2. |
 | §2.12 Configuration Foundation (TOML) | §2.8 | **Partially completed in 0.6.3; remaining polish on hold.** `%APPDATA%\tfx\config.toml` v1; full parser / split files / migrations remain. |
