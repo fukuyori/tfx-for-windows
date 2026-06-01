@@ -407,7 +407,8 @@ public partial class MainWindow
     {
         try
         {
-            await HtmlPreview.EnsureCoreWebView2Async();
+            var env = await EnsureWebView2EnvironmentAsync();
+            await HtmlPreview.EnsureCoreWebView2Async(env);
             if (HtmlPreview.CoreWebView2 is { } cw2)
             {
                 // Disable JavaScript / form fills / DevTools in the preview

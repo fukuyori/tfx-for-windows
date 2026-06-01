@@ -17,6 +17,28 @@ public partial class MainWindow
     private short _terminalCols = 80;
     private short _terminalRows = 25;
     private Task<bool>? _terminalWebInit;
+    private Task<CoreWebView2Environment>? _webView2EnvTask;
+
+    /// <summary>
+    /// Shared WebView2 environment for both the terminal and the preview. The
+    /// user-data folder is pinned to a writable location under %LOCALAPPDATA%;
+    /// the default (next to the executable) fails with 0x80070003 when tfx is
+    /// installed somewhere read-only such as Program Files.
+    /// </summary>
+    private Task<CoreWebView2Environment> EnsureWebView2EnvironmentAsync()
+    {
+        _webView2EnvTask ??= CreateWebView2EnvironmentAsync();
+        return _webView2EnvTask;
+
+        static Task<CoreWebView2Environment> CreateWebView2EnvironmentAsync()
+        {
+            var userData = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "tfx", "WebView2");
+            Directory.CreateDirectory(userData);
+            return CoreWebView2Environment.CreateAsync(null, userData);
+        }
+    }
 
     /// <summary>
     /// Applies persisted terminal-pane state at startup. The actual xterm.js
@@ -135,6 +157,48 @@ public partial class MainWindow
     }
 
     /// <summary>
+    /// Writes the embedded xterm.js assets (terminal.html, xterm.js, css, addons)
+    /// to a writable per-user folder and returns its path. Single-file publish
+    /// can't expose them as loose files next to the exe, so they ship as
+    /// <c>EmbeddedResource</c> (logical name <c>TfxTerminal.*</c>) and are
+    /// extracted here. Files are rewritten when missing or a different size, so a
+    /// new app version refreshes them.
+    /// </summary>
+    private static string ExtractTerminalAssets()
+    {
+        var dir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "tfx", "terminal");
+        Directory.CreateDirectory(dir);
+
+        var asm = typeof(MainWindow).Assembly;
+        const string prefix = "TfxTerminal.";
+        foreach (var resource in asm.GetManifestResourceNames())
+        {
+            if (!resource.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            var fileName = resource[prefix.Length..];
+            var target = Path.Combine(dir, fileName);
+
+            using var stream = asm.GetManifestResourceStream(resource);
+            if (stream is null)
+            {
+                continue;
+            }
+            // Skip rewrite when the on-disk file already matches the embedded size.
+            if (File.Exists(target) && new FileInfo(target).Length == stream.Length)
+            {
+                continue;
+            }
+            using var file = File.Create(target);
+            stream.CopyTo(file);
+        }
+        return dir;
+    }
+
+    /// <summary>
     /// True if the Edge WebView2 Runtime is installed. Preinstalled on Windows
     /// 11; may be absent on a clean Windows 10. Without it the terminal (and the
     /// Markdown / HTML preview) can't render.
@@ -154,7 +218,13 @@ public partial class MainWindow
 
     private async Task<bool> InitTerminalWebViewAsync()
     {
-        await Terminal.EnsureCoreWebView2Async();
+        CoreWebView2Environment env;
+        try { env = await EnsureWebView2EnvironmentAsync(); }
+        catch (Exception ex) { throw new InvalidOperationException($"[env] {ex.Message}", ex); }
+
+        try { await Terminal.EnsureCoreWebView2Async(env); }
+        catch (Exception ex) { throw new InvalidOperationException($"[ensure] {ex.Message}", ex); }
+
         var core = Terminal.CoreWebView2;
 
         var settings = core.Settings;
@@ -164,10 +234,12 @@ public partial class MainWindow
         settings.AreBrowserAcceleratorKeysEnabled = false;
         settings.IsZoomControlEnabled = false;
 
-        // Serve the bundled xterm assets from a virtual host. Allow lets our own
-        // page read its sibling files; the host name isn't real so cross-origin
-        // requests can't reach it.
-        var assetDir = Path.Combine(AppContext.BaseDirectory, "Assets", "terminal");
+        // Serve the bundled xterm assets from a virtual host. The assets are
+        // embedded in the executable (single-file friendly) and extracted to a
+        // writable per-user folder on demand. Allow lets our own page read its
+        // sibling files; the host name isn't real so cross-origin requests can't
+        // reach it.
+        var assetDir = ExtractTerminalAssets();
         core.SetVirtualHostNameToFolderMapping(
             "tfx.terminal", assetDir, CoreWebView2HostResourceAccessKind.Allow);
 

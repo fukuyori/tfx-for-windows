@@ -51,7 +51,11 @@
       "Bash(python3 -)",
       "Bash(python3 _locdiff.py)",
       "Bash(rm -f _locdiff.py)",
-      "Bash(grep -rn \"Close terminal \\(Ctrl+\\\\`\\)\\\\|Toggle split pane \\(Ctrl\\\\|Show rendered Markdown\\\\|Reload \\(Ctrl+R\\)\" src/Services/Loc.cs)"
+      "Bash(grep -rn \"Close terminal \\(Ctrl+\\\\`\\)\\\\|Toggle split pane \\(Ctrl\\\\|Show rendered Markdown\\\\|Reload \\(Ctrl+R\\)\" src/Services/Loc.cs)",
+      "Bash(grep -rn \"Assets/terminal\\\\|Assets\\\\\\\\\\\\\\\\terminal\\\\|copied next to the exe\\\\|bundled under\" README.md README.ja.md docs/roadmap.md docs/configuration.md)",
+      "Bash(ls *.ps1 scripts/ build/)",
+      "Bash(grep -rln \"PublishSingleFile\\\\|dotnet publish\\\\|artifacts\" *.ps1 *.cmd *.bat scripts/*.ps1 build/*.ps1)",
+      "Bash(pwsh -NoProfile -File scripts/build-release.ps1)"
     ]
   }
 }

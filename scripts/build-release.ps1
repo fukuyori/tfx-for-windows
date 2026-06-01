@@ -25,6 +25,13 @@ $releaseRoot = Join-Path $artifactsRoot "release"
 $publishDir = Join-Path $releaseRoot $releaseName
 
 New-Item -ItemType Directory -Force -Path $releaseRoot | Out-Null
+
+# Start from a clean publish folder so stale files from a previous build (e.g.
+# the loose Assets/terminal/* that earlier versions shipped before the xterm
+# assets were embedded in the exe) never linger in the single-file release.
+if (Test-Path -LiteralPath $publishDir) {
+    Remove-Item -LiteralPath $publishDir -Recurse -Force
+}
 New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
 
 dotnet publish $projectPath `
@@ -34,7 +41,9 @@ dotnet publish $projectPath `
     -o $publishDir `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:EnableCompressionInSingleFile=true
+    -p:EnableCompressionInSingleFile=true `
+    -p:DebugType=none `
+    -p:DebugSymbols=false
 
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE"
@@ -43,6 +52,16 @@ if ($LASTEXITCODE -ne 0) {
 $exePath = Join-Path $publishDir "Tfx.exe"
 if (-not (Test-Path -LiteralPath $exePath)) {
     throw "Release executable was not created: $exePath"
+}
+
+# Single-file sanity check: the only payload should be Tfx.exe. Warn loudly if
+# any extra files slipped into the publish folder (a sign that something is no
+# longer embedded / self-contained as intended).
+$strays = Get-ChildItem -LiteralPath $publishDir -Recurse -File |
+    Where-Object { $_.Name -ne "Tfx.exe" }
+if ($strays) {
+    Write-Warning "Unexpected files in the single-file publish folder:"
+    $strays | ForEach-Object { Write-Warning "  $($_.FullName.Substring($publishDir.Length + 1))" }
 }
 
 $versionInfo = (Get-Item -LiteralPath $exePath).VersionInfo

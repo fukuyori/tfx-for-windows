@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.9
+
+### Fix: terminal failed to start as a single-file executable
+
+- The xterm.js assets (terminal.html, xterm.js/css, addons) are now **embedded in the executable** and extracted to `%LOCALAPPDATA%\tfx\terminal` at startup, then served to the WebView2 terminal via the virtual host. Previously they shipped as loose `Content` files next to the exe; in a single-file publish those files aren't present at `AppContext.BaseDirectory`, so the terminal page couldn't load and the pane failed with `0x80070003` (path not found). tfx now runs as a true single file.
+- Both the terminal and the Markdown / HTML preview also create their WebView2 with a **user-data folder pinned to `%LOCALAPPDATA%\tfx\WebView2`** (shared `CoreWebView2Environment`). WebView2's default user-data folder sits next to the executable; when tfx is installed read-only (e.g. `Program Files`) that folder can't be created and initialization fails. Pinning it to a writable per-user location avoids that.
+- `scripts/build-release.ps1` now wipes the publish folder before building (so stale loose assets from older versions can't linger), suppresses `.pdb` output (`DebugType=none`), and warns if anything other than `Tfx.exe` ends up in the single-file release.
+
 ## 0.6.8
 
 ### Preview: load external images on demand

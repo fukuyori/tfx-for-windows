@@ -12,7 +12,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    <Version>0.6.8</Version>
+    <Version>0.6.9</Version>
     <DefaultItemExcludes>$(DefaultItemExcludes);Tfx.Tests\**;Tfx.Core\**;artifacts\**</DefaultItemExcludes>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>fukuyori</Authors>
@@ -31,12 +31,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- xterm.js terminal assets: copied next to the exe and loaded into the
-         WebView2-hosted terminal pane via a virtual host mapping. -->
-    <Content Include="Assets\terminal\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>Assets\terminal\%(RecursiveDir)%(Filename)%(Extension)</Link>
-    </Content>
+    <!-- xterm.js terminal assets are embedded in the executable so the app runs
+         as a single self-contained file. At startup they're written to a
+         writable per-user folder and served to the WebView2-hosted terminal
+         pane via a virtual host mapping (see MainWindow.Terminal.cs). -->
+    <EmbeddedResource Include="Assets\terminal\**\*">
+      <Link>TerminalAssets\%(Filename)%(Extension)</Link>
+      <LogicalName>TfxTerminal.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
