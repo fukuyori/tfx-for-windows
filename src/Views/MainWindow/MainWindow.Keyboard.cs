@@ -58,6 +58,32 @@ public partial class MainWindow
         return IsInside(focused, Terminal);
     }
 
+    /// <summary>
+    /// Runs the first user-defined command whose shortcut matches and whose
+    /// filters (extension / target / selection / git) match the current context.
+    /// Returns true if one was run.
+    /// </summary>
+    private bool TryRunCommandShortcut(KeyEventArgs e)
+    {
+        if (_config.Commands.Count == 0)
+        {
+            return false;
+        }
+
+        var selection = ActiveSelectedItems().Where(i => !i.IsParent).ToList();
+        var isGitRepo = GetGitRoot(ActivePane) is not null;
+        foreach (var command in _config.Commands)
+        {
+            if (command.Shortcut is { } sc && sc.Matches(e) &&
+                CommandRunner.Matches(command, selection, isGitRepo))
+            {
+                ExecuteUserCommand(command, selection);
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
         if (IsFocusInTerminal())
@@ -67,6 +93,15 @@ public partial class MainWindow
                 ToggleTerminalPane();
                 e.Handled = true;
             }
+            return;
+        }
+
+        // User-defined command shortcuts take precedence so they can be bound
+        // freely. Only fire when the current context matches the command's
+        // filters (same check as the context menu).
+        if (TryRunCommandShortcut(e))
+        {
+            e.Handled = true;
             return;
         }
 

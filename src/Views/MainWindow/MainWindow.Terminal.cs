@@ -682,7 +682,7 @@ public partial class MainWindow
         WriteOutputTab($"[90m$ {command.Name}[0m");
 
         var ok = CommandRunner.RunCaptured(
-            command, selection, cwd, ScriptsDirectory(),
+            command, selection, cwd, ScriptsDirectory(), ResolveTerminalShell(),
             onLine: l => Dispatcher.BeginInvoke(() => WriteOutputTab(l)),
             onExit: () => Dispatcher.BeginInvoke(() => WriteOutputTab("")),
             out var error);

@@ -267,25 +267,36 @@ public partial class MainWindow
             return;
         }
 
-        var cwd = GetCurrentPath(_activeGrid);
         menu.Items.Add(new Separator());
         foreach (var command in matching)
         {
-            var item = new MenuItem { Header = command.Name };
-            var captured = command;
-            item.Click += (_, _) =>
+            var item = new MenuItem
             {
-                if (captured.Terminal)
-                {
-                    RunCommandInTerminal(captured, selection, cwd);
-                    return;
-                }
-                if (!CommandRunner.Run(captured, selection, cwd, ScriptsDirectory(), out var error))
-                {
-                    SetStatus(Loc.F("Command failed: {0}", error ?? captured.Name));
-                }
+                Header = command.Name,
+                InputGestureText = command.Shortcut?.DisplayText ?? "",
             };
+            var captured = command;
+            item.Click += (_, _) => ExecuteUserCommand(captured, selection);
             menu.Items.Add(item);
+        }
+    }
+
+    /// <summary>
+    /// Runs a user-defined command against the given selection: either captured
+    /// into the terminal Output tab (<c>terminal = true</c>) or launched as an
+    /// external process. Shared by the context menu and keyboard shortcuts.
+    /// </summary>
+    private void ExecuteUserCommand(UserCommand command, IReadOnlyList<FileItem> selection)
+    {
+        var cwd = GetCurrentPath(_activeGrid);
+        if (command.Terminal)
+        {
+            RunCommandInTerminal(command, selection, cwd);
+            return;
+        }
+        if (!CommandRunner.Run(command, selection, cwd, ScriptsDirectory(), ResolveTerminalShell(), out var error))
+        {
+            SetStatus(Loc.F("Command failed: {0}", error ?? command.Name));
         }
     }
 }

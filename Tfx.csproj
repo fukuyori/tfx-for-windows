@@ -12,7 +12,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    <Version>0.7.0</Version>
+    <Version>0.7.1</Version>
     <DefaultItemExcludes>$(DefaultItemExcludes);Tfx.Tests\**;Tfx.Core\**;artifacts\**</DefaultItemExcludes>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>fukuyori</Authors>

@@ -51,8 +51,31 @@ public sealed class AppConfig
         // The current [[commands]] array-table entry being filled, if any.
         UserCommand? command = null;
 
-        foreach (var rawLine in toml.Replace("\r\n", "\n").Split('\n'))
+        var lines = toml.Replace("\r\n", "\n").Split('\n');
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
+            var rawLine = lines[lineIndex];
+
+            // Multi-line literal string inside [[commands]]:
+            //   run = '''
+            //   …raw script lines…
+            //   '''
+            // The body is taken verbatim (no escape/comment processing) so a
+            // command can hold a whole script. Only `run` uses this today.
+            if (command is not null && section.Equals("commands", StringComparison.OrdinalIgnoreCase)
+                && TryReadMultilineLiteral(lines, ref lineIndex, out var mlKey, out var mlBody))
+            {
+                if (mlKey.Equals("run", StringComparison.OrdinalIgnoreCase))
+                {
+                    command.Run = mlBody;
+                }
+                else
+                {
+                    config.Errors.Add($"Multi-line value not supported for command key: {mlKey}");
+                }
+                continue;
+            }
+
             var line = StripComment(rawLine).Trim();
             if (line.Length == 0)
             {
@@ -352,6 +375,24 @@ public sealed class AppConfig
             if (TryParseBool(value, out var b)) command.Terminal = b;
             else config.Errors.Add($"Invalid command terminal: {value}");
         }
+        else if (key.Equals("shortcut", StringComparison.OrdinalIgnoreCase))
+        {
+            string? shortcutError = null;
+            if (TryParseString(value, out var text) &&
+                AppShortcut.TryParse(text, out var shortcut, out shortcutError))
+            {
+                command.Shortcut = shortcut;
+            }
+            else
+            {
+                config.Errors.Add($"Invalid command shortcut: {shortcutError ?? value}");
+            }
+        }
+        else if (key.Equals("shell", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseString(value, out var sh)) command.Shell = sh;
+            else config.Errors.Add($"Invalid command shell: {value}");
+        }
     }
 
     private static void ParseStartup(AppConfig config, string key, string value)
@@ -402,6 +443,74 @@ public sealed class AppConfig
                 config.Errors.Add($"Invalid startup rightFolders: {value}");
             }
         }
+    }
+
+    /// <summary>
+    /// Detects a multi-line literal-string assignment <c>key = '''</c> starting
+    /// at <paramref name="lineIndex"/>, and if found consumes lines through the
+    /// closing <c>'''</c>, returning the verbatim body (lines joined with
+    /// <c>\r\n</c>, no escape or comment processing — so scripts pass through
+    /// intact). Advances <paramref name="lineIndex"/> to the closing line. The
+    /// opening <c>'''</c> may have trailing content on the same line, which
+    /// becomes the first body line. Returns false (and leaves the index put) when
+    /// the line is not a <c>'''</c> opener.
+    /// </summary>
+    private static bool TryReadMultilineLiteral(string[] lines, ref int lineIndex, out string key, out string body)
+    {
+        key = "";
+        body = "";
+        var line = lines[lineIndex];
+
+        var eq = line.IndexOf('=');
+        if (eq <= 0)
+        {
+            return false;
+        }
+        var rhs = line[(eq + 1)..].Trim();
+        if (!rhs.StartsWith("'''", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        key = line[..eq].Trim();
+        var collected = new List<string>();
+
+        // Content after the opening ''' on the same line (rare, but allowed).
+        var firstRemainder = rhs[3..];
+        // A single-line '''...''' is also accepted.
+        var closeOnSame = firstRemainder.IndexOf("'''", StringComparison.Ordinal);
+        if (closeOnSame >= 0)
+        {
+            body = firstRemainder[..closeOnSame];
+            return true;
+        }
+        if (firstRemainder.Length > 0)
+        {
+            collected.Add(firstRemainder);
+        }
+
+        for (var i = lineIndex + 1; i < lines.Length; i++)
+        {
+            var raw = lines[i];
+            var close = raw.IndexOf("'''", StringComparison.Ordinal);
+            if (close >= 0)
+            {
+                if (close > 0)
+                {
+                    collected.Add(raw[..close]);
+                }
+                lineIndex = i;
+                body = string.Join("\r\n", collected);
+                return true;
+            }
+            collected.Add(raw);
+        }
+
+        // No closing ''' — treat the rest as the body so the user sees output
+        // rather than a silent drop; advance to the end.
+        lineIndex = lines.Length - 1;
+        body = string.Join("\r\n", collected);
+        return true;
     }
 
     private static string StripComment(string line)
@@ -647,6 +756,7 @@ public sealed class AppConfig
         # target = "current"   # acts on the current folder, no selection needed
         # requireGit = true    # only inside a Git working copy
         # terminal = true
+        # shortcut = "ctrl+shift+p"   # optional keyboard shortcut
         """;
 }
 
@@ -720,6 +830,21 @@ public sealed class UserCommand
     /// Git working copy. Lets `git` commands show up only where they make sense.
     /// </summary>
     public bool RequireGit { get; set; }
+
+    /// <summary>
+    /// Optional keyboard shortcut. When set and the current context matches the
+    /// command's filters, pressing it runs the command. Same grammar as
+    /// <c>[shortcuts]</c> (e.g. "ctrl+shift+g").
+    /// </summary>
+    public AppShortcut? Shortcut { get; set; }
+
+    /// <summary>
+    /// Shell used to run a multi-line <see cref="Run"/> script for THIS command
+    /// (e.g. "cmd", "pwsh.exe -NoLogo", "bash"). Null = fall back to the
+    /// <c>[terminal] shell</c>. Ignored for single-line commands (which name
+    /// their own executable).
+    /// </summary>
+    public string? Shell { get; set; }
 }
 
 public readonly record struct AppShortcut(ModifierKeys Modifiers, Key Key)

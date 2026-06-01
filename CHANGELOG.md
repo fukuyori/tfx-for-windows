@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.1
+
+### User-defined commands: shortcuts, finer tokens, multi-line scripts
+
+- A command can carry a `shortcut` (same grammar as `[shortcuts]`, e.g. `"ctrl+shift+g"`); pressing it runs the command when the current context matches its filters. The shortcut is shown next to the command in the context menu, and command shortcuts take precedence over the built-in ones.
+- `run` gains finer path tokens for the first selected item: `{name}` (file name with extension), `{stem}` (without extension), `{ext}` (extension only, no dot), alongside the existing `{path}` / `{dir}` / `{cwd}`.
+- `run` accepts a **multi-line script** via TOML's `'''…'''` literal string; tfx writes it to a temp file and runs it with the per-command `shell` (if set) or the `[terminal] shell` (PowerShell `.ps1`, `cmd` `.bat`, or `bash` `.sh`; tokens still substituted). Pair with `terminal = true` to view the output. A per-command `shell` key overrides the shell for that one command.
+
 ## 0.7.0
 
 ### User-defined commands in the context menu (roadmap §2.15)

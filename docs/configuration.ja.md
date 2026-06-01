@@ -390,9 +390,40 @@ run = "git -C {cwd} push"
 target = "current"   # 現在のフォルダー対象。何も選択していなくても表示
 requireGit = true    # Git 作業ツリー内のみ
 terminal = true      # push の出力を出力タブに表示
+shortcut = "ctrl+shift+p"   # キー押下で実行
 ```
 
 別プロセスとして起動する場合（既定の `terminal = false`）、標準出力は**どこにも表示されません** — tfx は出力を取得せず、ウィンドウも保持しません。出力を見るには `terminal = true` にしてください。コマンドの標準出力 / 標準エラーがキャプチャされ、ターミナルペインの**出力（Output）タブ**（対話用の **Shell** タブとは別の読み取り専用タブ）に表示されます。出力タブに内容が入るとタブバーが表示されます。あるいは、起動するプログラム側でウィンドウを保持してください（例: `pwsh -NoExit ...`）。
+
+#### 複数行スクリプト
+
+`run` には、TOML の複数行リテラル文字列（`'''…'''`）でスクリプト全体を記述できます。本文はそのまま（エスケープ処理なし）扱われ、トークンは置換され、tfx はコマンド自身の `shell`（指定があれば）、なければ **`[terminal] shell`**（どちらも未設定なら PowerShell）でスクリプトを実行します。一時ファイルに書き出し、シェルに応じた形式で起動します（PowerShell → `.ps1` を `-NoProfile -ExecutionPolicy Bypass -File`、`cmd` → `.bat` を `/c`、`bash` / `sh` → `.sh`）。`terminal = true` と組み合わせると出力を確認できます:
+
+```toml
+[[commands]]
+name = "画像情報"
+extensions = ["png", "jpg", "jpeg", "gif"]
+terminal = true
+run = '''
+$f = {path}
+$img = [System.Drawing.Image]::FromFile($f)
+Write-Output ("{0}  {1} x {2}  {3:N0} bytes" -f (Split-Path $f -Leaf), $img.Width, $img.Height, (Get-Item $f).Length)
+$img.Dispose()
+'''
+
+# [terminal] shell に関わらず、特定のシェル（ここでは cmd）で実行:
+[[commands]]
+name = "ディレクトリ一覧"
+target = "current"
+terminal = true
+shell = "cmd"
+run = '''
+@echo off
+dir /b {cwd}
+'''
+```
+
+スクリプト内でもトークン（`{path}` / `{paths}` / `{stem}` など）は引用符付き文字列に展開されます。例えば `$f = {path}` は `$f = "C:\pics\a.png"` になります。
 
 | キー | 型 | 既定 | 説明 |
 | --- | --- | --- | --- |
@@ -403,12 +434,17 @@ terminal = true      # push の出力を出力タブに表示
 | `selection` | string | `any` | `single` / `multiple` / `any` — 選択数で限定。（`target = "current"` のときは無視されます。） |
 | `requireGit` | bool | `false` | `true` のとき、現在のフォルダーが Git 作業ツリー内のときだけメニューに表示されます。 |
 | `terminal` | bool | `false` | `true` のとき、別プロセスを起動する代わりに、コマンドの標準出力 / 標準エラーを内蔵ターミナルペインの読み取り専用**出力（Output）タブ**に流します。ペインが開き、自動的に出力タブへ切り替わります。 |
+| `shortcut` | string | (なし) | キーボードショートカット。`[shortcuts]` と同じ文法（例: `"ctrl+shift+g"`）。現在のコンテキストがコマンドの条件に合致するとき、押下で実行されます。コンテキストメニューではコマンド名の横に表示されます。コマンドのショートカットは組み込みより優先されます。 |
+| `shell` | string | (なし) | このコマンドの複数行 `run` スクリプトを実行するシェル（例: `"cmd"` / `"pwsh.exe -NoLogo"` / `"bash"`）。このコマンドに限り `[terminal] shell` を上書きします。単一行コマンド（自身で実行ファイルを指定）では無視されます。 |
 
 `run` 内で置換されるトークン（パス系トークンは自動的に二重引用符で囲まれます）:
 
 - `{path}` — 最初に選択した項目のフルパス（何も選択していなければ現在のフォルダー）。
 - `{paths}` — 選択したすべての項目（スペース区切り。何も選択していなければ現在のフォルダー）。
-- `{dir}` — 最初に選択した項目の親フォルダー（何も選択していなければ現在のフォルダー）。
+- `{dir}` — 項目が置かれているフォルダー（最初の項目の親。何も選択していなければ現在のフォルダー）。
+- `{name}` — 最初の項目の拡張子**あり**ファイル名（例: `report.pdf`）。
+- `{stem}` — 拡張子**なし**ファイル名（例: `report`）。
+- `{ext}` — 拡張子のみ（ドットなし。例: `pdf`。フォルダーの場合は空）。
 - `{cwd}` — 選択の有無に関わらず、現在のフォルダー。
 - `{scripts}` — `config.toml` と同じ場所の `scripts` フォルダー（`%APPDATA%\tfx\scripts`、必要に応じて自動作成）。絶対パスを書かずに設定と一緒にスクリプトを配布できます。例: `run = "pwsh -File \"{scripts}\\wc.ps1\" {paths}"`。（パス系トークンと異なり `{scripts}` は引用符なしで置換されるため、空白を含む可能性がある場合は自分で引用符で囲んでください。）
 

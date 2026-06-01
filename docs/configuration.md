@@ -414,9 +414,40 @@ run = "git -C {cwd} push"
 target = "current"   # acts on the current folder; shows with nothing selected
 requireGit = true    # only inside a Git working copy
 terminal = true      # show push output in the Output tab
+shortcut = "ctrl+shift+p"   # run with a keypress
 ```
 
 A command launched as a separate process (the default, `terminal = false`) does **not** show its standard output anywhere — tfx neither captures it nor keeps the window open. To see output, set `terminal = true`: the command's stdout / stderr are captured and shown in the terminal pane's **Output** tab (a read-only sink, separate from the interactive **Shell** tab). The tab strip appears once the Output tab has content. Alternatively, make the launched program keep its own window open (e.g. `pwsh -NoExit ...`).
+
+#### Multi-line scripts
+
+`run` can hold a whole script using TOML's multi-line literal string (`'''…'''`). The body is taken verbatim (no escaping), tokens are still substituted, and tfx runs it with the command's own `shell` if set, otherwise the **`[terminal] shell`** (falling back to PowerShell when neither is set). The script is written to a temp file and invoked in the form that shell expects: PowerShell → `.ps1` with `-NoProfile -ExecutionPolicy Bypass -File`, `cmd` → `.bat` with `/c`, `bash` / `sh` → `.sh`. Combine with `terminal = true` to see the output:
+
+```toml
+[[commands]]
+name = "Image info"
+extensions = ["png", "jpg", "jpeg", "gif"]
+terminal = true
+run = '''
+$f = {path}
+$img = [System.Drawing.Image]::FromFile($f)
+Write-Output ("{0}  {1} x {2}  {3:N0} bytes" -f (Split-Path $f -Leaf), $img.Width, $img.Height, (Get-Item $f).Length)
+$img.Dispose()
+'''
+
+# Run a script with a specific shell (cmd here) regardless of [terminal] shell:
+[[commands]]
+name = "Dir listing"
+target = "current"
+terminal = true
+shell = "cmd"
+run = '''
+@echo off
+dir /b {cwd}
+'''
+```
+
+Inside the script the tokens (`{path}`, `{paths}`, `{stem}`, …) expand to quoted strings, so `$f = {path}` becomes e.g. `$f = "C:\pics\a.png"`.
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -427,12 +458,17 @@ A command launched as a separate process (the default, `terminal = false`) does 
 | `selection` | string | `any` | `single`, `multiple`, or `any` — restrict by how many items are selected. (Ignored when `target = "current"`.) |
 | `requireGit` | bool | `false` | When `true`, the command appears only when the current folder is inside a Git working copy. |
 | `terminal` | bool | `false` | When `true`, the command's stdout / stderr stream into the terminal pane's read-only **Output** tab instead of launching a separate process. The pane opens and switches to the Output tab automatically. |
+| `shortcut` | string | (none) | Keyboard shortcut, same grammar as `[shortcuts]` (e.g. `"ctrl+shift+g"`). Pressing it runs the command when the current context matches its filters. Shown in the context menu next to the command name. Command shortcuts take precedence over built-in ones. |
+| `shell` | string | (none) | Shell used to run a multi-line `run` script for this command (e.g. `"cmd"`, `"pwsh.exe -NoLogo"`, `"bash"`). Overrides `[terminal] shell` for this command only. Ignored for single-line commands (which name their own executable). |
 
 Tokens substituted in `run` (path tokens are double-quoted automatically):
 
 - `{path}` — the first selected item's full path (or the current folder when nothing is selected).
 - `{paths}` — every selected item, space-separated (or the current folder when nothing is selected).
-- `{dir}` — the parent folder of the first selected item (or the current folder when nothing is selected).
+- `{dir}` — the folder the item sits in (parent of the first item; the current folder when nothing is selected).
+- `{name}` — the first item's file name **with** extension, e.g. `report.pdf`.
+- `{stem}` — the file name **without** extension, e.g. `report`.
+- `{ext}` — the extension only, without the dot, e.g. `pdf` (empty for folders).
 - `{cwd}` — the current folder, regardless of selection.
 - `{scripts}` — the `scripts` folder next to `config.toml` (`%APPDATA%\tfx\scripts`), created on demand. Use it to ship scripts alongside the config without hard-coding an absolute path — e.g. `run = "pwsh -File \"{scripts}\\wc.ps1\" {paths}"`. (Unlike the path tokens, `{scripts}` is substituted raw, so quote it yourself when the path may contain spaces.)
 

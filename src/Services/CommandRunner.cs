@@ -78,11 +78,17 @@ internal static class CommandRunner
 
     /// <summary>
     /// Builds the fully-substituted command line for <paramref name="command"/>.
-    /// Tokens (path tokens are quoted automatically): <c>{path}</c> = first
-    /// selected item, <c>{paths}</c> = all selected items (space-separated),
-    /// <c>{dir}</c> = parent folder of the first item (or <paramref name="cwd"/>
-    /// when nothing is selected), <c>{cwd}</c> = the current folder regardless of
-    /// selection, <c>{scripts}</c> = the user's scripts folder (substituted raw).
+    /// Tokens (path-like tokens are quoted automatically):
+    /// <list type="bullet">
+    /// <item><c>{path}</c> — first selected item's full path (or cwd if none).</item>
+    /// <item><c>{paths}</c> — all selected items, space-separated.</item>
+    /// <item><c>{dir}</c> — the folder the item sits in (parent of the first item).</item>
+    /// <item><c>{name}</c> — file name with extension (e.g. <c>report.pdf</c>).</item>
+    /// <item><c>{stem}</c> — file name without extension (e.g. <c>report</c>).</item>
+    /// <item><c>{ext}</c> — extension without the dot (e.g. <c>pdf</c>); empty for folders.</item>
+    /// <item><c>{cwd}</c> — current folder, regardless of selection.</item>
+    /// <item><c>{scripts}</c> — the user's scripts folder (substituted raw, unquoted).</item>
+    /// </list>
     /// </summary>
     public static string BuildCommandLine(UserCommand command, IReadOnlyList<FileItem> selection, string cwd, string scriptsDir)
     {
@@ -91,6 +97,9 @@ internal static class CommandRunner
         var paths = selection.Count > 0
             ? string.Join(" ", selection.Select(i => Quote(i.FullPath)))
             : Quote(cwd);
+        var name = Path.GetFileName(first);
+        var stem = Path.GetFileNameWithoutExtension(first);
+        var ext = Path.GetExtension(first).TrimStart('.');
 
         // Substitute {scripts} before env expansion so a scripts path containing
         // a literal '%' can't be misread as an environment variable.
@@ -100,7 +109,10 @@ internal static class CommandRunner
             .Replace("{paths}", paths, StringComparison.Ordinal)
             .Replace("{path}", Quote(first), StringComparison.Ordinal)
             .Replace("{cwd}", Quote(cwd), StringComparison.Ordinal)
-            .Replace("{dir}", Quote(dir), StringComparison.Ordinal);
+            .Replace("{dir}", Quote(dir), StringComparison.Ordinal)
+            .Replace("{name}", Quote(name), StringComparison.Ordinal)
+            .Replace("{stem}", Quote(stem), StringComparison.Ordinal)
+            .Replace("{ext}", Quote(ext), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -108,16 +120,16 @@ internal static class CommandRunner
     /// ShellExecute). <paramref name="cwd"/> is the current folder, used as the
     /// working directory and for the <c>{cwd}</c> token.
     /// </summary>
-    public static bool Run(UserCommand command, IReadOnlyList<FileItem> selection, string cwd, string scriptsDir, out string? error)
+    public static bool Run(UserCommand command, IReadOnlyList<FileItem> selection, string cwd, string scriptsDir, string shellCommandLine, out string? error)
     {
         error = null;
         var workDir = WorkingDirectoryFor(selection, cwd);
         var commandLine = BuildCommandLine(command, selection, cwd, scriptsDir);
 
-        // Split the command line into executable + arguments. ShellExecute needs
-        // them separated; we honor a leading quoted path so executables with
-        // spaces work.
-        var (exe, args) = SplitCommandLine(commandLine);
+        // A single-line command is split into executable + arguments; a multi-line
+        // command is written to a temp script and run with the command's own
+        // `shell` if set, otherwise the configured [terminal] shell.
+        var (exe, args) = ResolveInvocation(commandLine, command.Shell ?? shellCommandLine);
         if (string.IsNullOrWhiteSpace(exe))
         {
             error = "empty command";
@@ -156,6 +168,7 @@ internal static class CommandRunner
         IReadOnlyList<FileItem> selection,
         string cwd,
         string scriptsDir,
+        string shellCommandLine,
         Action<string> onLine,
         Action? onExit,
         out string? error)
@@ -163,7 +176,7 @@ internal static class CommandRunner
         error = null;
         var workDir = WorkingDirectoryFor(selection, cwd);
         var commandLine = BuildCommandLine(command, selection, cwd, scriptsDir);
-        var (exe, args) = SplitCommandLine(commandLine);
+        var (exe, args) = ResolveInvocation(commandLine, command.Shell ?? shellCommandLine);
         if (string.IsNullOrWhiteSpace(exe))
         {
             error = "empty command";
@@ -218,6 +231,66 @@ internal static class CommandRunner
 
     private static string Quote(string value) =>
         "\"" + (value ?? string.Empty).Replace("\"", "\"\"") + "\"";
+
+    /// <summary>
+    /// Resolves a command body into (executable, arguments). A single-line body
+    /// is split into program + args. A multi-line body is treated as a script for
+    /// the configured shell (<paramref name="shellCommandLine"/>, e.g. the
+    /// <c>[terminal] shell</c>): it's written to a temp file with an extension and
+    /// invoked in the form that shell expects (PowerShell → .ps1 + -File, cmd →
+    /// .bat + /c, bash → .sh). Tokens are already substituted into the body.
+    /// </summary>
+    private static (string Executable, string Arguments) ResolveInvocation(string commandBody, string shellCommandLine)
+    {
+        if (!commandBody.Contains('\n', StringComparison.Ordinal))
+        {
+            return SplitCommandLine(commandBody);
+        }
+
+        try
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "tfx", "commands");
+            Directory.CreateDirectory(dir);
+
+            // The shell command line may carry default args (e.g. "powershell.exe
+            // -NoLogo"); take the executable for kind detection.
+            var (shellExe, _) = SplitCommandLine(shellCommandLine);
+            if (string.IsNullOrWhiteSpace(shellExe))
+            {
+                shellExe = "powershell.exe";
+            }
+            var shellName = Path.GetFileNameWithoutExtension(shellExe).ToLowerInvariant();
+
+            string ext, args;
+            switch (shellName)
+            {
+                case "cmd":
+                    ext = ".bat";
+                    args = "/c \"{0}\"";
+                    break;
+                case "bash":
+                case "sh":
+                case "wsl":
+                    ext = ".sh";
+                    args = "\"{0}\"";
+                    break;
+                default: // powershell, pwsh, and anything else → PowerShell-style.
+                    ext = ".ps1";
+                    args = "-NoProfile -ExecutionPolicy Bypass -File \"{0}\"";
+                    break;
+            }
+
+            // Stable name (overwritten each run) keeps the temp folder bounded.
+            var scriptPath = Path.Combine(dir, "command" + ext);
+            File.WriteAllText(scriptPath, commandBody, new System.Text.UTF8Encoding(false));
+            return (shellExe, string.Format(args, scriptPath));
+        }
+        catch
+        {
+            // Fall back to single-line interpretation if the temp write fails.
+            return SplitCommandLine(commandBody);
+        }
+    }
 
     /// <summary>
     /// Splits a command line into (executable, arguments). A leading double-quote

@@ -58,7 +58,10 @@
       "Bash(pwsh -NoProfile -File scripts/build-release.ps1)",
       "Bash(grep -h \"ProjectReference\\\\|InternalsVisible\" Tfx.Tests/Tfx.Tests.csproj Tfx.csproj)",
       "Bash(grep -rln \"AppConfig\" Tfx.Tests/)",
-      "PowerShell($dir = Join-Path $env:APPDATA \"tfx\\\\scripts\"; New-Item -ItemType Directory -Force -Path $dir | Out-Null; $dir)"
+      "PowerShell($dir = Join-Path $env:APPDATA \"tfx\\\\scripts\"; New-Item -ItemType Directory -Force -Path $dir | Out-Null; $dir)",
+      "Bash(grep -E '^\\\\| `')",
+      "Bash(sed -n '/### `\\\\[\\\\[commands\\\\]\\\\]`/,/## Examples/p' docs/configuration.md)",
+      "Bash(grep -E '^- `\\\\{')"
     ]
   }
 }
