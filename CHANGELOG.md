@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0
+
+### User-defined commands in the context menu (roadmap §2.15)
+
+- New `[[commands]]` array in `config.toml` adds **user-defined commands to the file-pane context menu**, each running an external program (fire-and-forget) — the shell-script alternative to an embedded scripting runtime, consistent with how tfx already shells out for `[openWith]`, the terminal, and git. A command appears only when the current selection matches its filters.
+- Each entry: `name` (menu label), `run` (command line with `{path}` / `{paths}` / `{dir}` / `{scripts}` tokens, env-var expanded), and optional filters `extensions` (omit or `["*"]` = all files), `target` (`file` / `folder` / `any`), `selection` (`single` / `multiple` / `any`). Path tokens are quoted when substituted; `{scripts}` expands to the `scripts` folder next to `config.toml` (`%APPDATA%\tfx\scripts`) so commands can call bundled scripts without an absolute path. Invalid entries are reported as config warnings and skipped. Documented in `docs/configuration.md` / `.ja.md`.
+- Set `terminal = true` on an entry to capture its stdout / stderr into the terminal pane's read-only **Output** tab instead of launching a separate process. The terminal pane now has two tabs — the interactive **Shell** and the command **Output** sink — with the tab strip appearing once Output has content. The `{scripts}` token expands to `%APPDATA%\tfx\scripts` so commands can call bundled scripts (e.g. a `wc.ps1`) without an absolute path.
+- `target = "current"` makes a command act on the **current folder** and appear even with nothing selected (right-click the empty area) — for folder-wide actions. `requireGit = true` restricts a command to Git working copies, and the new `{cwd}` token expands to the current folder, so e.g. `git push` can be wired as `run = "git -C {cwd} push"`, `target = "current"`, `requireGit = true`, `terminal = true`.
+- This supersedes the earlier Lua extension plan (former roadmap §2.16), which is dropped.
+
 ## 0.6.9
 
 ### Fix: terminal failed to start as a single-file executable

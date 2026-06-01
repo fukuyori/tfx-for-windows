@@ -155,6 +155,7 @@ internal static class Loc
         ["None"] = "なし",
         ["Mixed (CRLF: {0}, LF: {1}, CR: {2})"] = "混在 (CRLF: {0}, LF: {1}, CR: {2})",
         ["Config warning: {0}"] = "設定の警告: {0}",
+        ["Command failed: {0}"] = "コマンドの実行に失敗しました: {0}",
         ["Minimize"] = "最小化",
         ["Maximize / restore"] = "最大化 / 元に戻す",
         ["Close"] = "閉じる",

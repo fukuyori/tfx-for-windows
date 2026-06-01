@@ -320,7 +320,8 @@ public partial class MainWindow
         // a Tab switch — sometimes focus ends up on the container and the
         // built-in handler does nothing. Intercepting here makes navigation
         // deterministic regardless of where focus landed inside the pane.
-        if (!inTextBox && e.Key is Key.Up or Key.Down or Key.PageUp or Key.PageDown && IsFocusInActiveListing())
+        if (!inTextBox && e.Key is Key.Up or Key.Down or Key.PageUp or Key.PageDown
+            && (IsFocusInActiveListing() || ShouldStartListingNavigation()))
         {
             MoveActiveListingSelection(e.Key);
             e.Handled = true;
@@ -360,6 +361,31 @@ public partial class MainWindow
         }
 
         return IsInside(focused, _activeGrid);
+    }
+
+    /// <summary>
+    /// True when an Up / Down press should "adopt" the active listing even though
+    /// focus isn't inside it — specifically when nothing is selected there and
+    /// focus is somewhere neutral (not the folder tree, search box, terminal, or
+    /// the other pane). This makes Down land on the ".." row when the listing has
+    /// no current selection.
+    /// </summary>
+    private bool ShouldStartListingNavigation()
+    {
+        if (ActiveListingSelectedItem() is not null)
+        {
+            return false;
+        }
+
+        var focused = Keyboard.FocusedElement as DependencyObject;
+        // Don't steal arrows from the folder tree or the inactive pane's listing.
+        if (IsInside(focused, FolderTree)
+            || IsInside(focused, GridOf(ActivePane == Pane.Left ? Pane.Right : Pane.Left))
+            || IsInside(focused, IconViewOf(ActivePane == Pane.Left ? Pane.Right : Pane.Left)))
+        {
+            return false;
+        }
+        return true;
     }
 
     private object? ActiveListingSelectedItem() =>

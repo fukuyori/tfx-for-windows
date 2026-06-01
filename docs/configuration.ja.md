@@ -358,6 +358,62 @@ pdf = "C:\\Program Files\\SumatraPDF\\SumatraPDF.exe"
 
 ディレクトリ、zip ナビゲーション、アーカイブ内部ファイルは既存の tfx 動作を維持します。
 
+### `[[commands]]`
+
+ファイルペインの右クリックメニューに表示される、ユーザー定義コマンドです。各エントリは外部プログラムを起動します（起動して放置 — tfx は出力を取得せず完了も待ちません）。これにより、インストール済みの任意のインタープリター（PowerShell / cmd / Git Bash / Python など）を、組み込みのスクリプト実行環境なしで利用できます。コマンドは、現在の選択がそのすべての条件に合致するときだけメニューに表示されます。
+
+```toml
+[[commands]]
+name = "VS Code で開く"
+run = "code {path}"
+
+[[commands]]
+name = "PNG を最適化"
+run = "pwsh -File C:\\scripts\\optipng.ps1 {paths}"
+extensions = ["png"]
+
+[[commands]]
+name = "ここで Git Bash を開く"
+run = "C:\\Program Files\\Git\\bin\\bash.exe --login -i"
+target = "folder"
+selection = "single"
+
+[[commands]]
+name = "行数 / 単語数 / 文字数を数える"
+run = "pwsh -NoProfile -File \"{scripts}\\wc.ps1\" {paths}"
+target = "file"
+terminal = true   # 出力を内蔵ターミナルペインに表示
+
+[[commands]]
+name = "git push"
+run = "git -C {cwd} push"
+target = "current"   # 現在のフォルダー対象。何も選択していなくても表示
+requireGit = true    # Git 作業ツリー内のみ
+terminal = true      # push の出力を出力タブに表示
+```
+
+別プロセスとして起動する場合（既定の `terminal = false`）、標準出力は**どこにも表示されません** — tfx は出力を取得せず、ウィンドウも保持しません。出力を見るには `terminal = true` にしてください。コマンドの標準出力 / 標準エラーがキャプチャされ、ターミナルペインの**出力（Output）タブ**（対話用の **Shell** タブとは別の読み取り専用タブ）に表示されます。出力タブに内容が入るとタブバーが表示されます。あるいは、起動するプログラム側でウィンドウを保持してください（例: `pwsh -NoExit ...`）。
+
+| キー | 型 | 既定 | 説明 |
+| --- | --- | --- | --- |
+| `name` | string | (必須) | メニューに表示するラベル。 |
+| `run` | string | (必須) | 起動するコマンドライン。環境変数は展開されます。下記トークンを使えます。 |
+| `extensions` | string 配列 | 全ファイル | 先頭のドットを除いた対象拡張子。省略または `["*"]` で全ファイル。 |
+| `target` | string | `any` | `file` / `folder` / `current` / `any`。`file` / `folder` は選択項目に対して判定。`current` は選択を無視して**現在のフォルダー**を対象にし、何も選択していなくてもメニューに表示されます（空き領域を右クリック）。`git push` などフォルダー単位の操作に便利。 |
+| `selection` | string | `any` | `single` / `multiple` / `any` — 選択数で限定。（`target = "current"` のときは無視されます。） |
+| `requireGit` | bool | `false` | `true` のとき、現在のフォルダーが Git 作業ツリー内のときだけメニューに表示されます。 |
+| `terminal` | bool | `false` | `true` のとき、別プロセスを起動する代わりに、コマンドの標準出力 / 標準エラーを内蔵ターミナルペインの読み取り専用**出力（Output）タブ**に流します。ペインが開き、自動的に出力タブへ切り替わります。 |
+
+`run` 内で置換されるトークン（パス系トークンは自動的に二重引用符で囲まれます）:
+
+- `{path}` — 最初に選択した項目のフルパス（何も選択していなければ現在のフォルダー）。
+- `{paths}` — 選択したすべての項目（スペース区切り。何も選択していなければ現在のフォルダー）。
+- `{dir}` — 最初に選択した項目の親フォルダー（何も選択していなければ現在のフォルダー）。
+- `{cwd}` — 選択の有無に関わらず、現在のフォルダー。
+- `{scripts}` — `config.toml` と同じ場所の `scripts` フォルダー（`%APPDATA%\tfx\scripts`、必要に応じて自動作成）。絶対パスを書かずに設定と一緒にスクリプトを配布できます。例: `run = "pwsh -File \"{scripts}\\wc.ps1\" {paths}"`。（パス系トークンと異なり `{scripts}` は引用符なしで置換されるため、空白を含む可能性がある場合は自分で引用符で囲んでください。）
+
+すべての条件が合致したときのみコマンドが表示されます。例: `extensions = ["png", "jpg"]` と `selection = "single"` を指定すると、`.png` または `.jpg` を 1 つだけ選んだときにのみ表示されます。`name` または `run` が欠けたエントリは設定警告として報告され、無視されます。
+
 ## 例
 
 ### カラーサンプル

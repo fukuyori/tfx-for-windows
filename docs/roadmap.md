@@ -246,22 +246,7 @@ Done when:
 
 #### 2.8 Built-in Color Themes
 
-Status: **Partially completed in 0.6.3; remaining work on hold.** User-defined `[colors]` in `config.toml` now drives the live WPF theme resources, Markdown preview CSS, custom chrome colors, selection colors, scrollbar colors, and light-mode palettes. The remaining work is an in-app theme picker and named built-in presets.
-
-Upstream: §2.6 (Built-in Color Themes). The macOS color tokens map directly; XAML `ResourceDictionary` replaces the Swift theme token table.
-
-Goal: ship visible theme variety and eventually expose named presets from the UI. Direct port of upstream §2.6.
-
-Tasks:
-
-- Continue expanding the theme token table only where real UI surfaces still need coverage.
-- Promote the documented color samples into named built-in themes if an in-app theme picker is added.
-- Add a "Theme" submenu / settings entry that switches the active resource dictionary at runtime.
-
-Done when:
-
-- Switching themes updates the main UI consistently and immediately without restart.
-- Missing color tokens in a theme fall back to the default.
+Status: **Done via `config.toml`.** User-defined `[colors]` drives the live WPF theme resources, Markdown preview CSS, custom chrome colors, selection colors, scrollbar colors, and light-mode palettes; `docs/configuration.md` ships distinctive color samples. Per user direction the original "in-app theme picker / named built-in presets" goal is dropped — TOML color configuration covers the need. (Upstream parity: §2.6.)
 
 #### 2.9 Built-in Terminal Pane
 
@@ -376,54 +361,34 @@ Done when:
 
 #### 2.14 Theme Customization via TOML
 
-Status: **Partially completed in 0.6.3.** `[colors]` in `config.toml` overrides the live theme tokens, including light-mode colors and translucent backgrounds. `docs/configuration.md` and `docs/configuration.ja.md` include three distinctive color samples. Named `themes/*.toml` files and an in-app theme picker remain deferred.
+Status: **Done via `config.toml`.** `[colors]` overrides the live theme tokens including light-mode colors and translucent backgrounds, with documented samples. Per user direction the separate "named `themes/*.toml` files + in-app picker" goal is dropped; the inline `[colors]` section covers theme customization. (Upstream parity: §2.10.)
 
-Upstream: §2.10 (Theme Customization via TOML). Direct port. Depends on §2.12 and §2.8.
+#### 2.15 User-Defined Commands (shell scripts via `[[commands]]`)
 
-Done when:
+Status: **Planned.** Supersedes the original §2.11 "extension-based behavior" and replaces the Lua-host approach (former §2.16) with a simpler, Windows-native model: user-defined commands declared in `config.toml` that run external scripts/programs. This unifies upstream §2.11 ("extension-based behavior") and §2.4's "run command on selected files" using the same external-process hand-off tfx already uses for `[openWith]` and the terminal launcher — no embedded language runtime, no sandbox to maintain.
 
-- A user-defined `themes/*.toml` overrides built-in themes and appears in the theme picker.
-- Missing tokens fall back to the active built-in default.
+Why shell scripts over Lua (former §2.16): tfx already shells out for `[openWith]`, the terminal launcher, `git`, and PDF rendering, so an external-process command model is consistent with the existing design. Any language the user has (PowerShell, cmd, Git Bash, Python, …) works, debugging happens by running the script standalone, and process isolation is the OS's job rather than a sandbox tfx has to guarantee. The Lua/MoonSharp plan is dropped.
 
-#### 2.15 Extension-Based Behavior
+Design:
 
-Status: **Partially completed in 0.6.3; remaining work on hold.** `[openWith]` supports per-extension external openers with `{path}` substitution. Per-extension preview selection and Lua-backed rule precedence remain future work.
-
-Upstream: §2.11 (Extension-Based Behavior). Direct port. Depends on §2.12.
-
-Done when:
-
-- The default preview / open behavior can be changed per extension.
-- Rule precedence (built-in → TOML → Lua) is explicit and documented.
-
-#### 2.16 Lua Extension API
-
-Upstream: §2.12 (Lua Extension API). Adapted: **`MoonSharp`** (managed Lua 5.2 interpreter, NuGet, no native dependency) replaces the macOS Lua-host choice. Depends on §2.12 (config), most useful after §2.13.
-
-Introduced incrementally:
-
-1. Read-only inspection. Lua reads current folder / selection / extension info and returns a value (filter, label, classification).
-2. Markdown post-processing. Lua filters Markdown source before conversion or HTML after conversion. Output is sanitized before being shown.
-3. Shortcut bindings. Lua callbacks bound to shortcut TOML actions.
-4. Open / preview hooks. Lua decides how a file is opened or previewed, within the sandbox.
-
-Restrictions across all steps:
-
-- No file mutation.
-- No external command execution.
-- Read-only host APIs; sanitized return values.
-- Long-running scripts can be detected and stopped.
+- `[[commands]]` array in `config.toml`. Each entry:
+  - `name` — label shown in the context menu (required).
+  - `run` — command line to launch; supports `{path}` (single), `{paths}` (multiple, space-separated, quoted), and `{dir}` (parent folder). Environment variables are expanded, same as `[terminal]`.
+  - `extensions` — list of matching extensions; omitted or `["*"]` means all files.
+  - `target` — `"file"` / `"folder"` / `"any"` (default `any`).
+  - `selection` — `"single"` / `"multiple"` / `"any"` (default `any`).
+- A command appears in the file-pane context menu (a "Commands" section) only when the current selection satisfies all of its conditions.
+- Execution launches the external process and does **not** capture output or wait (fire-and-forget), via the existing `ShellExecute` path with the silent PowerShell fallback. Visible output is the launched program's own responsibility (e.g. a command can target a terminal app).
 
 Done when:
 
-- Each step has its own "done when" gate; step 1 ships before step 2 begins.
-- Lua script errors never crash the app.
+- A `[[commands]]` entry with extension / target / selection filters shows up in the context menu only for matching selections and runs with `{path}` / `{paths}` / `{dir}` substituted.
+- An invalid command definition is reported (status warning) and never crashes the app.
+- `docs/configuration.md` / `.ja.md` document the schema with examples.
 
-#### 2.17 Markdown Preview Extensions
+Deferred (revisit only if real demand surfaces):
 
-Upstream: §2.13 (Markdown Preview Extensions). Direct port. Targets: ruby text, KaTeX / MathJax, Mermaid, custom inline / block syntax, CSS customization. Implementation is straightforward because the existing renderer is already WebView2, so CDN-loaded or bundled scripts can be injected into the HTML template the same way the dark-mode CSS is injected today.
-
-Priority: lower than §2.16. Address once the remaining extension hooks land and concrete user demand surfaces.
+- Per-extension **preview** generation from an external command (e.g. render `.dot` to an image for the preview pane). The current built-in preview pipeline covers the common cases.
 
 ### Items Skipped or Replaced
 
@@ -548,16 +513,15 @@ Quick lookup between this Windows roadmap and the upstream macOS roadmap [`fukuy
 | §2.5 Performance Measurement Infrastructure | §1.14 | `TFX_PERFORMANCE_LOGS` env var name preserved. |
 | §2.6 Git Status Indicators | §2.2 | Direct port; `Process.Start` for `git status`. |
 | §2.7 Pane Tabs | §2.3 | **Done in 0.6.4.** Direct port; per-tab history. |
-| §2.8 Built-in Color Themes | §2.6 | **Partially completed in 0.6.3; remaining work on hold.** Runtime color tokens and light-mode samples shipped; in-app theme picker remains. |
+| §2.8 Built-in Color Themes | §2.6 | **Done via `config.toml`.** Runtime color tokens and light-mode samples shipped; in-app picker dropped per user direction. |
 | §2.9 Built-in Terminal Pane | §2.4 | **Done in 0.6.5; lifecycle refined in 0.6.6.** Self-hosted ConPTY pane at window bottom (xterm.js in WebView2); fresh shell on reopen, clean teardown on exit; external launcher remains the default hand-off. |
 | §2.10 NTFS ACL / Owner Editing | §2.5 | **On hold.** NTFS ACL ↔ POSIX bits; UAC `runas` ↔ `AuthorizationServices`. |
 | §2.11 Auto-Update | §2.7 | **On hold.** Velopack / `NetSparkle` ↔ Sparkle 2. |
 | §2.12 Configuration Foundation (TOML) | §2.8 | **Partially completed in 0.6.3; remaining polish on hold.** `%APPDATA%\tfx\config.toml` v1; full parser / split files / migrations remain. |
 | §2.13 Shortcut Organization | §2.9 | **Completed for config overrides in 0.6.3.** Optional visual editor remains. |
-| §2.14 Theme Customization via TOML | §2.10 | **Partially completed in 0.6.3; remaining work on hold.** `[colors]` tokens and samples shipped; named theme files / picker remain. |
-| §2.15 Extension-Based Behavior | §2.11 | **Partially completed in 0.6.3; remaining work on hold.** `[openWith]` shipped; preview hooks and Lua precedence remain. |
-| §2.16 Lua Extension API | §2.12 | `MoonSharp` ↔ upstream Lua-host choice. |
-| §2.17 Markdown Preview Extensions | §2.13 | WebView2-based; CDN / bundled scripts injected into the existing HTML template. |
+| §2.14 Theme Customization via TOML | §2.10 | **Done via `config.toml`.** `[colors]` tokens and samples shipped; separate theme files / picker dropped per user direction. |
+| §2.15 User-Defined Commands | §2.11 | **Planned.** `[openWith]` shipped; new `[[commands]]` adds context-menu shell-script commands with extension / target / selection filters. Supersedes the Lua plan. |
+| §2.16 Lua Extension API | §2.12 | **Dropped.** Replaced by §2.15 user-defined shell-script commands — consistent with tfx's existing external-process model; no embedded runtime / sandbox. |
 | (skipped) | §2.1 macOS Tags | No OS-level Windows equivalent. |
 
 ### 6.3 Cross-Cutting Concerns

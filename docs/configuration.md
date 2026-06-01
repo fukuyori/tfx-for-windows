@@ -382,6 +382,62 @@ Compound extension keys can be quoted:
 
 Directories, zip navigation, and archive-internal files keep their existing tfx behavior.
 
+### `[[commands]]`
+
+User-defined commands shown in the file-pane context menu. Each entry runs an external program (fire-and-forget — tfx does not capture output or wait), which makes any installed interpreter (PowerShell, cmd, Git Bash, Python, …) usable without an embedded scripting runtime. A command appears in the menu only when the current selection matches all of its filters.
+
+```toml
+[[commands]]
+name = "Open in VS Code"
+run = "code {path}"
+
+[[commands]]
+name = "Optimize PNG"
+run = "pwsh -File C:\\scripts\\optipng.ps1 {paths}"
+extensions = ["png"]
+
+[[commands]]
+name = "Open Git Bash here"
+run = "C:\\Program Files\\Git\\bin\\bash.exe --login -i"
+target = "folder"
+selection = "single"
+
+[[commands]]
+name = "Count lines / words / chars"
+run = "pwsh -NoProfile -File \"{scripts}\\wc.ps1\" {paths}"
+target = "file"
+terminal = true   # show the output in the built-in terminal pane
+
+[[commands]]
+name = "git push"
+run = "git -C {cwd} push"
+target = "current"   # acts on the current folder; shows with nothing selected
+requireGit = true    # only inside a Git working copy
+terminal = true      # show push output in the Output tab
+```
+
+A command launched as a separate process (the default, `terminal = false`) does **not** show its standard output anywhere — tfx neither captures it nor keeps the window open. To see output, set `terminal = true`: the command's stdout / stderr are captured and shown in the terminal pane's **Output** tab (a read-only sink, separate from the interactive **Shell** tab). The tab strip appears once the Output tab has content. Alternatively, make the launched program keep its own window open (e.g. `pwsh -NoExit ...`).
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | string | (required) | Label shown in the context menu. |
+| `run` | string | (required) | Command line to launch. Environment variables are expanded. Supports the tokens below. |
+| `extensions` | string array | all | Matching extensions without the leading dot. Omitted or `["*"]` matches every file. |
+| `target` | string | `any` | `file`, `folder`, `current`, or `any`. `file` / `folder` match the selected items; `current` ignores the selection and acts on the **current folder** (the command shows even with nothing selected — right-click the empty area), useful for folder-wide actions like `git push`. |
+| `selection` | string | `any` | `single`, `multiple`, or `any` — restrict by how many items are selected. (Ignored when `target = "current"`.) |
+| `requireGit` | bool | `false` | When `true`, the command appears only when the current folder is inside a Git working copy. |
+| `terminal` | bool | `false` | When `true`, the command's stdout / stderr stream into the terminal pane's read-only **Output** tab instead of launching a separate process. The pane opens and switches to the Output tab automatically. |
+
+Tokens substituted in `run` (path tokens are double-quoted automatically):
+
+- `{path}` — the first selected item's full path (or the current folder when nothing is selected).
+- `{paths}` — every selected item, space-separated (or the current folder when nothing is selected).
+- `{dir}` — the parent folder of the first selected item (or the current folder when nothing is selected).
+- `{cwd}` — the current folder, regardless of selection.
+- `{scripts}` — the `scripts` folder next to `config.toml` (`%APPDATA%\tfx\scripts`), created on demand. Use it to ship scripts alongside the config without hard-coding an absolute path — e.g. `run = "pwsh -File \"{scripts}\\wc.ps1\" {paths}"`. (Unlike the path tokens, `{scripts}` is substituted raw, so quote it yourself when the path may contain spaces.)
+
+All filters must match for the command to appear: e.g. `extensions = ["png", "jpg"]` with `selection = "single"` shows the command only when exactly one `.png` or `.jpg` file is selected. An entry missing `name` or `run` is reported as a config warning and skipped.
+
 ## Examples
 
 Use a larger file-list font:

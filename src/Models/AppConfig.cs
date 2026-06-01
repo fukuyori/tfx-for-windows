@@ -19,6 +19,7 @@ public sealed class AppConfig
     public TerminalConfig Terminal { get; } = new();
     public Dictionary<string, string> OpenWith { get; } = new(StringComparer.OrdinalIgnoreCase);
     public StartupConfig Startup { get; } = new();
+    public List<UserCommand> Commands { get; } = [];
     public List<string> Errors { get; } = [];
 
     public static AppConfig LoadOrCreate(string path)
@@ -47,6 +48,9 @@ public sealed class AppConfig
         var section = "";
         var versionSeen = false;
 
+        // The current [[commands]] array-table entry being filled, if any.
+        UserCommand? command = null;
+
         foreach (var rawLine in toml.Replace("\r\n", "\n").Split('\n'))
         {
             var line = StripComment(rawLine).Trim();
@@ -55,9 +59,27 @@ public sealed class AppConfig
                 continue;
             }
 
+            // Array-of-tables header [[commands]] starts a new command entry.
+            if (line.StartsWith("[[", StringComparison.Ordinal) && line.EndsWith("]]", StringComparison.Ordinal))
+            {
+                section = line[2..^2].Trim();
+                if (section.Equals("commands", StringComparison.OrdinalIgnoreCase))
+                {
+                    command = new UserCommand();
+                    config.Commands.Add(command);
+                }
+                else
+                {
+                    command = null;
+                    config.Errors.Add($"Unknown array section: {line}");
+                }
+                continue;
+            }
+
             if (line.StartsWith("[", StringComparison.Ordinal) && line.EndsWith("]", StringComparison.Ordinal))
             {
                 section = line[1..^1].Trim();
+                command = null;
                 continue;
             }
 
@@ -134,6 +156,23 @@ public sealed class AppConfig
                 case "startup":
                     ParseStartup(config, key, value);
                     break;
+                case "commands":
+                    if (command is not null)
+                    {
+                        ParseCommand(config, command, key, value);
+                    }
+                    break;
+            }
+        }
+
+        // Drop commands that never got a usable name + run pair.
+        for (var i = config.Commands.Count - 1; i >= 0; i--)
+        {
+            var c = config.Commands[i];
+            if (string.IsNullOrWhiteSpace(c.Name) || string.IsNullOrWhiteSpace(c.Run))
+            {
+                config.Errors.Add("Ignored a [[commands]] entry missing name or run.");
+                config.Commands.RemoveAt(i);
             }
         }
 
@@ -243,6 +282,75 @@ public sealed class AppConfig
         else if (key.Equals("shell", StringComparison.OrdinalIgnoreCase))
         {
             config.Terminal.Shell = Environment.ExpandEnvironmentVariables(parsed);
+        }
+    }
+
+    /// <summary>
+    /// Parses one <c>key = value</c> line inside a <c>[[commands]]</c> entry.
+    /// Recognized keys: name, run, extensions (string array), target
+    /// (file/folder/any), selection (single/multiple/any).
+    /// </summary>
+    private static void ParseCommand(AppConfig config, UserCommand command, string key, string value)
+    {
+        if (key.Equals("name", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseString(value, out var name)) command.Name = name;
+            else config.Errors.Add($"Invalid command name: {value}");
+        }
+        else if (key.Equals("run", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseString(value, out var run)) command.Run = run;
+            else config.Errors.Add($"Invalid command run: {value}");
+        }
+        else if (key.Equals("extensions", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseStringArray(value, out var exts))
+            {
+                command.Extensions = exts.Select(NormalizeExtension).ToList();
+            }
+            else
+            {
+                config.Errors.Add($"Invalid command extensions: {value}");
+            }
+        }
+        else if (key.Equals("target", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseString(value, out var t) &&
+                (t.Equals("file", StringComparison.OrdinalIgnoreCase) ||
+                 t.Equals("folder", StringComparison.OrdinalIgnoreCase) ||
+                 t.Equals("current", StringComparison.OrdinalIgnoreCase) ||
+                 t.Equals("any", StringComparison.OrdinalIgnoreCase)))
+            {
+                command.Target = t.ToLowerInvariant();
+            }
+            else
+            {
+                config.Errors.Add($"Invalid command target: {value}");
+            }
+        }
+        else if (key.Equals("requireGit", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseBool(value, out var b)) command.RequireGit = b;
+            else config.Errors.Add($"Invalid command requireGit: {value}");
+        }
+        else if (key.Equals("selection", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseString(value, out var s) &&
+                (s.Equals("single", StringComparison.OrdinalIgnoreCase) ||
+                 s.Equals("multiple", StringComparison.OrdinalIgnoreCase) ||
+                 s.Equals("any", StringComparison.OrdinalIgnoreCase)))
+            {
+                command.Selection = s.ToLowerInvariant();
+            }
+            else
+            {
+                config.Errors.Add($"Invalid command selection: {value}");
+            }
+        }
+        else if (key.Equals("terminal", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseBool(value, out var b)) command.Terminal = b;
+            else config.Errors.Add($"Invalid command terminal: {value}");
         }
     }
 
@@ -402,6 +510,15 @@ public sealed class AppConfig
     private static bool TryParseDouble(string value, out double parsed) =>
         double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsed);
 
+    private static bool TryParseBool(string value, out bool parsed)
+    {
+        var v = value.Trim();
+        if (v.Equals("true", StringComparison.OrdinalIgnoreCase)) { parsed = true; return true; }
+        if (v.Equals("false", StringComparison.OrdinalIgnoreCase)) { parsed = false; return true; }
+        parsed = false;
+        return false;
+    }
+
     private static bool TryParseColor(string value, out Color color)
     {
         color = default;
@@ -510,6 +627,26 @@ public sealed class AppConfig
         # [openWith]
         # md = "code"
         # pdf = "C:\\Program Files\\SumatraPDF\\SumatraPDF.exe"
+        #
+        # User-defined commands shown in the file-pane context menu. Each runs an
+        # external program (fire-and-forget). Tokens: {path} (single item),
+        # {paths} (all selected, quoted), {dir} (parent folder). Filters:
+        # extensions (omit or ["*"] = all), target = file|folder|any,
+        # selection = single|multiple|any.
+        # [[commands]]
+        # name = "Open in VS Code"
+        # run = "code {path}"
+        # [[commands]]
+        # name = "Count lines"
+        # run = "pwsh -NoProfile -File \"{scripts}\\wc.ps1\" {paths}"
+        # extensions = ["txt", "md", "cs"]
+        # terminal = true   # show output in the built-in terminal pane
+        # [[commands]]
+        # name = "git push"
+        # run = "git -C {cwd} push"
+        # target = "current"   # acts on the current folder, no selection needed
+        # requireGit = true    # only inside a Git working copy
+        # terminal = true
         """;
 }
 
@@ -544,6 +681,45 @@ public sealed class StartupConfig
     public string? Layout { get; set; }
     public string? Preview { get; set; }
     public List<string> RightFolders { get; set; } = [];
+}
+
+/// <summary>
+/// A user-defined command from a <c>[[commands]]</c> entry. Shown in the file-
+/// pane context menu when the current selection matches its filters, then run
+/// as an external process (fire-and-forget). <see cref="Run"/> supports the
+/// tokens <c>{path}</c> (single item), <c>{paths}</c> (all selected, quoted and
+/// space-separated), and <c>{dir}</c> (parent folder of the first item).
+/// </summary>
+public sealed class UserCommand
+{
+    public string Name { get; set; } = "";
+    public string Run { get; set; } = "";
+
+    /// <summary>Matching extensions (normalized, no dot). Empty / contains "*" = all files.</summary>
+    public List<string> Extensions { get; set; } = [];
+
+    /// <summary>
+    /// <c>file</c> / <c>folder</c> / <c>any</c> (default) match against the
+    /// selected items. <c>current</c> ignores the selection entirely and targets
+    /// the current folder — useful for folder-wide actions (e.g. <c>git push</c>)
+    /// invoked from the empty area of the listing.
+    /// </summary>
+    public string Target { get; set; } = "any";
+
+    /// <summary>"single", "multiple", or "any" (default).</summary>
+    public string Selection { get; set; } = "any";
+
+    /// <summary>
+    /// When true, the command is sent to the built-in terminal pane (its output
+    /// shows there) instead of being launched as a separate external process.
+    /// </summary>
+    public bool Terminal { get; set; }
+
+    /// <summary>
+    /// When true, the command only appears when the current folder is inside a
+    /// Git working copy. Lets `git` commands show up only where they make sense.
+    /// </summary>
+    public bool RequireGit { get; set; }
 }
 
 public readonly record struct AppShortcut(ModifierKeys Modifiers, Key Key)

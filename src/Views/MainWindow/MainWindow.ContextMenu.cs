@@ -210,6 +210,8 @@ public partial class MainWindow
         terminalSettings.Click += (_, _) => OpenTerminalSettings();
         menu.Items.Add(terminalSettings);
 
+        AddUserCommandMenuItems(menu, selection);
+
         menu.Items.Add(new Separator());
 
         var rename = new MenuItem { Header = Loc.T("Rename"), InputGestureText = ShortcutText("rename"), IsEnabled = oneSelected && writableContext };
@@ -231,5 +233,59 @@ public partial class MainWindow
         menu.Items.Add(perm);
 
         return menu;
+    }
+
+    /// <summary>
+    /// Adds a "Commands" section for any user-defined <c>[[commands]]</c> entries
+    /// whose filters match the current selection. Each runs as an external
+    /// process (fire-and-forget). Nothing is added when no command matches.
+    /// </summary>
+    /// <summary>
+    /// The <c>scripts</c> folder next to <c>config.toml</c> (created on demand).
+    /// Used to expand the <c>{scripts}</c> token in user-defined commands so they
+    /// can ship scripts alongside the config without hard-coding an absolute path.
+    /// </summary>
+    private string ScriptsDirectory()
+    {
+        var dir = System.IO.Path.Combine(
+            System.IO.Path.GetDirectoryName(_configPath) ?? ".", "scripts");
+        try { System.IO.Directory.CreateDirectory(dir); } catch { }
+        return dir;
+    }
+
+    private void AddUserCommandMenuItems(ContextMenu menu, IReadOnlyList<FileItem> selection)
+    {
+        if (_config.Commands.Count == 0)
+        {
+            return;
+        }
+
+        var isGitRepo = GetGitRoot(ActivePane) is not null;
+        var matching = _config.Commands.Where(c => CommandRunner.Matches(c, selection, isGitRepo)).ToList();
+        if (matching.Count == 0)
+        {
+            return;
+        }
+
+        var cwd = GetCurrentPath(_activeGrid);
+        menu.Items.Add(new Separator());
+        foreach (var command in matching)
+        {
+            var item = new MenuItem { Header = command.Name };
+            var captured = command;
+            item.Click += (_, _) =>
+            {
+                if (captured.Terminal)
+                {
+                    RunCommandInTerminal(captured, selection, cwd);
+                    return;
+                }
+                if (!CommandRunner.Run(captured, selection, cwd, ScriptsDirectory(), out var error))
+                {
+                    SetStatus(Loc.F("Command failed: {0}", error ?? captured.Name));
+                }
+            };
+            menu.Items.Add(item);
+        }
     }
 }

@@ -55,7 +55,10 @@
       "Bash(grep -rn \"Assets/terminal\\\\|Assets\\\\\\\\\\\\\\\\terminal\\\\|copied next to the exe\\\\|bundled under\" README.md README.ja.md docs/roadmap.md docs/configuration.md)",
       "Bash(ls *.ps1 scripts/ build/)",
       "Bash(grep -rln \"PublishSingleFile\\\\|dotnet publish\\\\|artifacts\" *.ps1 *.cmd *.bat scripts/*.ps1 build/*.ps1)",
-      "Bash(pwsh -NoProfile -File scripts/build-release.ps1)"
+      "Bash(pwsh -NoProfile -File scripts/build-release.ps1)",
+      "Bash(grep -h \"ProjectReference\\\\|InternalsVisible\" Tfx.Tests/Tfx.Tests.csproj Tfx.csproj)",
+      "Bash(grep -rln \"AppConfig\" Tfx.Tests/)",
+      "PowerShell($dir = Join-Path $env:APPDATA \"tfx\\\\scripts\"; New-Item -ItemType Directory -Force -Path $dir | Out-Null; $dir)"
     ]
   }
 }

@@ -16,6 +16,8 @@ public partial class MainWindow
     private bool _terminalPaneOpen;        // pane currently shown (gates PTY spawn)
     private short _terminalCols = 80;
     private short _terminalRows = 25;
+    private bool _suppressShellActivate;   // pane opened to run a command in Output
+    private bool _shellRequested;          // the interactive shell is actually wanted
     private Task<bool>? _terminalWebInit;
     private Task<CoreWebView2Environment>? _webView2EnvTask;
 
@@ -73,6 +75,10 @@ public partial class MainWindow
 
     private void ToggleTerminalPane()
     {
+        // A user-driven open/close is a normal interactive session — clear the
+        // command-output-only flag so the Shell tab is focused and its shell can
+        // start as usual.
+        _suppressShellActivate = false;
         SetTerminalVisible(TerminalHost.Visibility != Visibility.Visible);
         SaveSettings();
     }
@@ -93,6 +99,14 @@ public partial class MainWindow
             }
 
             _terminalPaneOpen = true;
+            // A normal open (toolbar / Ctrl+J / context menu) wants the
+            // interactive shell. Opening only to show a command's Output tab sets
+            // _suppressShellActivate, in which case no shell is started until the
+            // user actually views the Shell tab.
+            if (!_suppressShellActivate)
+            {
+                _shellRequested = true;
+            }
             var h = _settings.TerminalPaneHeight;
             TerminalRow.Height = new GridLength(h >= 80 ? h : 220, GridUnitType.Pixel);
             TerminalSplitter.Visibility = Visibility.Visible;
@@ -109,7 +123,12 @@ public partial class MainWindow
                     PostToTerminal(new { type = "reset" });
                 }
                 Terminal.Focus();
-                PostToTerminal(new { type = "focus" });
+                // When the pane was opened to run a command in the Output tab,
+                // don't steal focus back to the Shell tab.
+                if (!_suppressShellActivate)
+                {
+                    PostToTerminal(new { type = "focus" });
+                }
             }, DispatcherPriority.Input);
         }
         else
@@ -289,7 +308,7 @@ public partial class MainWindow
             case "resize":
                 _terminalCols = (short)Math.Clamp(msg.cols, 1, 1000);
                 _terminalRows = (short)Math.Clamp(msg.rows, 1, 1000);
-                StartOrResizePty();
+                StartOrResizePty("resize");
                 break;
             case "input":
                 if (!string.IsNullOrEmpty(msg.dataB64) && _terminalPty is not null)
@@ -303,15 +322,25 @@ public partial class MainWindow
                 }
                 break;
             case "ready":
-                PostToTerminal(new { type = "focus" });
+                // Don't force the Shell tab when the pane was opened to show a
+                // command's Output (the page applies its own pendingActivate).
+                if (!_suppressShellActivate)
+                {
+                    PostToTerminal(new { type = "focus" });
+                }
+                break;
+            case "shellActivated":
+                // The user clicked the Shell tab. Start the shell lazily if it
+                // isn't running yet (the pane may have opened only for Output) and
+                // stop suppressing Shell-tab focus.
+                _suppressShellActivate = false;
+                _shellRequested = true;
+                _terminalCols = (short)Math.Clamp(msg.cols, 1, 1000);
+                _terminalRows = (short)Math.Clamp(msg.rows, 1, 1000);
+                StartOrResizePty("shellActivated");
                 break;
             case "error":
                 SetStatus(Loc.F("Terminal failed to start: {0}", msg.message ?? "script error"));
-                break;
-            case "log":
-                // Temporary: surfaces terminal key-handling diagnostics in the
-                // status bar so Ctrl+C routing can be verified.
-                SetStatus(msg.message ?? "");
                 break;
         }
     }
@@ -407,7 +436,7 @@ public partial class MainWindow
     /// Starts the pseudo console once we know the grid size, or resizes the
     /// existing one. Called on every "resize" message from the page.
     /// </summary>
-    private void StartOrResizePty()
+    private void StartOrResizePty(string reason = "?")
     {
         if (_terminalPty is not null)
         {
@@ -415,10 +444,12 @@ public partial class MainWindow
             return;
         }
 
-        // Don't spawn a shell for resize messages that arrive while the pane is
-        // closed (e.g. xterm re-fitting after a reset). A new shell is created
-        // only when the pane is actually open.
-        if (!_terminalPaneOpen)
+        // Only spawn a shell when one is actually wanted — the pane is open AND
+        // the interactive Shell tab has been requested. Opening the pane just to
+        // show a command's Output tab must not start a shell (it would be an
+        // unused ConPTY session). The shell starts lazily when the user views the
+        // Shell tab (see "shellActivated" from the page).
+        if (!_terminalPaneOpen || !_shellRequested)
         {
             return;
         }
@@ -497,6 +528,9 @@ public partial class MainWindow
     /// </summary>
     private void DisposeTerminalIfAny()
     {
+        // The shell is gone; the next open must explicitly request it again (so
+        // reopening only for command Output doesn't resurrect a shell).
+        _shellRequested = false;
         if (_terminalPty is not null)
         {
             _terminalPty.OutputReceived -= OnTerminalPtyOutput;
@@ -605,4 +639,90 @@ public partial class MainWindow
     /// <summary>Double-quotes a path if it contains whitespace.</summary>
     private static string QuoteShellPath(string path) =>
         path.Any(char.IsWhiteSpace) ? $"\"{path}\"" : path;
+
+    /// <summary>
+    /// Runs a user-defined command (with <c>terminal = true</c>) and streams its
+    /// stdout / stderr into the terminal pane's read-only **Output** tab. Opens
+    /// the pane and activates the Output tab; the command runs with redirected
+    /// output (no separate console window).
+    /// </summary>
+    private void RunCommandInTerminal(UserCommand command, IReadOnlyList<FileItem> selection, string cwd)
+    {
+        if (!IsWebView2RuntimeAvailable())
+        {
+            SetStatus(Loc.T("Built-in terminal needs the Microsoft Edge WebView2 Runtime. Install it from https://go.microsoft.com/fwlink/p/?LinkId=2124703"));
+            return;
+        }
+
+        // Opening the pane normally focuses the Shell tab (and a reopen sends a
+        // "reset" that re-activates Shell). Suppress that here so the Output tab
+        // we switch to below isn't immediately overridden.
+        _suppressShellActivate = true;
+        if (TerminalHost.Visibility != Visibility.Visible)
+        {
+            SetTerminalVisible(true);
+            SaveSettings();
+        }
+
+        // The xterm page loads asynchronously; activate / output messages sent
+        // before it signals "ready" are dropped. Wait for readiness, then switch
+        // to the Output tab and stream the command's output there.
+        RunWhenTerminalReady(() => RunCommandCaptured(command, selection, cwd));
+    }
+
+    private void RunCommandCaptured(UserCommand command, IReadOnlyList<FileItem> selection, string cwd)
+    {
+        // Keep _suppressShellActivate set while showing command output so a late
+        // "ready" focus message can't pull focus back to the Shell tab. It is
+        // cleared on the next user-driven open (ToggleTerminalPane) or when the
+        // user clicks the Shell tab.
+        PostToTerminal(new { type = "activate", target = "output" });
+
+        // Header line so successive runs are distinguishable in the Output tab.
+        WriteOutputTab($"[90m$ {command.Name}[0m");
+
+        var ok = CommandRunner.RunCaptured(
+            command, selection, cwd, ScriptsDirectory(),
+            onLine: l => Dispatcher.BeginInvoke(() => WriteOutputTab(l)),
+            onExit: () => Dispatcher.BeginInvoke(() => WriteOutputTab("")),
+            out var error);
+
+        if (!ok)
+        {
+            SetStatus(Loc.F("Command failed: {0}", error ?? command.Name));
+        }
+    }
+
+    /// <summary>
+    /// Runs <paramref name="action"/> once the xterm page has signalled it is
+    /// ready (so posted messages aren't dropped). Ensures the WebView is starting,
+    /// then polls a short-interval timer; gives up after a few seconds.
+    /// </summary>
+    private void RunWhenTerminalReady(Action action, int attempt = 0)
+    {
+        _ = EnsureTerminalWebViewAsync();
+        if (_terminalWebReady)
+        {
+            action();
+            return;
+        }
+        if (attempt > 100) // ~5s at 50ms.
+        {
+            return;
+        }
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            RunWhenTerminalReady(action, attempt + 1);
+        };
+        timer.Start();
+    }
+
+    /// <summary>Writes one line (+ CRLF) to the read-only Output tab of the pane.</summary>
+    private void WriteOutputTab(string line)
+    {
+        var b64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(line + "\r\n"));
+        PostToTerminal(new { type = "output", target = "output", dataB64 = b64 });
+    }
 }
