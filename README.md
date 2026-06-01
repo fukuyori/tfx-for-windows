@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.6.7
+Version: 0.6.8
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -56,7 +56,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.7 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.6.8 |
 +---------------------------------------------------------------------+
 ```
 
@@ -259,6 +259,10 @@ Requires .NET 10 SDK and Windows 10 / 11.
 ```powershell
 dotnet build
 ```
+
+### Runtime prerequisite: Microsoft Edge WebView2 Runtime
+
+The built-in terminal pane and the Markdown / HTML preview render with WebView2, so the **Microsoft Edge WebView2 Runtime** must be installed. It is preinstalled on Windows 11 and on up-to-date Windows 10, but may be missing on a clean Windows 10 image. If it is absent, opening the terminal pane shows a status-bar hint and the preview falls back to source view. Install the Evergreen runtime from <https://go.microsoft.com/fwlink/p/?LinkId=2124703> (or <https://developer.microsoft.com/microsoft-edge/webview2/>).
 
 Run:
 

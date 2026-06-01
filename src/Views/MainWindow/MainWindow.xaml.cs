@@ -259,9 +259,16 @@ public partial class MainWindow : Window
         ReloadButton.ToolTip = Loc.F("Reload ({0})", ShortcutText("reload"));
         PreviewButton.ToolTip = Loc.F("Toggle preview ({0})", ShortcutText("togglePreview"));
         RenderedToggle.ToolTip = Loc.T("Show rendered preview");
+        LoadImagesButton.ToolTip = Loc.T("Load external images for this preview (not remembered)");
         SplitButton.ToolTip = Loc.F("Toggle split pane ({0})", ShortcutText("toggleSplit"));
         SwapPanesButton.ToolTip = Loc.F("Swap left and right panes ({0})", ShortcutText("swapPanes"));
         ColumnsButton.ToolTip = Loc.T("Columns");
+        TerminalPaneButton.ToolTip = Loc.F("Toggle terminal pane ({0})", ShortcutText("toggleTerminal"));
+        TerminalInterruptButton.ToolTip = Loc.T("Interrupt (send Ctrl+C)");
+        TerminalCloseButton.ToolTip = Loc.F("Close terminal ({0})", ShortcutText("toggleTerminal"));
+        MinimizeButton.ToolTip = Loc.T("Minimize");
+        MaximizeRestoreButton.ToolTip = Loc.T("Maximize / restore");
+        CloseButton.ToolTip = Loc.T("Close");
         PinnedHeader.Text = Loc.T("PINNED");
         FoldersHeader.Text = Loc.T("FOLDERS");
         PreviewHeader.Text = Loc.T("PREVIEW");

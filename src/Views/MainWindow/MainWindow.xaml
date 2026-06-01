@@ -153,13 +153,13 @@
                             </Grid>
                         </Viewbox>
                     </Button>
-                    <ToggleButton x:Name="TerminalPaneButton" Style="{StaticResource ToolbarToggleButton}" Click="TerminalPane_Click" ToolTip="Toggle terminal pane (Ctrl+J)" Content="&#xE756;" />
+                    <ToggleButton x:Name="TerminalPaneButton" Style="{StaticResource ToolbarToggleButton}" Click="TerminalPane_Click" Content="&#xE756;" />
                     <Button Style="{StaticResource ToolbarButton}" x:Name="ColumnsButton" Click="Columns_Click" ToolTip="Columns" Content="&#xE713;" />
                 </StackPanel>
                 <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="8,0,0,0">
-                    <Button Style="{StaticResource ToolbarButton}" Click="Minimize_Click" ToolTip="Minimize" Content="&#xE921;" />
-                    <Button Style="{StaticResource ToolbarButton}" Click="MaximizeRestore_Click" ToolTip="Maximize / restore" Content="&#xE922;" />
-                    <Button Style="{StaticResource ToolbarButton}" Click="Close_Click" ToolTip="Close" Content="&#xE8BB;" />
+                    <Button x:Name="MinimizeButton" Style="{StaticResource ToolbarButton}" Click="Minimize_Click" Content="&#xE921;" />
+                    <Button x:Name="MaximizeRestoreButton" Style="{StaticResource ToolbarButton}" Click="MaximizeRestore_Click" Content="&#xE922;" />
+                    <Button x:Name="CloseButton" Style="{StaticResource ToolbarButton}" Click="Close_Click" Content="&#xE8BB;" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -421,6 +421,8 @@
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="10,8,8,4">
                         <ToggleButton x:Name="RenderedToggle" DockPanel.Dock="Right" Style="{StaticResource ToolbarToggleButton}" Click="RenderedToggle_Click" Content="&#xE7B3;" Visibility="Collapsed" />
+                        <Button x:Name="LoadImagesButton" DockPanel.Dock="Right" Style="{StaticResource ToolbarButton}" Click="LoadImages_Click"
+                                Content="&#xE8B9;" Visibility="Collapsed" Margin="0,0,10,0" />
                         <TextBlock x:Name="PreviewHeader" Text="PREVIEW" Foreground="{DynamicResource TfxMuted}" VerticalAlignment="Center" />
                     </DockPanel>
                     <Grid>
@@ -454,9 +456,9 @@
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Background="{DynamicResource TfxChrome}" LastChildFill="True">
                     <Button x:Name="TerminalCloseButton" DockPanel.Dock="Right" Style="{StaticResource ToolbarButton}"
-                            Click="TerminalClose_Click" ToolTip="Close terminal (Ctrl+J)" Content="&#xE8BB;" Margin="0,2,4,2" />
+                            Click="TerminalClose_Click" Content="&#xE8BB;" Margin="0,2,4,2" />
                     <Button x:Name="TerminalInterruptButton" DockPanel.Dock="Left"
-                            Click="TerminalInterrupt_Click" ToolTip="Interrupt (send Ctrl+C)"
+                            Click="TerminalInterrupt_Click"
                             Content="^C" FontFamily="Consolas, Yu Gothic UI" FontWeight="Bold"
                             Foreground="{DynamicResource TfxForeground}"
                             Background="{DynamicResource TfxInput}"

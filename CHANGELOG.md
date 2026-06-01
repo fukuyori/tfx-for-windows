@@ -1,6 +1,20 @@
 # Changelog
 
+## 0.6.8
+
+### Preview: load external images on demand
+
+- Markdown / HTML preview keeps blocking external network requests by default (`img-src data:` in the CSP), but a new **Load images** button in the preview header re-renders the current document with external `https:` images allowed (e.g. shields.io badges). The permission is **per-render and never remembered** — selecting any file, including re-selecting the same one, requires pressing the button again. Scripts, `fetch`, and external styles stay blocked.
+
+### Localization fixes
+
+- Fixed several tooltips that stayed English on a Japanese OS because they bypassed `ApplyLocalization` (XAML-literal tooltips) or used dictionary keys that didn't match the `({0})` placeholder form the code looks up: the toolbar navigation / search / hidden / terminal / reload / preview / split / swap buttons, the terminal-pane toggle, the window Minimize / Maximize / Close buttons, the terminal interrupt (`^C`) and close buttons, and the new Load-images button. All UI strings resolve to Japanese on a Japanese OS and to the English source text elsewhere.
+
 ## 0.6.7
+
+### WebView2 runtime check for the terminal
+
+- Opening the terminal pane now **checks for the Edge WebView2 Runtime** first (via `CoreWebView2Environment.GetAvailableBrowserVersionString`). On a clean Windows 10 without the runtime the pane used to open blank with no shell; it now shows a status-bar hint pointing to the runtime installer instead. The README documents the runtime as a prerequisite.
 
 ### Terminal copy / paste / interrupt
 

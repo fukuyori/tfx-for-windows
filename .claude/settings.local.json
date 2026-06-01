@@ -46,7 +46,12 @@
       "Bash(echo \"EXIT=$?\")",
       "Bash(grep -n \"toggleTerminal.*ctrl+j\\\\|| \\\\`toggleTerminal\\\\`\" docs/configuration.md docs/configuration.ja.md)",
       "Bash(powershell -Command \"Get-ChildItem Assets/terminal | Select-Object Name,Length\")",
-      "Bash(grep -n 'bytesToB64\\(\"\\\\\\\\\\\\\\\\x03\"\\)' bin/Debug/net10.0-windows10.0.19041.0/Assets/terminal/terminal.html)"
+      "Bash(grep -n 'bytesToB64\\(\"\\\\\\\\\\\\\\\\x03\"\\)' bin/Debug/net10.0-windows10.0.19041.0/Assets/terminal/terminal.html)",
+      "Bash(grep -rhoP 'Loc\\\\.[FT]\\\\\\(\\\\s*\"\\(\\\\\\\\.|[^\"\\\\\\\\]\\)*\"' src/)",
+      "Bash(python3 -)",
+      "Bash(python3 _locdiff.py)",
+      "Bash(rm -f _locdiff.py)",
+      "Bash(grep -rn \"Close terminal \\(Ctrl+\\\\`\\)\\\\|Toggle split pane \\(Ctrl\\\\|Show rendered Markdown\\\\|Reload \\(Ctrl+R\\)\" src/Services/Loc.cs)"
     ]
   }
 }

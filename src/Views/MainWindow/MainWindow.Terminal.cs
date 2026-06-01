@@ -31,6 +31,10 @@ public partial class MainWindow
         else
         {
             TerminalRow.Height = new GridLength(0);
+            if (!IsWebView2RuntimeAvailable())
+            {
+                return;
+            }
             // Warm up the WebView2 + xterm.js page in the background once the UI
             // is idle. The first open is otherwise slow because creating the
             // WebView2 runtime process and loading/parsing xterm happens only on
@@ -55,6 +59,17 @@ public partial class MainWindow
     {
         if (visible)
         {
+            // The terminal renders with xterm.js inside WebView2. If the Edge
+            // WebView2 Runtime isn't installed (common on a fresh Windows 10),
+            // the page can't load and the shell never appears. Detect this up
+            // front and tell the user how to fix it instead of showing a blank
+            // pane.
+            if (!IsWebView2RuntimeAvailable())
+            {
+                SetStatus(Loc.T("Built-in terminal needs the Microsoft Edge WebView2 Runtime. Install it from https://go.microsoft.com/fwlink/p/?LinkId=2124703"));
+                return;
+            }
+
             _terminalPaneOpen = true;
             var h = _settings.TerminalPaneHeight;
             TerminalRow.Height = new GridLength(h >= 80 ? h : 220, GridUnitType.Pixel);
@@ -117,6 +132,24 @@ public partial class MainWindow
     {
         _terminalWebInit ??= InitTerminalWebViewAsync();
         return _terminalWebInit;
+    }
+
+    /// <summary>
+    /// True if the Edge WebView2 Runtime is installed. Preinstalled on Windows
+    /// 11; may be absent on a clean Windows 10. Without it the terminal (and the
+    /// Markdown / HTML preview) can't render.
+    /// </summary>
+    private static bool IsWebView2RuntimeAvailable()
+    {
+        try
+        {
+            var version = CoreWebView2Environment.GetAvailableBrowserVersionString();
+            return !string.IsNullOrEmpty(version);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private async Task<bool> InitTerminalWebViewAsync()

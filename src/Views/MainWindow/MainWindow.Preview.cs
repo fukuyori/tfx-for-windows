@@ -22,6 +22,11 @@ public partial class MainWindow
     private const int MultiSelectionPreviewCap = 8;
 
     private FileItem? _previewItem;
+    // Allows external (https) images for the *current* preview render only. Reset
+    // on every UpdatePreview so the permission is never remembered — the user
+    // must press the "Load images" button again for each preview, even when
+    // re-selecting the same file.
+    private bool _allowExternalImagesOnce;
     private Task<bool>? _webViewInitTask;
     private DispatcherTimer? _previewDebounceTimer;
     private IReadOnlyList<FileItem> _pendingPreviewSelection = Array.Empty<FileItem>();
@@ -55,6 +60,13 @@ public partial class MainWindow
     private async void UpdatePreview(IReadOnlyList<FileItem> selection)
     {
         var cts = ReplacePreviewToken();
+        // The external-image permission is per-render and never remembered.
+        // Reset it here and hide the button; ShowRenderedAsync re-shows the
+        // button when it renders HTML-like content. The only way it's on for
+        // this render is the one-shot signal from LoadImages_Click.
+        _allowExternalImagesOnce = _renderWithExternalImagesNext;
+        _renderWithExternalImagesNext = false;
+        LoadImagesButton.Visibility = Visibility.Collapsed;
         ImagePreview.Visibility = Visibility.Collapsed;
         TextPreview.Visibility = Visibility.Collapsed;
         TextPreview.Text = "";
@@ -274,6 +286,11 @@ public partial class MainWindow
             }
             PreviewScroll.Visibility = Visibility.Collapsed;
             HtmlPreview.Visibility = Visibility.Visible;
+            // Offer the one-shot "load external images" button. When the images
+            // are already loaded (button pressed) keep it hidden.
+            LoadImagesButton.Visibility = _allowExternalImagesOnce
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
         catch (Exception ex)
         {
@@ -451,16 +468,24 @@ img { max-width:100%; }
 """;
     }
 
-    private static string BuildMarkdownDocument(string bodyHtml, string css)
+    private string BuildMarkdownDocument(string bodyHtml, string css)
     {
         // Defense-in-depth CSP: even though DisableHtml() strips inline scripts
         // and `javascript:` URLs at the Markdig level, set a strict policy in
         // case some future pipeline change re-enables raw HTML. Allows our own
         // inline <style> block but forbids scripts entirely and blocks all
         // network fetches (so a leak-via-image / fetch is impossible).
-        const string csp = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';";
+        var csp = $"default-src 'none'; {ImgSrcDirective()} style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';";
         return $"<!doctype html><html><head><meta charset='utf-8'><meta http-equiv='Content-Security-Policy' content=\"{csp}\"><style>{css}</style></head><body>{bodyHtml}</body></html>";
     }
+
+    /// <summary>
+    /// The CSP <c>img-src</c> directive for the preview. Data URIs are always
+    /// allowed; external <c>https:</c> images are added only when the user pressed
+    /// "Load images" for the current render (never remembered).
+    /// </summary>
+    private string ImgSrcDirective() =>
+        _allowExternalImagesOnce ? "img-src data: https:;" : "img-src data:;";
 
     private string ColorSchemeForCss()
     {
@@ -490,9 +515,9 @@ img { max-width:100%; }
     /// the settings level (see <see cref="InitWebViewAsync"/>), so this is a
     /// belt-and-braces measure for the rendered view.
     /// </summary>
-    private static string BuildHtmlPreviewDocument(string htmlSource)
+    private string BuildHtmlPreviewDocument(string htmlSource)
     {
-        const string csp = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';";
+        var csp = $"default-src 'none'; {ImgSrcDirective()} style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';";
         // Wrap the original document inside our shell — the CSP <meta> in the
         // head we control wins because it appears first.
         return $"<!doctype html><html><head><meta charset='utf-8'><meta http-equiv='Content-Security-Policy' content=\"{csp}\"></head><body>{htmlSource}</body></html>";
@@ -560,4 +585,26 @@ img { max-width:100%; }
         SaveSettings();
         UpdatePreview(_previewItem is null ? Array.Empty<FileItem>() : new[] { _previewItem });
     }
+
+    /// <summary>
+    /// Re-renders the current preview with external (https) images allowed, for
+    /// this render only. UpdatePreview resets the flag, so selecting any file
+    /// (including re-selecting this one) requires pressing the button again.
+    /// </summary>
+    private void LoadImages_Click(object sender, RoutedEventArgs e)
+    {
+        if (_previewItem is null)
+        {
+            return;
+        }
+        // Re-run the preview pipeline (resets the flag), then turn it on and
+        // re-render this item. A direct flag set + re-render is enough because
+        // UpdatePreview reads _allowExternalImagesOnce when it builds the CSP.
+        _renderWithExternalImagesNext = true;
+        UpdatePreview(new[] { _previewItem });
+    }
+
+    // One-shot signal from LoadImages_Click to UpdatePreview: render the upcoming
+    // (single) preview with external images enabled. Consumed immediately.
+    private bool _renderWithExternalImagesNext;
 }
