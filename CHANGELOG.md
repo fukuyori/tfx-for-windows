@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.4
+
+### Fixes
+
+- **No more intermittent UI freezes from Git status**: refreshing a pane's Git badges spawned `git status` and **blocked the UI thread** until it finished (the `async` reader did its process spawn and an 8s blocking `Wait` before its first `await`). This fired on every navigation, tab switch and external change (terminal command → auto-refresh), so on large or Dropbox/network-hosted repos — especially with `core.fsmonitor` disabled — the window froze for the duration of each `git status`. The work now runs fully off the UI thread (`Task.Run`) with a non-blocking `WaitAsync` timeout.
+
 ## 0.7.3
 
 ### Fixes

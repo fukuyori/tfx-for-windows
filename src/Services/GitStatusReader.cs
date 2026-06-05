@@ -135,19 +135,22 @@ internal static class GitStatusReader
 
             try
             {
-                if (!waitTask.Wait(TimeSpan.FromSeconds(8)))
-                {
-                    try { process.Kill(entireProcessTree: true); } catch { }
-                    return null;
-                }
+                // Await (never block) the exit, with an 8s cap. Blocking here with
+                // waitTask.Wait(...) would stall the calling thread for the whole
+                // duration of `git status`; since this is awaited from the UI
+                // thread, that froze the window on slow/large repos.
+                await waitTask.WaitAsync(TimeSpan.FromSeconds(8), cancellationToken);
             }
-            catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
+            catch (TimeoutException)
             {
                 try { process.Kill(entireProcessTree: true); } catch { }
-                cancellationToken.ThrowIfCancellationRequested();
+                return null;
             }
-
-            cancellationToken.ThrowIfCancellationRequested();
+            catch (OperationCanceledException)
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+                throw;
+            }
 
             if (process.ExitCode != 0)
             {

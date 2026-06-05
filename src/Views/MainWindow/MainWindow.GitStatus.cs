@@ -65,7 +65,11 @@ public partial class MainWindow
         GitWorkingCopyStatus? status;
         try
         {
-            status = await GitStatusReader.ReadAsync(root, cts.Token);
+            // Run off the UI thread: ReadAsync spawns `git status` and the
+            // process spawn itself (before its first await) would otherwise run
+            // synchronously on the caller. This handler is invoked on the UI
+            // thread for every navigation, tab switch and external change.
+            status = await Task.Run(() => GitStatusReader.ReadAsync(root, cts.Token), cts.Token);
         }
         catch (OperationCanceledException)
         {
