@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.3
+
+### Fixes
+
+- **No more white strip after an auto-refresh delete**: deleting a file from the embedded terminal (or any external change) triggers an incremental list refresh that mutates the `ObservableCollection` with `Move`/`Insert`/`Remove`. The file-list `DataGrid` used the default container *recycling*, which left a ghost white strip at the left edge of the top viewport rows. Both panes now use `VirtualizingPanel.VirtualizationMode="Standard"`, so recycled containers no longer carry over stale visuals. Row virtualization is unchanged (only visible rows are realized).
+
 ## 0.7.2
 
 ### Fixes
