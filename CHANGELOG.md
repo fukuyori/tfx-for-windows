@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.5
+
+### Window & preview layout
+
+- **Resize works while previewing Markdown / HTML**: the preview pane could grow wider than the window (its column width plus the sidebar and the main pane's minimum exceeded the client area), so the preview `WebView2` — a child HWND — spilled over the right edge and covered the window's resize grip. The preview column is now clamped to the available width on every size change, so it never overflows and the resize grips stay reachable.
+- **Showing the preview no longer moves or resizes the window**: toggling the preview used to grow the window to the right (and shift it left near a screen edge) to keep the file panes a constant width. It now simply splits the existing width — the window position and size never change.
+- **Maximize respects the work area**: the borderless window maximized over the taskbar; a `WM_GETMINMAXINFO` handler now constrains the maximized bounds to the monitor work area.
+- **Smaller minimum window size**: the floor dropped from 980×560 to 560×360 (the main file-pane column minimum was lowered from 420 to 240).
+- **Preview header tidy-up**: the rendered-view toggle and the load-external-images button moved to the left of the preview header, and the "PREVIEW" label was removed.
+
 ## 0.7.4
 
 ### Fixes

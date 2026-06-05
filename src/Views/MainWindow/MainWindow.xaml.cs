@@ -273,7 +273,6 @@ public partial class MainWindow : Window
         CloseButton.ToolTip = Loc.T("Close");
         PinnedHeader.Text = Loc.T("PINNED");
         FoldersHeader.Text = Loc.T("FOLDERS");
-        PreviewHeader.Text = Loc.T("PREVIEW");
     }
 
     private void LoadSettings()
@@ -765,6 +764,8 @@ public partial class MainWindow : Window
     private const int DBT_DEVICEARRIVAL = 0x8000;
     private const int DBT_DEVICEREMOVECOMPLETE = 0x8004;
     private const int DBT_DEVNODES_CHANGED = 0x0007;
+    private const int WM_GETMINMAXINFO = 0x0024;
+    private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
     private DispatcherTimer? _driveRefreshDebounce;
 
     private void HookDeviceChange()
@@ -776,6 +777,14 @@ public partial class MainWindow : Window
 
     private IntPtr DeviceChangeHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (msg == WM_GETMINMAXINFO)
+        {
+            // A borderless (WindowStyle=None) window maximizes to the full
+            // monitor and covers the taskbar. Constrain the maximized
+            // size/position to the monitor work area instead.
+            ConstrainMaximizeToWorkArea(hwnd, lParam);
+            return IntPtr.Zero;
+        }
         if (msg != WM_DEVICECHANGE)
         {
             return IntPtr.Zero;
@@ -799,6 +808,72 @@ public partial class MainWindow : Window
         }
         return IntPtr.Zero;
     }
+
+    private static void ConstrainMaximizeToWorkArea(IntPtr hwnd, IntPtr lParam)
+    {
+        var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if (monitor == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(monitor, ref info))
+        {
+            return;
+        }
+
+        var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+        var work = info.rcWork;
+        var full = info.rcMonitor;
+        // Positions are relative to the monitor's top-left.
+        mmi.ptMaxPosition.X = work.left - full.left;
+        mmi.ptMaxPosition.Y = work.top - full.top;
+        mmi.ptMaxSize.X = work.right - work.left;
+        mmi.ptMaxSize.Y = work.bottom - work.top;
+        Marshal.StructureToPtr(mmi, lParam, true);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WinPoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public WinPoint ptReserved;
+        public WinPoint ptMaxSize;
+        public WinPoint ptMaxPosition;
+        public WinPoint ptMinTrackSize;
+        public WinPoint ptMaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WinRect
+    {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MONITORINFO
+    {
+        public int cbSize;
+        public WinRect rcMonitor;
+        public WinRect rcWork;
+        public uint dwFlags;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {

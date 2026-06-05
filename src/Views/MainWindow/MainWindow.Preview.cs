@@ -541,41 +541,55 @@ img { max-width:100%; }
         PreviewColumn.Width = visible ? new GridLength(previewWidth) : new GridLength(0);
         PreviewHost.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         PreviewButton.IsChecked = visible;
+        ClampPreviewWidth();
+    }
+
+    private void Window_SizeChanged(object sender, SizeChangedEventArgs e) => ClampPreviewWidth();
+
+    /// <summary>
+    /// Keeps the preview pane inside the window so it never overflows the right
+    /// edge — which would clip content and let the WebView2 (a child HWND) cover
+    /// the window's right resize grip. Caps the preview column to the space left
+    /// after the sidebar and the main pane's minimum width. Safe to run on every
+    /// size change: the window is no longer grown when the preview opens, so
+    /// there is no window-resize logic to fight, and it only ever shrinks the
+    /// column.
+    /// </summary>
+    private void ClampPreviewWidth()
+    {
+        if (PreviewColumn.Width.Value <= 0)
+        {
+            return; // preview hidden
+        }
+
+        var available = ActualWidth; // window width (client ≈ window for the borderless chrome)
+        if (available <= 0)
+        {
+            return; // not laid out yet
+        }
+
+        var sidebar = SidebarColumn.ActualWidth > 0 ? SidebarColumn.ActualWidth : SidebarColumn.Width.Value;
+        var splitters = PreviewSplitterColumn.Width.Value + 5; // preview splitter + sidebar splitter
+        var maxPreview = available - sidebar - splitters - MainPaneColumn.MinWidth;
+        if (maxPreview < PreviewColumn.MinWidth)
+        {
+            maxPreview = PreviewColumn.MinWidth;
+        }
+
+        if (PreviewColumn.Width.Value > maxPreview)
+        {
+            PreviewColumn.Width = new GridLength(maxPreview);
+        }
     }
 
     private void Preview_Click(object sender, RoutedEventArgs e) => TogglePreview();
 
     private void TogglePreview()
     {
+        // Fixed window, split width: toggling the preview only shows/hides the
+        // preview column. The window position and size never change; the main
+        // file pane (the star column) gives up / reclaims the width.
         var willBeVisible = PreviewColumn.Width.Value == 0;
-
-        // Grow the window to the right when showing the preview, and shrink
-        // it back by the same amount when hiding. This way the two file panes
-        // keep the same width regardless of whether the preview is open. Only
-        // applies to a normal window — when maximized we have no headroom to
-        // grow, so we fall back to the previous "share width" behaviour.
-        if (WindowState == WindowState.Normal)
-        {
-            var previewWidth = _settings.PreviewWidth >= 240 ? _settings.PreviewWidth : 320;
-            const double splitterWidth = 5;
-            var delta = previewWidth + splitterWidth;
-            var workArea = SystemParameters.WorkArea;
-
-            if (willBeVisible)
-            {
-                var newWidth = Math.Min(Width + delta, workArea.Width);
-                if (Left + newWidth > workArea.Right)
-                {
-                    Left = Math.Max(workArea.Left, workArea.Right - newWidth);
-                }
-                Width = newWidth;
-            }
-            else
-            {
-                Width = Math.Max(MinWidth, Width - delta);
-            }
-        }
-
         SetPreviewVisible(willBeVisible);
         SaveSettings();
     }

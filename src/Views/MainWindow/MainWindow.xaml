@@ -11,8 +11,8 @@
         AllowsTransparency="True"
         WindowStyle="None"
         ResizeMode="CanResizeWithGrip"
-        MinHeight="560"
-        MinWidth="980"
+        MinHeight="360"
+        MinWidth="560"
         Height="760"
         Width="1280"
         Background="{DynamicResource TfxBackground}"
@@ -20,6 +20,7 @@
         FontFamily="Consolas, Yu Gothic UI"
         KeyDown="Window_KeyDown"
         PreviewKeyDown="Window_PreviewKeyDown"
+        SizeChanged="Window_SizeChanged"
         Closing="Window_Closing">
     <Window.Resources>
         <Style x:Key="ListingCellText" TargetType="TextBlock">
@@ -193,7 +194,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="SidebarColumn" Width="260" MinWidth="180" />
                 <ColumnDefinition Width="5" />
-                <ColumnDefinition Width="*" MinWidth="420" />
+                <ColumnDefinition x:Name="MainPaneColumn" Width="*" MinWidth="240" />
                 <ColumnDefinition x:Name="PreviewSplitterColumn" Width="5" />
                 <ColumnDefinition x:Name="PreviewColumn" Width="320" MinWidth="240" />
             </Grid.ColumnDefinitions>
@@ -420,10 +421,11 @@
             <Border x:Name="PreviewHost" Grid.Column="4" Margin="0,8,8,8" Background="{DynamicResource TfxPanel}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="1">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="10,8,8,4">
-                        <ToggleButton x:Name="RenderedToggle" DockPanel.Dock="Right" Style="{StaticResource ToolbarToggleButton}" Click="RenderedToggle_Click" Content="&#xE7B3;" Visibility="Collapsed" />
-                        <Button x:Name="LoadImagesButton" DockPanel.Dock="Right" Style="{StaticResource ToolbarButton}" Click="LoadImages_Click"
-                                Content="&#xE8B9;" Visibility="Collapsed" Margin="0,0,10,0" />
-                        <TextBlock x:Name="PreviewHeader" Text="PREVIEW" Foreground="{DynamicResource TfxMuted}" VerticalAlignment="Center" />
+                        <ToggleButton x:Name="RenderedToggle" DockPanel.Dock="Left" Style="{StaticResource ToolbarToggleButton}" Click="RenderedToggle_Click" Content="&#xE7B3;" Visibility="Collapsed" />
+                        <Button x:Name="LoadImagesButton" DockPanel.Dock="Left" Style="{StaticResource ToolbarButton}" Click="LoadImages_Click"
+                                Content="&#xE8B9;" Visibility="Collapsed" Margin="6,0,0,0" />
+                        <!-- Empty filler keeps the buttons left-docked; the "PREVIEW" label was removed. -->
+                        <TextBlock x:Name="PreviewHeader" Foreground="{DynamicResource TfxMuted}" VerticalAlignment="Center" />
                     </DockPanel>
                     <Grid>
                         <ScrollViewer x:Name="PreviewScroll">
