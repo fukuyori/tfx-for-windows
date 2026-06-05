@@ -265,6 +265,8 @@ public partial class MainWindow : Window
         ColumnsButton.ToolTip = Loc.T("Columns");
         TerminalPaneButton.ToolTip = Loc.F("Toggle terminal pane ({0})", ShortcutText("toggleTerminal"));
         TerminalInterruptButton.ToolTip = Loc.T("Interrupt (send Ctrl+C)");
+        TerminalQuitButton.ToolTip = Loc.T("Quit (send Ctrl+\\)");
+        TerminalEofButton.ToolTip = Loc.T("EOF / suspend (send Ctrl+Z)");
         TerminalCloseButton.ToolTip = Loc.F("Close terminal ({0})", ShortcutText("toggleTerminal"));
         MinimizeButton.ToolTip = Loc.T("Minimize");
         MaximizeRestoreButton.ToolTip = Loc.T("Maximize / restore");

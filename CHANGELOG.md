@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.2
+
+### Fixes
+
+- **Reveal in Explorer no longer crashes**: the context-menu "Reveal in Explorer" command resolved `explorer.exe` under `System32`, where it does not exist, so launching it threw an unhandled `Win32Exception` and the app terminated. It now uses `%SystemRoot%\explorer.exe` (the Windows directory). The absolute-path hardening against a planted `explorer.exe` on `PATH` / in the CWD is preserved.
+
+### Terminal: more signal buttons
+
+- The terminal pane header now has **`^\` (Ctrl+\\, 0x1C / quit)** and **`^Z` (Ctrl+Z, 0x1A / EOF)** buttons next to the existing **`^C`** interrupt. They send the control byte straight to the running shell from C#, so they work even where the in-WebView2 keyboard equivalents aren't delivered.
+
 ## 0.7.1
 
 ### User-defined commands: shortcuts, finer tokens, multi-line scripts

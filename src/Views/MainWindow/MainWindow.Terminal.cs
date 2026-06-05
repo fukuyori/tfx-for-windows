@@ -566,14 +566,18 @@ public partial class MainWindow
         SaveSettings();
     }
 
-    /// <summary>
-    /// Sends an interrupt (Ctrl+C / ETX, 0x03) to the running shell. Exposed as a
-    /// header button because the keyboard Ctrl+C inside the WebView2 terminal is
-    /// not reliably delivered on all setups.
-    /// </summary>
-    private void TerminalInterrupt_Click(object sender, RoutedEventArgs e)
+    // Header buttons that send a control byte to the running shell. The keyboard
+    // equivalents inside the WebView2 terminal aren't reliably delivered on all
+    // setups, so these provide a dependable way to send the common signals.
+    //   Ctrl+C = 0x03 (ETX / interrupt), Ctrl+\ = 0x1C (FS / quit),
+    //   Ctrl+Z = 0x1A (SUB / EOF on Windows shells).
+    private void TerminalInterrupt_Click(object sender, RoutedEventArgs e) => SendTerminalControl(0x03);
+    private void TerminalQuit_Click(object sender, RoutedEventArgs e) => SendTerminalControl(0x1C);
+    private void TerminalEof_Click(object sender, RoutedEventArgs e) => SendTerminalControl(0x1A);
+
+    private void SendTerminalControl(byte controlByte)
     {
-        _terminalPty?.WriteBytes([0x03]);
+        _terminalPty?.WriteBytes([controlByte]);
         Terminal.Focus();
         PostToTerminal(new { type = "focus" });
     }

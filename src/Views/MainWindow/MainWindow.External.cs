@@ -49,9 +49,12 @@ public partial class MainWindow
             argument = currentPath;
         }
 
-        // Always invoke explorer.exe by its absolute System32 path so we never
-        // race a `explorer.exe` on PATH / in CWD that an attacker could plant.
-        var explorerExe = System.IO.Path.Combine(Environment.SystemDirectory, "explorer.exe");
+        // Always invoke explorer.exe by its absolute path in the Windows
+        // directory (e.g. C:\Windows\explorer.exe — it does NOT live in
+        // System32) so we never race a `explorer.exe` on PATH / in CWD that an
+        // attacker could plant.
+        var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        var explorerExe = System.IO.Path.Combine(windowsDir, "explorer.exe");
         Process.Start(new ProcessStartInfo(explorerExe, argument) { UseShellExecute = true });
     }
 

@@ -37,6 +37,8 @@ internal static class Loc
         ["Show rendered preview"] = "レンダリング表示",
         ["Load external images for this preview (not remembered)"] = "このプレビューで外部画像を読み込む（記憶しません）",
         ["Interrupt (send Ctrl+C)"] = "中断（Ctrl+C を送信）",
+        ["Quit (send Ctrl+\\)"] = "終了（Ctrl+\\ を送信）",
+        ["EOF / suspend (send Ctrl+Z)"] = "EOF / 中断（Ctrl+Z を送信）",
         ["Close terminal ({0})"] = "ターミナルを閉じる ({0})",
         ["Showing {0} of {1} rows"] = "{1} 行中 {0} 行を表示",
         ["Showing {0} of {1} columns"] = "{1} 列中 {0} 列を表示",

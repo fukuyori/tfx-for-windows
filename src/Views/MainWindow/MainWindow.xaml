@@ -464,6 +464,20 @@
                             Background="{DynamicResource TfxInput}"
                             BorderBrush="{DynamicResource TfxBorder}"
                             BorderThickness="1" Padding="8,1" Margin="8,3,0,3" Cursor="Hand" />
+                    <Button x:Name="TerminalQuitButton" DockPanel.Dock="Left"
+                            Click="TerminalQuit_Click"
+                            Content="^\" FontFamily="Consolas, Yu Gothic UI" FontWeight="Bold"
+                            Foreground="{DynamicResource TfxForeground}"
+                            Background="{DynamicResource TfxInput}"
+                            BorderBrush="{DynamicResource TfxBorder}"
+                            BorderThickness="1" Padding="8,1" Margin="4,3,0,3" Cursor="Hand" />
+                    <Button x:Name="TerminalEofButton" DockPanel.Dock="Left"
+                            Click="TerminalEof_Click"
+                            Content="^Z" FontFamily="Consolas, Yu Gothic UI" FontWeight="Bold"
+                            Foreground="{DynamicResource TfxForeground}"
+                            Background="{DynamicResource TfxInput}"
+                            BorderBrush="{DynamicResource TfxBorder}"
+                            BorderThickness="1" Padding="8,1" Margin="4,3,0,3" Cursor="Hand" />
                     <TextBlock Text="TERMINAL" Foreground="{DynamicResource TfxMuted}" Margin="10,4" VerticalAlignment="Center" />
                 </DockPanel>
                 <Grid x:Name="TerminalContent">
