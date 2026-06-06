@@ -221,6 +221,13 @@ rightFolders = ["~/Downloads", "~/Documents", "~/Desktop"]
 
 Paths can be absolute paths, environment-variable paths such as `%USERPROFILE%\Downloads`, or `~`-expanded user paths.
 
+`geometry` sets the startup window size and/or position in X11 style `[WxH][+X+Y]` (DIPs; a leading `-` on an offset anchors it to the right / bottom edge). It forces a normal (non-maximized) window. The `-g` / `--geometry` command-line option overrides it.
+
+```toml
+[startup]
+geometry = "1200x800+100+50"
+```
+
 ### `[shortcuts]`
 
 Shortcuts are written with Windows-native modifier names.

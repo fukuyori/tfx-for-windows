@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
@@ -20,6 +22,16 @@ public partial class MainWindow
     private bool _shellRequested;          // the interactive shell is actually wanted
     private Task<bool>? _terminalWebInit;
     private Task<CoreWebView2Environment>? _webView2EnvTask;
+
+    // "Sync file list to terminal folder" support: the button sends a built-in
+    // cwd-printing command to the shell, and the output is scanned for the
+    // marker line to drive the active pane.
+    private enum TerminalShellKind { PowerShell, Cmd, Bash }
+    private const string CwdMarker = "[tfx:cwd]";
+    private TerminalShellKind _terminalShellKind = TerminalShellKind.PowerShell;
+    private bool _cwdSyncPending;
+    private readonly List<byte> _cwdSyncBytes = new();
+    private DispatcherTimer? _cwdSyncTimer;
 
     /// <summary>
     /// Shared WebView2 environment for both the terminal and the preview. The
@@ -456,6 +468,7 @@ public partial class MainWindow
 
         var cwd = ResolveTerminalCwd();
         var commandLine = ResolveTerminalShell();
+        _terminalShellKind = DetectShellKind(commandLine);
         try
         {
             _terminalPty = new ConPty();
@@ -475,8 +488,135 @@ public partial class MainWindow
     private void OnTerminalPtyOutput(byte[] data)
     {
         var b64 = Convert.ToBase64String(data);
-        Dispatcher.BeginInvoke(() => PostToTerminal(new { type = "output", dataB64 = b64 }));
+        Dispatcher.BeginInvoke(() =>
+        {
+            PostToTerminal(new { type = "output", dataB64 = b64 });
+            if (_cwdSyncPending)
+            {
+                TryParseCwdSync(data);
+            }
+        });
     }
+
+    /// <summary>
+    /// Sends a built-in "print current directory" command to the running shell,
+    /// then (in <see cref="OnTerminalPtyOutput"/>) reads the marked output and
+    /// navigates the active file pane to that folder. The command and its output
+    /// stay visible in the terminal by design.
+    /// </summary>
+    private void TerminalSyncCwd_Click(object sender, RoutedEventArgs e)
+    {
+        if (_terminalPty is not { IsRunning: true })
+        {
+            return;
+        }
+
+        var command = _terminalShellKind switch
+        {
+            TerminalShellKind.Cmd => $"echo {CwdMarker} %CD%",
+            TerminalShellKind.Bash => $"printf '{CwdMarker} %s\\n' \"$PWD\"",
+            _ => $"Write-Output (\"{CwdMarker} \" + $PWD.ProviderPath)",
+        };
+
+        BeginCwdSync();
+        try
+        {
+            _terminalPty.WriteBytes(Encoding.UTF8.GetBytes(command + "\r"));
+        }
+        catch
+        {
+            EndCwdSync();
+        }
+        Terminal.Focus();
+    }
+
+    private static TerminalShellKind DetectShellKind(string commandLine)
+    {
+        var s = commandLine.ToLowerInvariant();
+        if (s.Contains("pwsh") || s.Contains("powershell"))
+        {
+            return TerminalShellKind.PowerShell;
+        }
+        if (s.Contains("bash") || s.Contains("wsl") || s.Contains("git\\bin\\sh") || s.Contains("/sh"))
+        {
+            return TerminalShellKind.Bash;
+        }
+        if (s.Contains("cmd"))
+        {
+            return TerminalShellKind.Cmd;
+        }
+        return TerminalShellKind.PowerShell; // default shell is PowerShell
+    }
+
+    private void BeginCwdSync()
+    {
+        _cwdSyncPending = true;
+        _cwdSyncBytes.Clear();
+        if (_cwdSyncTimer is null)
+        {
+            _cwdSyncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            _cwdSyncTimer.Tick += (_, _) => EndCwdSync();
+        }
+        _cwdSyncTimer.Stop();
+        _cwdSyncTimer.Start();
+    }
+
+    private void EndCwdSync()
+    {
+        _cwdSyncPending = false;
+        _cwdSyncBytes.Clear();
+        _cwdSyncTimer?.Stop();
+    }
+
+    private void TryParseCwdSync(byte[] data)
+    {
+        _cwdSyncBytes.AddRange(data);
+        if (_cwdSyncBytes.Count > 65536)
+        {
+            EndCwdSync();
+            return;
+        }
+
+        var text = Encoding.UTF8.GetString(_cwdSyncBytes.ToArray());
+        var idx = 0;
+        while ((idx = text.IndexOf(CwdMarker, idx, StringComparison.Ordinal)) >= 0)
+        {
+            var start = idx + CwdMarker.Length;
+            var end = text.IndexOfAny(new[] { '\r', '\n' }, start);
+            if (end < 0)
+            {
+                break; // the marker line hasn't fully arrived yet
+            }
+
+            var candidate = StripAnsi(text[start..end]).Trim().Trim('"');
+            if (candidate.Length > 0 && !ArchivePath.Contains(candidate))
+            {
+                try
+                {
+                    if (Directory.Exists(candidate))
+                    {
+                        var full = Path.GetFullPath(candidate);
+                        EndCwdSync();
+                        if (!string.Equals(GetCurrentPath(_activeGrid), full, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Navigate(_activeGrid, full, true);
+                        }
+                        return;
+                    }
+                }
+                catch
+                {
+                    // ignore and keep scanning
+                }
+            }
+            idx = end;
+        }
+    }
+
+    private static string StripAnsi(string s) =>
+        s.IndexOf('\x1b') < 0
+            ? s
+            : System.Text.RegularExpressions.Regex.Replace(s, "\x1b\\[[0-9;?]*[ -/]*[@-~]", "");
 
     private void OnTerminalExited()
     {

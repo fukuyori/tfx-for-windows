@@ -22,6 +22,7 @@ public sealed class StartupOptions
     public Toggle Preview { get; private set; } = Toggle.Unset;
     public Toggle Terminal { get; private set; } = Toggle.Unset;
     public string? FolderPath { get; private set; }
+    public WindowGeometry? Geometry { get; private set; }
     public bool ShowHelp { get; private set; }
     public bool HasError { get; private set; }
     public string? ErrorMessage { get; private set; }
@@ -29,8 +30,9 @@ public sealed class StartupOptions
     public static StartupOptions Parse(string[] args)
     {
         var o = new StartupOptions();
-        foreach (var raw in args)
+        for (var i = 0; i < args.Length; i++)
         {
+            var raw = args[i];
             if (string.IsNullOrEmpty(raw))
             {
                 continue;
@@ -39,6 +41,30 @@ public sealed class StartupOptions
             if (raw is "-h" or "--help" or "/?" or "/h")
             {
                 o.ShowHelp = true;
+            }
+            // Geometry takes a value: -g/-geometry/--geometry <value>, or =/attached forms.
+            else if (raw is "-g" or "-geometry" or "--geometry")
+            {
+                if (i + 1 < args.Length)
+                {
+                    o.SetGeometry(args[++i]);
+                }
+                else
+                {
+                    o.SetError($"Missing value for {raw}");
+                }
+            }
+            else if (raw.StartsWith("--geometry=", StringComparison.Ordinal))
+            {
+                o.SetGeometry(raw["--geometry=".Length..]);
+            }
+            else if (raw.StartsWith("-geometry=", StringComparison.Ordinal))
+            {
+                o.SetGeometry(raw["-geometry=".Length..]);
+            }
+            else if (raw.StartsWith("-g", StringComparison.Ordinal) && raw.Length > 2 && raw != "-geometry")
+            {
+                o.SetGeometry(raw[2..]); // attached: -g1200x800
             }
             else if (raw.StartsWith("--", StringComparison.Ordinal))
             {
@@ -57,6 +83,18 @@ public sealed class StartupOptions
             }
         }
         return o;
+    }
+
+    private void SetGeometry(string value)
+    {
+        if (WindowGeometry.TryParse(value, out var geometry))
+        {
+            Geometry = geometry;
+        }
+        else
+        {
+            SetError($"Invalid geometry: {value} (expected e.g. 1200x800 or 1200x800+100+50)");
+        }
     }
 
     private void ApplyLong(string name)
@@ -111,6 +149,8 @@ public sealed class StartupOptions
         "  -P, --no-preview    Hide the preview pane\r\n" +
         "  -t, --terminal      Show the built-in terminal\r\n" +
         "  -T, --no-terminal   Hide the built-in terminal\r\n" +
+        "  -g, --geometry G    Window geometry [WxH][+X+Y] (DIPs; -X/-Y = from right/bottom)\r\n" +
+        "                      e.g. -g 1200x800  |  --geometry=1200x800+100+50\r\n" +
         "\r\n" +
         "  [folder]            Open this folder in the left pane (supports ~ and %VARS%)\r\n" +
         "\r\n" +

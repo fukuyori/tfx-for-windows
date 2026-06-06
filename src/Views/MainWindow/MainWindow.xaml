@@ -480,6 +480,8 @@
                             Background="{DynamicResource TfxInput}"
                             BorderBrush="{DynamicResource TfxBorder}"
                             BorderThickness="1" Padding="8,1" Margin="4,3,0,3" Cursor="Hand" />
+                    <Button x:Name="TerminalSyncCwdButton" DockPanel.Dock="Left" Style="{StaticResource ToolbarButton}"
+                            Click="TerminalSyncCwd_Click" Content="&#xE838;" Margin="8,2,0,2" />
                     <TextBlock Text="TERMINAL" Foreground="{DynamicResource TfxMuted}" Margin="10,4" VerticalAlignment="Center" />
                 </DockPanel>
                 <Grid x:Name="TerminalContent">

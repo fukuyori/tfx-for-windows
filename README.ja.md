@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 読み方: **Tafix**
-Version: 0.7.6
+Version: 0.7.7
 
 [English](README.md) | 日本語
 
@@ -100,8 +100,9 @@ tfx [options] [folder]
 | `-P` | `--no-preview` | プレビューペインを非表示 |
 | `-t` | `--terminal` | 内蔵ターミナルを表示 |
 | `-T` | `--no-terminal` | 内蔵ターミナルを非表示 |
+| `-g G` | `--geometry=G` | ウィンドウ位置/サイズ `[幅x高さ][+X+Y]`（DIP、`-X`/`-Y` は右端/下端基準）。例 `1200x800+100+50` |
 
-末尾の `[folder]` は左ペインに開くフォルダ（`~` と `%VAR%` 展開対応）。短縮フラグは結合可（例 `-2Pt`）。コマンドラインオプションは `config.toml [startup]` や保存済みセッションより優先されます。
+末尾の `[folder]` は左ペインに開くフォルダ（`~` と `%VAR%` 展開対応）。短縮フラグは結合可（例 `-2Pt`）。コマンドラインオプションは `config.toml [startup]` や保存済みセッションより優先されます。ジオメトリ指定時は最大化を解除して配置します。
 
 例 — 分割・プレビュー非表示・ターミナル表示で `~/Downloads` を左ペインに:
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.7
+
+### Window geometry option
+
+- New `-g` / `--geometry` startup option in X11 style `[WxH][+X+Y]`, e.g. `tfx -g 1200x800+100+50` or `tfx --geometry=1000x700-0-0`. Each half is optional; a leading `-` on an offset anchors it to the right / bottom edge. Sizes are in DIPs (= physical pixels at 100% scale). Specifying a geometry forces a normal (non-maximized) window and is clamped to the minimum size and the work area. Also settable in `config.toml` as `[startup] geometry = "..."`. Precedence: `-g` > config > saved session.
+
+### Built-in terminal: sync file list to terminal folder
+
+- New folder button in the terminal pane header sends a built-in "print current directory" command to the shell (`[tfx:cwd] <path>`), reads it back from the output, and navigates the **active** file pane there. Per-shell command (PowerShell / cmd / bash); the command and its output stay visible in the terminal.
+
 ## 0.7.6
 
 ### Built-in terminal: UTF-8 output

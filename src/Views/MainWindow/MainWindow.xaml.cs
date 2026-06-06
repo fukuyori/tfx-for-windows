@@ -306,6 +306,7 @@ public partial class MainWindow : Window
         TerminalInterruptButton.ToolTip = Loc.T("Interrupt (send Ctrl+C)");
         TerminalQuitButton.ToolTip = Loc.T("Quit (send Ctrl+\\)");
         TerminalEofButton.ToolTip = Loc.T("EOF / suspend (send Ctrl+Z)");
+        TerminalSyncCwdButton.ToolTip = Loc.T("Set the active file pane to the terminal's current folder");
         TerminalCloseButton.ToolTip = Loc.F("Close terminal ({0})", ShortcutText("toggleTerminal"));
         MinimizeButton.ToolTip = Loc.T("Minimize");
         MaximizeRestoreButton.ToolTip = Loc.T("Maximize / restore");
@@ -713,10 +714,52 @@ public partial class MainWindow : Window
         {
             WindowState = WindowState.Maximized;
         }
+
+        // Window geometry: command line (-g / --geometry) wins over config
+        // [startup] geometry. Applied last so it overrides the saved bounds and
+        // forces a normal (non-maximized) window.
+        var geometry = _startupOptions.Geometry ?? _config.Startup.Geometry;
+        if (geometry is not null)
+        {
+            ApplyGeometry(geometry);
+        }
+
         HiddenButton.IsChecked = _settings.ShowHidden;
         ApplyColumnVisibility();
         ApplyColumnOrder();
         ApplyViewMode();
+    }
+
+    private void ApplyGeometry(WindowGeometry g)
+    {
+        // Geometry implies a specific normal window, so drop maximize.
+        WindowState = WindowState.Normal;
+        var work = SystemParameters.WorkArea;
+
+        var width = g.Width ?? (Width > 0 ? Width : 1280);
+        var height = g.Height ?? (Height > 0 ? Height : 760);
+        width = Math.Clamp(width, MinWidth, Math.Max(MinWidth, work.Width));
+        height = Math.Clamp(height, MinHeight, Math.Max(MinHeight, work.Height));
+        if (g.Width.HasValue)
+        {
+            Width = width;
+        }
+        if (g.Height.HasValue)
+        {
+            Height = height;
+        }
+
+        if (g.HasPosition)
+        {
+            var left = g.FromRight ? work.Right - width - g.OffsetX!.Value : work.Left + g.OffsetX!.Value;
+            var top = g.FromBottom ? work.Bottom - height - g.OffsetY!.Value : work.Top + g.OffsetY!.Value;
+            // Keep the window reachable: at least a sliver stays on the work area.
+            left = Math.Clamp(left, work.Left - width + 80, work.Right - 80);
+            top = Math.Clamp(top, work.Top, work.Bottom - 40);
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = left;
+            Top = top;
+        }
     }
 
     private void UpdateStatus()

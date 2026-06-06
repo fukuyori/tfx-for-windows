@@ -36,6 +36,7 @@ internal static class Loc
         ["Show source"] = "ソースを表示",
         ["Show rendered preview ({0})"] = "レンダリング表示 ({0})",
         ["Load external images for this preview ({0})"] = "このプレビューで外部画像を読み込む ({0})",
+        ["Set the active file pane to the terminal's current folder"] = "アクティブなファイル一覧をターミナルの現在フォルダに合わせる",
         ["Interrupt (send Ctrl+C)"] = "中断（Ctrl+C を送信）",
         ["Quit (send Ctrl+\\)"] = "終了（Ctrl+\\ を送信）",
         ["EOF / suspend (send Ctrl+Z)"] = "EOF / 中断（Ctrl+Z を送信）",

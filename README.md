@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.7.6
+Version: 0.7.7
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -56,7 +56,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.7.6 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.7.7 |
 +---------------------------------------------------------------------+
 ```
 
@@ -230,8 +230,9 @@ tfx [options] [folder]
 | `-P` | `--no-preview` | Hide the preview pane |
 | `-t` | `--terminal` | Show the built-in terminal |
 | `-T` | `--no-terminal` | Hide the built-in terminal |
+| `-g G` | `--geometry=G` | Window geometry `[WxH][+X+Y]` (DIPs; `-X`/`-Y` = from right/bottom), e.g. `1200x800+100+50` |
 
-`[folder]` opens that folder in the left pane (supports `~` and `%VARS%`). Short flags can be combined, e.g. `-2Pt`. Command-line options take precedence over `config.toml [startup]` and the saved session state.
+`[folder]` opens that folder in the left pane (supports `~` and `%VARS%`). Short flags can be combined, e.g. `-2Pt`. Command-line options take precedence over `config.toml [startup]` and the saved session state. A geometry also forces a normal (non-maximized) window.
 
 Example — split layout, preview hidden, terminal shown, `~/Downloads` in the left pane:
 

@@ -443,6 +443,17 @@ public sealed class AppConfig
                 config.Errors.Add($"Invalid startup rightFolders: {value}");
             }
         }
+        else if (key.Equals("geometry", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseString(value, out var geom) && WindowGeometry.TryParse(geom, out var geometry))
+            {
+                config.Startup.Geometry = geometry;
+            }
+            else
+            {
+                config.Errors.Add($"Invalid startup geometry: {value}");
+            }
+        }
     }
 
     /// <summary>
@@ -722,6 +733,7 @@ public sealed class AppConfig
         # preview = "restore"
         # rightFolder = "~/Downloads"
         # rightFolders = ["~/Downloads", "~/Documents"]
+        # geometry = "1200x800+100+50"   # [WxH][+X+Y]; -X/-Y = from right/bottom
         #
         # External terminal (toolbar / openTerminal) and built-in pane:
         # [terminal]
@@ -793,6 +805,7 @@ public sealed class StartupConfig
     public string? Layout { get; set; }
     public string? Preview { get; set; }
     public List<string> RightFolders { get; set; } = [];
+    public WindowGeometry? Geometry { get; set; }
 }
 
 /// <summary>
