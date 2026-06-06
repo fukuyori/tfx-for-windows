@@ -12,6 +12,8 @@ public partial class MainWindow
         ["reload"] = "f5",
         ["openTerminal"] = "ctrl+shift+t",
         ["togglePreview"] = "ctrl+shift+p",
+        ["toggleRendered"] = "ctrl+shift+r",
+        ["loadExternalImages"] = "ctrl+shift+i",
         ["toggleSplit"] = "ctrl+backslash",
         ["swapPanes"] = "ctrl+shift+x",
         ["focusSearch"] = "ctrl+f",
@@ -203,6 +205,18 @@ public partial class MainWindow
         else if (IsShortcut("togglePreview", e))
         {
             TogglePreview();
+            e.Handled = true;
+        }
+        else if (IsShortcut("toggleRendered", e) && RenderedToggle.IsVisible)
+        {
+            // Flip the toggle, then run its handler (which reads IsChecked).
+            RenderedToggle.IsChecked = RenderedToggle.IsChecked != true;
+            RenderedToggle_Click(RenderedToggle, new RoutedEventArgs());
+            e.Handled = true;
+        }
+        else if (IsShortcut("loadExternalImages", e) && LoadImagesButton.IsVisible)
+        {
+            LoadImages_Click(LoadImagesButton, new RoutedEventArgs());
             e.Handled = true;
         }
         else if (IsShortcut("swapPanes", e))

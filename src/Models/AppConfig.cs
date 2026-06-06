@@ -689,6 +689,8 @@ public sealed class AppConfig
         reload = "f5"
         openTerminal = "ctrl+shift+t"
         togglePreview = "ctrl+shift+p"
+        toggleRendered = "ctrl+shift+r"
+        loadExternalImages = "ctrl+shift+i"
         toggleSplit = "ctrl+backslash"
         swapPanes = "ctrl+shift+x"
         focusSearch = "ctrl+f"

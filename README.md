@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.7.5
+Version: 0.7.6
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -56,7 +56,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.7.5 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.7.6 |
 +---------------------------------------------------------------------+
 ```
 
@@ -110,6 +110,8 @@ The native title bar is replaced by custom chrome when transparency is enabled. 
 | `Ctrl + Shift + .` | Toggle hidden files |
 | `Ctrl + \` | Toggle split pane |
 | `Ctrl + Shift + P` | Toggle preview pane |
+| `Ctrl + Shift + R` | Toggle rendered / source view (while a Markdown / HTML / CSV / JSON preview is shown) |
+| `Ctrl + Shift + I` | Load external images for the current preview (when offered) |
 | `Ctrl + Shift + X` | Swap left and right panes (split view only) |
 | `Esc` | Cancel rename / clear search / exit address-bar edit |
 
@@ -209,6 +211,33 @@ Default pins on first run: User profile, Desktop, Documents, Downloads.
 | Right | `<drive>  <free> free of <total>` for the active pane's drive, followed by the current version |
 
 The parent (`..`) row is excluded from counts and size sums.
+
+---
+
+## Command-line options
+
+```
+tfx [options] [folder]
+```
+
+| Option | Long form | Effect |
+| --- | --- | --- |
+| `-h` | `--help` | Show help and exit |
+| `-1` | `--single` | Start in single-pane layout |
+| `-2` | `--split` | Start in split (two-pane) layout |
+| `-r` | `--restore` | Restore the saved layout |
+| `-p` | `--preview` | Show the preview pane |
+| `-P` | `--no-preview` | Hide the preview pane |
+| `-t` | `--terminal` | Show the built-in terminal |
+| `-T` | `--no-terminal` | Hide the built-in terminal |
+
+`[folder]` opens that folder in the left pane (supports `~` and `%VARS%`). Short flags can be combined, e.g. `-2Pt`. Command-line options take precedence over `config.toml [startup]` and the saved session state.
+
+Example — split layout, preview hidden, terminal shown, `~/Downloads` in the left pane:
+
+```
+tfx -2 -P -t ~/Downloads
+```
 
 ---
 

@@ -263,6 +263,8 @@ Supported action keys:
 | `reload` | `f5` | Reload the active file pane. |
 | `openTerminal` | `ctrl+shift+t` | Open the configured external terminal at the active folder. |
 | `togglePreview` | `ctrl+shift+p` | Show or hide the preview pane. |
+| `toggleRendered` | `ctrl+shift+r` | Toggle rendered vs. source view (Markdown / HTML / CSV / JSON preview). Active only while that toggle is visible. |
+| `loadExternalImages` | `ctrl+shift+i` | Load external (https) images for the current preview, once. Active only while the button is visible. |
 | `toggleSplit` | `ctrl+backslash` | Show or hide split view. |
 | `swapPanes` | `ctrl+shift+x` | Swap left and right panes. |
 | `focusSearch` | `ctrl+f` | Focus the search field. |

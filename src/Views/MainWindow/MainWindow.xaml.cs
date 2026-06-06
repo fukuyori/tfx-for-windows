@@ -68,9 +68,11 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _previewCts;
     private string? _archiveTempRoot;
     private bool _initialLeftFocusDone;
+    private readonly StartupOptions _startupOptions;
 
-    public MainWindow()
+    public MainWindow(StartupOptions? startup = null)
     {
+        _startupOptions = startup ?? new StartupOptions();
         InitializeComponent();
         SourceInitialized += (_, _) =>
         {
@@ -168,6 +170,13 @@ public partial class MainWindow : Window
     {
         explicitStart = true;
 
+        // A folder passed on the command line (supports ~ and %VARS%) wins.
+        if (!string.IsNullOrWhiteSpace(_startupOptions.FolderPath)
+            && TryResolveStartupFolder(_startupOptions.FolderPath, out var cliFolder))
+        {
+            return cliFolder;
+        }
+
         var args = Environment.GetCommandLineArgs().Skip(1);
         var firstDirectoryArg = args.FirstOrDefault(Directory.Exists);
         if (!string.IsNullOrWhiteSpace(firstDirectoryArg))
@@ -188,6 +197,36 @@ public partial class MainWindow : Window
         }
 
         return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    }
+
+    /// <summary>
+    /// Expands a command-line folder argument (<c>~</c>, <c>~/sub</c>, and
+    /// <c>%VARS%</c>) and returns its full path when it exists.
+    /// </summary>
+    private static bool TryResolveStartupFolder(string raw, out string fullPath)
+    {
+        fullPath = "";
+        try
+        {
+            var expanded = raw.Trim();
+            if (expanded == "~" || expanded.StartsWith("~/", StringComparison.Ordinal) || expanded.StartsWith("~\\", StringComparison.Ordinal))
+            {
+                var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                expanded = expanded.Length <= 1 ? home : Path.Combine(home, expanded[2..]);
+            }
+
+            expanded = Environment.ExpandEnvironmentVariables(expanded);
+            if (Directory.Exists(expanded))
+            {
+                fullPath = Path.GetFullPath(expanded);
+                return true;
+            }
+        }
+        catch
+        {
+            // fall through
+        }
+        return false;
     }
 
     private string ResolveInitialRightPath()
@@ -258,8 +297,8 @@ public partial class MainWindow : Window
         TerminalButton.ToolTip = Loc.F("Open Terminal here ({0})", ShortcutText("openTerminal"));
         ReloadButton.ToolTip = Loc.F("Reload ({0})", ShortcutText("reload"));
         PreviewButton.ToolTip = Loc.F("Toggle preview ({0})", ShortcutText("togglePreview"));
-        RenderedToggle.ToolTip = Loc.T("Show rendered preview");
-        LoadImagesButton.ToolTip = Loc.T("Load external images for this preview (not remembered)");
+        RenderedToggle.ToolTip = Loc.F("Show rendered preview ({0})", ShortcutText("toggleRendered"));
+        LoadImagesButton.ToolTip = Loc.F("Load external images for this preview ({0})", ShortcutText("loadExternalImages"));
         SplitButton.ToolTip = Loc.F("Toggle split pane ({0})", ShortcutText("toggleSplit"));
         SwapPanesButton.ToolTip = Loc.F("Swap left and right panes ({0})", ShortcutText("swapPanes"));
         ColumnsButton.ToolTip = Loc.T("Columns");
@@ -601,6 +640,8 @@ public partial class MainWindow : Window
 
     private void ApplyLayoutSettings()
     {
+        var savedShowSplit = _settings.ShowSplit;
+
         if (_settings.Width > 0)
         {
             Width = _settings.Width;
@@ -639,6 +680,31 @@ public partial class MainWindow : Window
         else if (_config.Startup.Preview == "hide")
         {
             _settings.ShowPreview = false;
+        }
+
+        // Command-line startup options override config.toml [startup] and the
+        // saved session state.
+        switch (_startupOptions.Layout)
+        {
+            case StartupOptions.LayoutMode.Single: _settings.ShowSplit = false; break;
+            case StartupOptions.LayoutMode.Split: _settings.ShowSplit = true; break;
+            case StartupOptions.LayoutMode.Restore: _settings.ShowSplit = savedShowSplit; break;
+        }
+        if (_startupOptions.Preview == StartupOptions.Toggle.On)
+        {
+            _settings.ShowPreview = true;
+        }
+        else if (_startupOptions.Preview == StartupOptions.Toggle.Off)
+        {
+            _settings.ShowPreview = false;
+        }
+        if (_startupOptions.Terminal == StartupOptions.Toggle.On)
+        {
+            _settings.ShowTerminalPane = true;
+        }
+        else if (_startupOptions.Terminal == StartupOptions.Toggle.Off)
+        {
+            _settings.ShowTerminalPane = false;
         }
 
         SetSplitVisible(_settings.ShowSplit);

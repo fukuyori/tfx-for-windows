@@ -257,6 +257,8 @@ openTerminal = "ctrl+shift+t"
 | `reload` | `f5` | アクティブペインを再読み込み。 |
 | `openTerminal` | `ctrl+shift+t` | 外部ターミナルを現在フォルダーで開く。 |
 | `togglePreview` | `ctrl+shift+p` | preview pane 表示切替。 |
+| `toggleRendered` | `ctrl+shift+r` | レンダリング表示／ソース表示の切替（Markdown / HTML / CSV / JSON プレビュー）。トグルが表示されているときのみ有効。 |
+| `loadExternalImages` | `ctrl+shift+i` | 現在のプレビューで外部 (https) 画像を一度だけ読み込む。ボタンが表示されているときのみ有効。 |
 | `toggleSplit` | `ctrl+backslash` | split view 表示切替。 |
 | `swapPanes` | `ctrl+shift+x` | 左右ペイン入れ替え。 |
 | `focusSearch` | `ctrl+f` | 検索欄へフォーカス。 |

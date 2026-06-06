@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.6
+
+### Built-in terminal: UTF-8 output
+
+- **Fixes mojibake from UTF-8 CLI tools** in the built-in terminal. The terminal renders UTF-8 fine, but it never told programs it was a modern terminal, so UTF-8-aware tools fell back to the legacy OEM code page (e.g. CP932) and emitted garbled text — the same tools render correctly under Windows Terminal / WezTerm because those advertise themselves via `WT_SESSION` / `TERM`. The ConPTY child shell now starts with `TERM=xterm-256color` and `COLORTERM=truecolor` (the pane is xterm.js, so this is accurate). Set per-child only; the code page is unchanged, so legacy programs are unaffected.
+
+### Command-line startup options
+
+- `tfx` now accepts startup options: `-h/--help`, `-1/--single`, `-2/--split`, `-r/--restore`, `-p/--preview`, `-P/--no-preview`, `-t/--terminal`, `-T/--no-terminal`, plus a trailing `[folder]` opened in the left pane (`~` and `%VARS%` expanded). Short flags can be combined (e.g. `-2Pt`). CLI options take precedence over `config.toml [startup]` and the saved session. `-h` prints usage to the parent console (or a dialog). Example: `tfx -2 -P -t ~/Downloads`.
+
+### Preview shortcuts & tooltip
+
+- The rendered/source toggle and the load-external-images button are now keyboard-assignable: `toggleRendered` (default `ctrl+shift+r`) and `loadExternalImages` (default `ctrl+shift+i`), configurable under `[shortcuts]` and shown in the buttons' tooltips. Each fires only while its button is visible.
+- Removed "(not remembered)" from the load-external-images tooltip.
+
 ## 0.7.5
 
 ### Window & preview layout

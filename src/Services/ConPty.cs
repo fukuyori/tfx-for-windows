@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -81,6 +82,7 @@ internal sealed class ConPty : IDisposable
         var attrListSize = IntPtr.Zero;
         InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref attrListSize);
         var attrList = Marshal.AllocHGlobal(attrListSize);
+        var envBlock = IntPtr.Zero;
         try
         {
             if (!InitializeProcThreadAttributeList(attrList, 1, 0, ref attrListSize))
@@ -101,14 +103,15 @@ internal sealed class ConPty : IDisposable
             securityAttributes.nLength = Marshal.SizeOf<SECURITY_ATTRIBUTES>();
 
             var wd = string.IsNullOrWhiteSpace(workingDirectory) ? null : workingDirectory;
+            envBlock = BuildChildEnvironment();
             if (!CreateProcess(
                     null,
                     new System.Text.StringBuilder(commandLine),
                     ref securityAttributes,
                     ref securityAttributes,
                     false,
-                    EXTENDED_STARTUPINFO_PRESENT,
-                    IntPtr.Zero,
+                    EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
+                    envBlock,
                     wd,
                     ref startupInfo,
                     out var procInfo))
@@ -147,7 +150,43 @@ internal sealed class ConPty : IDisposable
         {
             DeleteProcThreadAttributeList(attrList);
             Marshal.FreeHGlobal(attrList);
+            if (envBlock != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(envBlock);
+            }
         }
+    }
+
+    /// <summary>
+    /// Builds a Unicode environment block for the child shell: the current
+    /// process environment plus terminal-identification variables. The built-in
+    /// terminal is xterm.js (an xterm-compatible, UTF-8 terminal), so it
+    /// advertises itself as such. Without this, UTF-8-aware CLI tools fall back
+    /// to the legacy OEM code page (e.g. CP932) and emit mojibake — the same
+    /// tools render correctly under Windows Terminal / WezTerm because those set
+    /// WT_SESSION / TERM. Must be passed with CREATE_UNICODE_ENVIRONMENT.
+    /// </summary>
+    private static IntPtr BuildChildEnvironment()
+    {
+        var vars = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (System.Collections.DictionaryEntry entry in Environment.GetEnvironmentVariables())
+        {
+            var key = entry.Key?.ToString();
+            if (!string.IsNullOrEmpty(key))
+            {
+                vars[key] = entry.Value?.ToString() ?? "";
+            }
+        }
+        vars["TERM"] = "xterm-256color";
+        vars["COLORTERM"] = "truecolor";
+
+        var sb = new System.Text.StringBuilder();
+        foreach (var kv in vars)
+        {
+            sb.Append(kv.Key).Append('=').Append(kv.Value).Append('\0');
+        }
+        sb.Append('\0'); // block terminator
+        return Marshal.StringToHGlobalUni(sb.ToString());
     }
 
     private void ReadLoop()
@@ -276,6 +315,7 @@ internal sealed class ConPty : IDisposable
     // ─── Win32 ────────────────────────────────────────────────────────────
 
     private const int EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
+    private const int CREATE_UNICODE_ENVIRONMENT = 0x00000400;
     private static readonly IntPtr PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = (IntPtr)0x00020016;
 
     [StructLayout(LayoutKind.Sequential)]
