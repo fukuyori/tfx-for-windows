@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Web.WebView2.Core;
@@ -351,6 +352,11 @@ public partial class MainWindow
                 _terminalRows = (short)Math.Clamp(msg.rows, 1, 1000);
                 StartOrResizePty("shellActivated");
                 break;
+            case "focusFiles":
+                // The user pressed the focusFilePane shortcut inside the terminal.
+                // Move focus out of the WebView and back to the active file list.
+                Dispatcher.BeginInvoke(FocusActiveFilePane, DispatcherPriority.Input);
+                break;
             case "error":
                 SetStatus(Loc.F("Terminal failed to start: {0}", msg.message ?? "script error"));
                 break;
@@ -385,9 +391,58 @@ public partial class MainWindow
             scrollback = 5000,
             // Transparent unless the user set an explicit background color.
             allowTransparency = !_config.Terminal.Colors.ContainsKey("background"),
+            // The shell intercepts this combo and asks the host to focus the
+            // file list (config.toml [shortcuts] focusFilePane).
+            focusFilesKey = BuildFocusFilesKeySpec(),
             theme
         };
         PostToTerminal(new { type = "init", options });
+    }
+
+    /// <summary>
+    /// Translates the <c>focusFilePane</c> shortcut into a small {ctrl,shift,alt,key}
+    /// object the xterm page can match against a browser KeyboardEvent. Returns null
+    /// if the shortcut is unset, so the page leaves the key alone.
+    /// </summary>
+    private object? BuildFocusFilesKeySpec()
+    {
+        if (!_shortcuts.TryGetValue("focusFilePane", out var sc))
+        {
+            return null;
+        }
+        return new
+        {
+            ctrl = sc.Modifiers.HasFlag(ModifierKeys.Control),
+            shift = sc.Modifiers.HasFlag(ModifierKeys.Shift),
+            alt = sc.Modifiers.HasFlag(ModifierKeys.Alt),
+            key = JsKeyName(sc.Key)
+        };
+    }
+
+    /// <summary>Maps a WPF <see cref="Key"/> to the browser KeyboardEvent.key value.</summary>
+    private static string JsKeyName(Key key)
+    {
+        if (key >= Key.D0 && key <= Key.D9)
+        {
+            return ((char)('0' + (key - Key.D0))).ToString();
+        }
+        if (key >= Key.NumPad0 && key <= Key.NumPad9)
+        {
+            return ((char)('0' + (key - Key.NumPad0))).ToString();
+        }
+        if (key >= Key.A && key <= Key.Z)
+        {
+            return key.ToString().ToLowerInvariant();
+        }
+        return key switch
+        {
+            Key.OemPeriod => ".",
+            Key.OemComma => ",",
+            Key.OemQuestion => "/",
+            Key.OemMinus => "-",
+            Key.Escape => "escape",
+            _ => key.ToString().ToLowerInvariant()
+        };
     }
 
     /// <summary>

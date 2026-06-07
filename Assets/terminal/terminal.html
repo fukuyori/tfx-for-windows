@@ -70,6 +70,10 @@
   var activeTab = "shell";
   var outputUsed = false;   // reveal the tab strip once Output has content
   var pendingActivate = null;  // tab requested before init finished
+  // {ctrl,shift,alt,key} combo that returns focus to the file list. Sent by the
+  // host from config.toml [shortcuts] focusFilePane. WebView2 owns most keys, so
+  // the shell intercepts this one and tells the host to focus the file pane.
+  var focusFilesKey = null;
 
   function post(obj) {
     if (window.chrome && window.chrome.webview) {
@@ -126,8 +130,17 @@
     return { term: term, fit: fit };
   }
 
+  function matchesKey(e, spec) {
+    if (!spec || !spec.key) { return false; }
+    if (!!spec.ctrl !== !!e.ctrlKey) { return false; }
+    if (!!spec.shift !== !!e.shiftKey) { return false; }
+    if (!!spec.alt !== !!e.altKey) { return false; }
+    return (e.key || "").toLowerCase() === String(spec.key).toLowerCase();
+  }
+
   function initInner(options) {
     options = options || {};
+    focusFilesKey = options.focusFilesKey || null;
 
     var shell = makeTerminal(options, true);
     terms.shell = shell.term;
@@ -143,7 +156,15 @@
 
     // Copy / paste / interrupt handling on the interactive shell only.
     terms.shell.attachCustomKeyEventHandler(function (e) {
-      if (e.type !== "keydown" || !e.ctrlKey || e.altKey || e.metaKey) {
+      if (e.type !== "keydown") { return true; }
+      // Return focus to the file list (checked before the Ctrl-only handling so
+      // a non-Ctrl binding still works).
+      if (matchesKey(e, focusFilesKey)) {
+        post({ type: "focusFiles" });
+        e.preventDefault();
+        return false;
+      }
+      if (!e.ctrlKey || e.altKey || e.metaKey) {
         return true;
       }
       var k = (e.key || "").toLowerCase();

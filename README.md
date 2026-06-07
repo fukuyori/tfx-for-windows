@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.7.7
+Version: 0.7.8
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -56,7 +56,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.7.7 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.7.8 |
 +---------------------------------------------------------------------+
 ```
 
@@ -105,10 +105,13 @@ The native title bar is replaced by custom chrome when transparency is enabled. 
 | `Ctrl + L` / `F4` | Focus address bar (edit path) |
 | `Tab` / `Shift + Tab` | Switch focus to the other file pane (split view only; only when focus is already in a pane) |
 | `Left` / `Right` | Move focus between file panes (only when focus is already in a pane) |
+| `Ctrl + 1` | Move focus to the file list |
+| `Ctrl + 2` | Move focus to the terminal pane (opens it if hidden) |
 | `Up` / `Down` | Move selection in active view |
 | `Ctrl + Shift + T` | Open Terminal in current folder |
 | `Ctrl + Shift + .` | Toggle hidden files |
 | `Ctrl + \` | Toggle split pane |
+| `Ctrl + B` | Toggle folder tree (sidebar) |
 | `Ctrl + Shift + P` | Toggle preview pane |
 | `Ctrl + Shift + R` | Toggle rendered / source view (while a Markdown / HTML / CSV / JSON preview is shown) |
 | `Ctrl + Shift + I` | Load external images for the current preview (when offered) |
@@ -175,6 +178,8 @@ Open via the Columns button. The popup stays open while you toggle items.
 - Check / uncheck a column to show / hide it
 - Up / Down arrows reorder columns. Order applies to both panes
 - At least one column must remain visible
+
+You can also reorder columns by dragging their headers in the file list; the new order is mirrored to the other pane and saved.
 
 ---
 
@@ -250,7 +255,7 @@ See [docs/configuration.md](docs/configuration.md) for the full file format, sup
 
 Shortcut values use Windows-native modifier names such as `ctrl`, `shift`, and `alt`. Supported key names include single letters / digits, `.`, `[`, `]`, `backslash`, arrow keys, `enter`, `tab`, `space`, `delete`, `backspace`, and `f1` through `f24`.
 
-Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`. Color keys use the macOS tfx semantic names and are mapped onto WPF theme resources, including toolbar chrome, selection colors, inputs, scrollbars, and Markdown preview CSS. `[opacity].background` controls the transparent window surface. `[startup]` can force single/split layout and preview pane visibility. `[terminal] app` maps to the Windows executable or app alias, and `[terminal] arguments` is optional because tfx supplies cwd arguments for Windows Terminal, WezTerm, PowerShell, and pwsh. `[openWith]` maps an extension without the leading dot to an executable or app alias used when opening files of that type.
+Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`. Color keys use the macOS tfx semantic names and are mapped onto WPF theme resources, including toolbar chrome, selection colors, inputs, scrollbars, and Markdown preview CSS. `[opacity].background` controls the transparent window surface. `[startup]` can force single/split layout and the visibility of the preview pane, terminal pane, and folder tree. `[terminal] app` maps to the Windows executable or app alias, and `[terminal] arguments` is optional because tfx supplies cwd arguments for Windows Terminal, WezTerm, PowerShell, and pwsh. `[openWith]` maps an extension without the leading dot to an executable or app alias used when opening files of that type.
 
 `config.toml` is intended for user-editable preferences. Session state is still saved automatically to `%APPDATA%\tfx\settings.json` on every change and on close.
 

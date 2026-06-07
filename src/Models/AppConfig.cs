@@ -425,6 +425,34 @@ public sealed class AppConfig
                 config.Errors.Add($"Invalid startup preview: {value}");
             }
         }
+        else if (key.Equals("terminal", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseString(value, out var terminal) &&
+                (terminal.Equals("show", StringComparison.OrdinalIgnoreCase) ||
+                 terminal.Equals("hide", StringComparison.OrdinalIgnoreCase) ||
+                 terminal.Equals("restore", StringComparison.OrdinalIgnoreCase)))
+            {
+                config.Startup.Terminal = terminal.ToLowerInvariant();
+            }
+            else
+            {
+                config.Errors.Add($"Invalid startup terminal: {value}");
+            }
+        }
+        else if (key.Equals("folderTree", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseString(value, out var folderTree) &&
+                (folderTree.Equals("show", StringComparison.OrdinalIgnoreCase) ||
+                 folderTree.Equals("hide", StringComparison.OrdinalIgnoreCase) ||
+                 folderTree.Equals("restore", StringComparison.OrdinalIgnoreCase)))
+            {
+                config.Startup.FolderTree = folderTree.ToLowerInvariant();
+            }
+            else
+            {
+                config.Errors.Add($"Invalid startup folderTree: {value}");
+            }
+        }
         else if (key.Equals("rightFolder", StringComparison.OrdinalIgnoreCase))
         {
             if (TryParseString(value, out var folder))
@@ -700,11 +728,14 @@ public sealed class AppConfig
         reload = "f5"
         openTerminal = "ctrl+shift+t"
         togglePreview = "ctrl+shift+p"
+        toggleFolderTree = "ctrl+b"
         toggleRendered = "ctrl+shift+r"
         loadExternalImages = "ctrl+shift+i"
         toggleSplit = "ctrl+backslash"
         swapPanes = "ctrl+shift+x"
         focusSearch = "ctrl+f"
+        focusFilePane = "ctrl+1"
+        focusTerminal = "ctrl+2"
         toggleHidden = "ctrl+shift+."
         goBack = "alt+left"
         goForward = "alt+right"
@@ -731,6 +762,8 @@ public sealed class AppConfig
         # [startup]
         # layout = "restore"
         # preview = "restore"
+        # terminal = "restore"   # show / hide / restore (built-in terminal pane)
+        # folderTree = "restore" # show / hide / restore (left sidebar / folder tree)
         # rightFolder = "~/Downloads"
         # rightFolders = ["~/Downloads", "~/Documents"]
         # geometry = "1200x800+100+50"   # [WxH][+X+Y]; -X/-Y = from right/bottom
@@ -804,6 +837,8 @@ public sealed class StartupConfig
 {
     public string? Layout { get; set; }
     public string? Preview { get; set; }
+    public string? Terminal { get; set; }
+    public string? FolderTree { get; set; }
     public List<string> RightFolders { get; set; } = [];
     public WindowGeometry? Geometry { get; set; }
 }

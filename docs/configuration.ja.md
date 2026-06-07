@@ -53,9 +53,12 @@ size = 13
 reload = "f5"
 openTerminal = "ctrl+shift+t"
 togglePreview = "ctrl+shift+p"
+toggleFolderTree = "ctrl+b"
 toggleSplit = "ctrl+backslash"
 swapPanes = "ctrl+shift+x"
 focusSearch = "ctrl+f"
+focusFilePane = "ctrl+1"
+focusTerminal = "ctrl+2"
 toggleHidden = "ctrl+shift+."
 goBack = "alt+left"
 goForward = "alt+right"
@@ -75,6 +78,8 @@ selectAll = "ctrl+a"
 # [startup]
 # layout = "single"
 # preview = "restore"
+# terminal = "restore"
+# folderTree = "restore"
 # rightFolder = "~/Downloads"
 # rightFolders = ["~/Downloads", "~/Documents"]
 
@@ -203,6 +208,10 @@ rightFolders = ["~/Downloads", "~/Documents"]
 | `"hide"` | preview pane を非表示で起動します。 |
 | `"restore"` | `settings.json` の保存済み preview pane 状態を使います。 |
 
+`terminal` は内蔵ターミナルペインの起動時状態を `"show"` / `"hide"` / `"restore"` で指定します。コマンドラインの `-t` / `-T` が優先されます。
+
+`folderTree` は左サイドバー（ピン留め＋フォルダーツリー）の起動時状態を `"show"` / `"hide"` / `"restore"` で指定します。
+
 `rightFolder` は `layout = "split"` のときに右ペインの初期フォルダーを 1 つ指定します。
 
 ```toml
@@ -264,11 +273,14 @@ openTerminal = "ctrl+shift+t"
 | `reload` | `f5` | アクティブペインを再読み込み。 |
 | `openTerminal` | `ctrl+shift+t` | 外部ターミナルを現在フォルダーで開く。 |
 | `togglePreview` | `ctrl+shift+p` | preview pane 表示切替。 |
+| `toggleFolderTree` | `ctrl+b` | フォルダーツリー（左サイドバー）表示切替。 |
 | `toggleRendered` | `ctrl+shift+r` | レンダリング表示／ソース表示の切替（Markdown / HTML / CSV / JSON プレビュー）。トグルが表示されているときのみ有効。 |
 | `loadExternalImages` | `ctrl+shift+i` | 現在のプレビューで外部 (https) 画像を一度だけ読み込む。ボタンが表示されているときのみ有効。 |
 | `toggleSplit` | `ctrl+backslash` | split view 表示切替。 |
 | `swapPanes` | `ctrl+shift+x` | 左右ペイン入れ替え。 |
 | `focusSearch` | `ctrl+f` | 検索欄へフォーカス。 |
+| `focusFilePane` | `ctrl+1` | アクティブなファイル一覧へフォーカス移動（ターミナルペイン内からも有効）。 |
+| `focusTerminal` | `ctrl+2` | 内蔵ターミナルペインへフォーカス移動。非表示なら開いてから移動。 |
 | `toggleHidden` | `ctrl+shift+.` | 隠しファイル表示切替。 |
 | `goBack` | `alt+left` | 戻る。 |
 | `goForward` | `alt+right` | 進む。 |

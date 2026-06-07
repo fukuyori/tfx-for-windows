@@ -30,6 +30,7 @@ internal static class Loc
         ["Reload ({0})"] = "再読み込み ({0})",
         ["Toggle preview"] = "プレビュー切替",
         ["Toggle preview ({0})"] = "プレビュー切替 ({0})",
+        ["Toggle folder tree ({0})"] = "フォルダーツリー切替 ({0})",
         ["Toggle split pane ({0})"] = "分割表示切替 ({0})",
         ["Swap left and right panes ({0})"] = "左右ペインを入れ替え ({0})",
         ["Show rendered Markdown / HTML"] = "Markdown / HTML をレンダリング表示",

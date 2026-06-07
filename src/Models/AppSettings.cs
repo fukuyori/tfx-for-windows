@@ -15,6 +15,7 @@ public sealed class AppSettings
     public string ActivePane { get; set; } = "Left";
     public bool ShowSplit { get; set; } = true;
     public bool ShowPreview { get; set; } = true;
+    public bool ShowFolderTree { get; set; } = true;
     public bool ShowHidden { get; set; }
     public bool RenderMarkdownHtml { get; set; } = true;
     public bool ShowPerformanceLogs { get; set; }

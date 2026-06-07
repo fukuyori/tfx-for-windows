@@ -296,6 +296,7 @@ public partial class MainWindow : Window
         HiddenButton.ToolTip = Loc.F("Toggle hidden files ({0})", ShortcutText("toggleHidden"));
         TerminalButton.ToolTip = Loc.F("Open Terminal here ({0})", ShortcutText("openTerminal"));
         ReloadButton.ToolTip = Loc.F("Reload ({0})", ShortcutText("reload"));
+        FolderTreeButton.ToolTip = Loc.F("Toggle folder tree ({0})", ShortcutText("toggleFolderTree"));
         PreviewButton.ToolTip = Loc.F("Toggle preview ({0})", ShortcutText("togglePreview"));
         RenderedToggle.ToolTip = Loc.F("Show rendered preview ({0})", ShortcutText("toggleRendered"));
         LoadImagesButton.ToolTip = Loc.F("Load external images for this preview ({0})", ShortcutText("loadExternalImages"));
@@ -617,7 +618,12 @@ public partial class MainWindow : Window
         _settings.Width = bounds.Width;
         _settings.Height = bounds.Height;
         _settings.IsMaximized = WindowState == WindowState.Maximized;
-        _settings.SidebarWidth = SidebarColumn.ActualWidth > 0 ? SidebarColumn.ActualWidth : SidebarColumn.Width.Value;
+        var folderTreeVisible = SidebarColumn.Width.Value > 0;
+        _settings.ShowFolderTree = folderTreeVisible;
+        if (folderTreeVisible)
+        {
+            _settings.SidebarWidth = SidebarColumn.ActualWidth > 0 ? SidebarColumn.ActualWidth : SidebarColumn.Width.Value;
+        }
         if (showPreview)
         {
             _settings.PreviewWidth = PreviewColumn.ActualWidth > 0 ? PreviewColumn.ActualWidth : PreviewColumn.Width.Value;
@@ -683,6 +689,24 @@ public partial class MainWindow : Window
             _settings.ShowPreview = false;
         }
 
+        if (_config.Startup.Terminal == "show")
+        {
+            _settings.ShowTerminalPane = true;
+        }
+        else if (_config.Startup.Terminal == "hide")
+        {
+            _settings.ShowTerminalPane = false;
+        }
+
+        if (_config.Startup.FolderTree == "show")
+        {
+            _settings.ShowFolderTree = true;
+        }
+        else if (_config.Startup.FolderTree == "hide")
+        {
+            _settings.ShowFolderTree = false;
+        }
+
         // Command-line startup options override config.toml [startup] and the
         // saved session state.
         switch (_startupOptions.Layout)
@@ -708,6 +732,7 @@ public partial class MainWindow : Window
             _settings.ShowTerminalPane = false;
         }
 
+        SetFolderTreeVisible(_settings.ShowFolderTree);
         SetSplitVisible(_settings.ShowSplit);
         SetPreviewVisible(_settings.ShowPreview);
         if (_settings.IsMaximized)

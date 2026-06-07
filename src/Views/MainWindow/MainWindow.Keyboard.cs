@@ -12,11 +12,14 @@ public partial class MainWindow
         ["reload"] = "f5",
         ["openTerminal"] = "ctrl+shift+t",
         ["togglePreview"] = "ctrl+shift+p",
+        ["toggleFolderTree"] = "ctrl+b",
         ["toggleRendered"] = "ctrl+shift+r",
         ["loadExternalImages"] = "ctrl+shift+i",
         ["toggleSplit"] = "ctrl+backslash",
         ["swapPanes"] = "ctrl+shift+x",
         ["focusSearch"] = "ctrl+f",
+        ["focusFilePane"] = "ctrl+1",
+        ["focusTerminal"] = "ctrl+2",
         ["toggleHidden"] = "ctrl+shift+.",
         ["goBack"] = "alt+left",
         ["goForward"] = "alt+right",
@@ -95,6 +98,14 @@ public partial class MainWindow
                 ToggleTerminalPane();
                 e.Handled = true;
             }
+            else if (IsShortcut("focusFilePane", e))
+            {
+                // Move focus back to the file list. Primary path while the
+                // terminal is focused is the xterm page forwarding a "focusFiles"
+                // message (WebView2 owns most keys); this is a WPF fallback.
+                FocusActiveFilePane();
+                e.Handled = true;
+            }
             return;
         }
 
@@ -113,6 +124,16 @@ public partial class MainWindow
         {
             SearchBox.Focus();
             SearchBox.SelectAll();
+            e.Handled = true;
+        }
+        else if (IsShortcut("focusFilePane", e))
+        {
+            FocusActiveFilePane();
+            e.Handled = true;
+        }
+        else if (IsShortcut("focusTerminal", e))
+        {
+            FocusTerminalPane();
             e.Handled = true;
         }
         else if (e.Key == Key.F4)
@@ -205,6 +226,11 @@ public partial class MainWindow
         else if (IsShortcut("togglePreview", e))
         {
             TogglePreview();
+            e.Handled = true;
+        }
+        else if (IsShortcut("toggleFolderTree", e))
+        {
+            ToggleFolderTree();
             e.Handled = true;
         }
         else if (IsShortcut("toggleRendered", e) && RenderedToggle.IsVisible)
@@ -473,6 +499,27 @@ public partial class MainWindow
         var grid = isLeft ? LeftGrid : RightGrid;
         var iconView = isLeft ? LeftIconView : RightIconView;
         return IsInside(focused, grid) || IsInside(focused, iconView);
+    }
+
+    /// <summary>Moves keyboard focus to the active file listing.</summary>
+    private void FocusActiveFilePane() => FocusPane(ActivePane);
+
+    /// <summary>
+    /// Moves keyboard focus into the built-in terminal pane. Opens the pane first
+    /// if it is hidden (which also focuses it).
+    /// </summary>
+    private void FocusTerminalPane()
+    {
+        if (TerminalHost.Visibility == Visibility.Visible)
+        {
+            Terminal.Focus();
+            PostToTerminal(new { type = "focus" });
+        }
+        else
+        {
+            // Hidden → open it; SetTerminalVisible(true) focuses the shell.
+            ToggleTerminalPane();
+        }
     }
 
     private void FocusPane(Pane pane)

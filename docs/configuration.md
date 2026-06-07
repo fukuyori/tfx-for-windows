@@ -53,9 +53,12 @@ size = 13
 reload = "f5"
 openTerminal = "ctrl+shift+t"
 togglePreview = "ctrl+shift+p"
+toggleFolderTree = "ctrl+b"
 toggleSplit = "ctrl+backslash"
 swapPanes = "ctrl+shift+x"
 focusSearch = "ctrl+f"
+focusFilePane = "ctrl+1"
+focusTerminal = "ctrl+2"
 toggleHidden = "ctrl+shift+."
 goBack = "alt+left"
 goForward = "alt+right"
@@ -75,6 +78,8 @@ selectAll = "ctrl+a"
 # [startup]
 # layout = "single"
 # preview = "restore"
+# terminal = "restore"
+# folderTree = "restore"
 # rightFolder = "~/Downloads"
 # rightFolders = ["~/Downloads", "~/Documents"]
 
@@ -203,6 +208,10 @@ rightFolders = ["~/Downloads", "~/Documents"]
 | `"hide"` | Starts with the preview pane hidden. |
 | `"restore"` | Uses the saved preview-pane state from `settings.json`. |
 
+`terminal` controls the built-in terminal pane at startup with the same `"show"` / `"hide"` / `"restore"` values. The `-t` / `-T` command-line options override it.
+
+`folderTree` controls the left sidebar (pinned folders + folder tree) at startup with the same `"show"` / `"hide"` / `"restore"` values.
+
 `rightFolder` opens a single right-pane folder when `layout = "split"`:
 
 ```toml
@@ -270,11 +279,14 @@ Supported action keys:
 | `reload` | `f5` | Reload the active file pane. |
 | `openTerminal` | `ctrl+shift+t` | Open the configured external terminal at the active folder. |
 | `togglePreview` | `ctrl+shift+p` | Show or hide the preview pane. |
+| `toggleFolderTree` | `ctrl+b` | Show or hide the folder tree (left sidebar). |
 | `toggleRendered` | `ctrl+shift+r` | Toggle rendered vs. source view (Markdown / HTML / CSV / JSON preview). Active only while that toggle is visible. |
 | `loadExternalImages` | `ctrl+shift+i` | Load external (https) images for the current preview, once. Active only while the button is visible. |
 | `toggleSplit` | `ctrl+backslash` | Show or hide split view. |
 | `swapPanes` | `ctrl+shift+x` | Swap left and right panes. |
 | `focusSearch` | `ctrl+f` | Focus the search field. |
+| `focusFilePane` | `ctrl+1` | Move keyboard focus to the active file list (also works from inside the terminal pane). |
+| `focusTerminal` | `ctrl+2` | Move keyboard focus to the built-in terminal pane; opens it first if hidden. |
 | `toggleHidden` | `ctrl+shift+.` | Show or hide hidden files. |
 | `goBack` | `alt+left` | Navigate back. |
 | `goForward` | `alt+right` | Navigate forward. |

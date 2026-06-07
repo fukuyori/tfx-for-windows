@@ -71,6 +71,47 @@ public partial class MainWindow
         }
     }
 
+    private bool _suspendColumnReorder;
+
+    /// <summary>
+    /// Persists a header drag-reorder: rebuilds the column order from the grid
+    /// the user dragged in, mirrors it onto the other pane, and saves. Without
+    /// this, a dragged order is lost on the next reload and conflicts with the
+    /// Columns popup order.
+    /// </summary>
+    private void FileGrid_ColumnReordered(object sender, DataGridColumnEventArgs e)
+    {
+        if (_suspendColumnReorder || sender is not DataGrid grid)
+        {
+            return;
+        }
+
+        var ordered = grid.Columns
+            .OrderBy(c => c.DisplayIndex)
+            .Select(c => _fileColumns.FirstOrDefault(fc => ReferenceEquals(fc.Left, c) || ReferenceEquals(fc.Right, c)))
+            .Where(fc => fc is not null)
+            .Select(fc => fc!)
+            .ToList();
+        if (ordered.Count != _fileColumns.Count)
+        {
+            return; // unexpected; leave order untouched
+        }
+
+        _fileColumns.Clear();
+        _fileColumns.AddRange(ordered);
+
+        _suspendColumnReorder = true;
+        try
+        {
+            ApplyColumnOrder(); // mirror the new order onto the other pane
+        }
+        finally
+        {
+            _suspendColumnReorder = false;
+        }
+        SaveSettings();
+    }
+
     private void ApplyColumnVisibility()
     {
         var visible = _settings.VisibleFileColumns.ToHashSet(StringComparer.OrdinalIgnoreCase);

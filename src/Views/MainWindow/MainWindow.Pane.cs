@@ -106,6 +106,37 @@ public partial class MainWindow
         SplitButton.IsChecked = visible;
     }
 
+    private void FolderTree_Click(object sender, RoutedEventArgs e) => ToggleFolderTree();
+
+    private void ToggleFolderTree()
+    {
+        SetFolderTreeVisible(SidebarColumn.Width.Value == 0); // hidden → show
+        SaveSettings();
+    }
+
+    /// <summary>
+    /// Shows or hides the left sidebar (pinned folders + folder tree). Hiding it
+    /// collapses the column and its splitter so the file panes get the space.
+    /// </summary>
+    private void SetFolderTreeVisible(bool visible)
+    {
+        if (visible)
+        {
+            var width = _settings.SidebarWidth >= 180 ? _settings.SidebarWidth : 260;
+            SidebarColumn.MinWidth = 180;
+            SidebarColumn.Width = new GridLength(width);
+        }
+        else
+        {
+            SidebarColumn.MinWidth = 0;
+            SidebarColumn.Width = new GridLength(0);
+        }
+        SidebarSplitterColumn.Width = visible ? new GridLength(5) : new GridLength(0);
+        SidebarBorder.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        SidebarSplitter.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        FolderTreeButton.IsChecked = visible;
+    }
+
     private void ApplyPaneSplitRatio()
     {
         var ratio = Math.Clamp(_settings.LeftPaneRatio, 0.15, 0.85);

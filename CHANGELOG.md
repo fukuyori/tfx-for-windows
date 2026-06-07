@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.7.8
+
+### Folder tree show/hide toggle
+
+- New toolbar toggle (and `Ctrl+B` shortcut, configurable as `[shortcuts] toggleFolderTree`) shows or hides the left sidebar (pinned folders + folder tree), collapsing it and its splitter so the file panes get the space. The state persists across runs (`settings.json` `ShowFolderTree`) and can be forced at launch with `config.toml` `[startup] folderTree = "show" / "hide" / "restore"`. The layout toolbar buttons are ordered: folder tree, split pane, swap panes, preview, terminal pane.
+
+### Focus navigation shortcuts
+
+- Added `focusFilePane` (default `Ctrl+1`) and `focusTerminal` (default `Ctrl+2`), both remappable via `config.toml` `[shortcuts]`. `focusFilePane` moves keyboard focus to the active file list — and works from inside the built-in terminal too (the xterm page forwards the key to the host, since WebView2 otherwise owns it). `focusTerminal` moves focus to the terminal pane, opening it first if hidden.
+
+### Columns: drag-reorder is now persisted
+
+- Reordering file-list columns by dragging a header is now saved and mirrored to the other pane. Previously a header drag only changed the live view and was lost on the next reload (and conflicted with the Columns popup order). A `ColumnReordered` handler rebuilds the column order, syncs both panes, and writes it to `settings.json` (`FileColumnOrder`).
+
+### Startup: terminal pane visibility
+
+- `config.toml` `[startup]` gains a `terminal = "show" / "hide" / "restore"` key (same shape as `preview` / `layout`) to control the built-in terminal pane at launch. The `-t` / `-T` command-line options still take precedence.
+
 ## 0.7.7
 
 ### Window geometry option

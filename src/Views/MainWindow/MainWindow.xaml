@@ -76,7 +76,7 @@
                 <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="8,0,0,0">
                     <Button x:Name="TerminalButton" Style="{StaticResource ToolbarButton}" Click="Terminal_Click" ToolTip="Open Terminal here (Ctrl+Shift+T)" Content="&#xE756;" />
                     <Button x:Name="ReloadButton" Style="{StaticResource ToolbarButton}" Click="Reload_Click" ToolTip="Reload (Ctrl+R)" Content="&#xE72C;" />
-                    <ToggleButton x:Name="PreviewButton" Style="{StaticResource ToolbarToggleButton}" Click="Preview_Click" ToolTip="Toggle preview">
+                    <ToggleButton x:Name="FolderTreeButton" Style="{StaticResource ToolbarToggleButton}" Click="FolderTree_Click" ToolTip="Toggle folder tree">
                         <Viewbox Width="15" Height="11" Stretch="Uniform">
                             <Grid Width="15" Height="11">
                                 <Rectangle Width="14"
@@ -87,9 +87,9 @@
                                            StrokeThickness="1.4"
                                            Fill="Transparent"
                                            SnapsToDevicePixels="True" />
-                                <Line X1="10"
+                                <Line X1="5"
                                       Y1="1.7"
-                                      X2="10"
+                                      X2="5"
                                       Y2="9.3"
                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
                                       StrokeThickness="1.2"
@@ -154,6 +154,29 @@
                             </Grid>
                         </Viewbox>
                     </Button>
+                    <ToggleButton x:Name="PreviewButton" Style="{StaticResource ToolbarToggleButton}" Click="Preview_Click" ToolTip="Toggle preview">
+                        <Viewbox Width="15" Height="11" Stretch="Uniform">
+                            <Grid Width="15" Height="11">
+                                <Rectangle Width="14"
+                                           Height="10"
+                                           RadiusX="1.8"
+                                           RadiusY="1.8"
+                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                           StrokeThickness="1.4"
+                                           Fill="Transparent"
+                                           SnapsToDevicePixels="True" />
+                                <Line X1="10"
+                                      Y1="1.7"
+                                      X2="10"
+                                      Y2="9.3"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                      StrokeThickness="1.2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      SnapsToDevicePixels="True" />
+                            </Grid>
+                        </Viewbox>
+                    </ToggleButton>
                     <ToggleButton x:Name="TerminalPaneButton" Style="{StaticResource ToolbarToggleButton}" Click="TerminalPane_Click" Content="&#xE756;" />
                     <Button Style="{StaticResource ToolbarButton}" x:Name="ColumnsButton" Click="Columns_Click" ToolTip="Columns" Content="&#xE713;" />
                 </StackPanel>
@@ -193,13 +216,13 @@
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="SidebarColumn" Width="260" MinWidth="180" />
-                <ColumnDefinition Width="5" />
+                <ColumnDefinition x:Name="SidebarSplitterColumn" Width="5" />
                 <ColumnDefinition x:Name="MainPaneColumn" Width="*" MinWidth="240" />
                 <ColumnDefinition x:Name="PreviewSplitterColumn" Width="5" />
                 <ColumnDefinition x:Name="PreviewColumn" Width="320" MinWidth="240" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="{DynamicResource TfxPanel}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,0,1,0">
+            <Border x:Name="SidebarBorder" Grid.Column="0" Background="{DynamicResource TfxPanel}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,0,1,0">
                 <DockPanel>
                     <TextBlock x:Name="PinnedHeader" DockPanel.Dock="Top" Text="PINNED" Foreground="{DynamicResource TfxMuted}" Margin="10,10,10,4" />
                     <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Padding="4,0,4,12" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="PinnedList_SelectionChanged" PreviewMouseMove="PinnedList_PreviewMouseMove" PreviewMouseRightButtonDown="PinnedList_PreviewMouseRightButtonDown" ContextMenuOpening="PinnedList_ContextMenuOpening" DragOver="PinnedList_DragOver" Drop="PinnedList_Drop" AllowDrop="True">
@@ -246,7 +269,7 @@
                 </DockPanel>
             </Border>
 
-            <GridSplitter Grid.Column="1" Width="5" Background="{DynamicResource TfxBorder}" HorizontalAlignment="Stretch" />
+            <GridSplitter x:Name="SidebarSplitter" Grid.Column="1" Width="5" Background="{DynamicResource TfxBorder}" HorizontalAlignment="Stretch" />
 
             <Grid Grid.Column="2">
                 <Grid.ColumnDefinitions>
@@ -266,7 +289,7 @@
                         </ItemsControl>
                         <local:PathBar x:Name="LeftPathBar" DockPanel.Dock="Top" Margin="6,6,6,4" PathRequested="LeftPathBar_PathRequested" />
                         <Grid>
-                        <DataGrid x:Name="LeftGrid" ItemsSource="{Binding LeftItems}" IsReadOnly="True" VirtualizingPanel.VirtualizationMode="Standard" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
+                        <DataGrid x:Name="LeftGrid" ItemsSource="{Binding LeftItems}" IsReadOnly="True" VirtualizingPanel.VirtualizationMode="Standard" ColumnReordered="FileGrid_ColumnReordered" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn x:Name="LeftNameColumn" Header="Name" Width="280" MinWidth="200" SortMemberPath="Name" CanUserResize="True">
                                     <DataGridTemplateColumn.CellTemplate>
@@ -347,7 +370,7 @@
                         </ItemsControl>
                         <local:PathBar x:Name="RightPathBar" DockPanel.Dock="Top" Margin="6,6,6,4" PathRequested="RightPathBar_PathRequested" />
                         <Grid>
-                        <DataGrid x:Name="RightGrid" ItemsSource="{Binding RightItems}" IsReadOnly="True" VirtualizingPanel.VirtualizationMode="Standard" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
+                        <DataGrid x:Name="RightGrid" ItemsSource="{Binding RightItems}" IsReadOnly="True" VirtualizingPanel.VirtualizationMode="Standard" ColumnReordered="FileGrid_ColumnReordered" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn x:Name="RightNameColumn" Header="Name" Width="280" MinWidth="200" SortMemberPath="Name" CanUserResize="True">
                                     <DataGridTemplateColumn.CellTemplate>
