@@ -63,6 +63,10 @@ public partial class MainWindow : Window
     private bool _syncingFolderTree;
     private string? _leftPendingSelectionName;
     private string? _rightPendingSelectionName;
+    // When true, the pane's next pending-selection target is also put into inline
+    // rename mode (Explorer-style "New folder" → type name → Enter).
+    private bool _leftPendingRename;
+    private bool _rightPendingRename;
     private CancellationTokenSource? _leftReloadCts;
     private CancellationTokenSource? _rightReloadCts;
     private CancellationTokenSource? _previewCts;

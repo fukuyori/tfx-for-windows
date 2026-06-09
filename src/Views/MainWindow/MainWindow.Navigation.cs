@@ -186,6 +186,7 @@ public partial class MainWindow
         var name = TakePendingSelectionName(pane);
         if (string.IsNullOrWhiteSpace(name))
         {
+            TakePendingRename(pane);
             return;
         }
 
@@ -193,6 +194,7 @@ public partial class MainWindow
         var item = source.FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.CurrentCultureIgnoreCase));
         if (item is null)
         {
+            TakePendingRename(pane);
             return;
         }
 
@@ -213,11 +215,81 @@ public partial class MainWindow
             _syncingSelection = false;
         }
 
+        var renaming = TakePendingRename(pane);
         if (grid == _activeGrid)
         {
-            FocusSelectedListingItem(grid, iconView, item);
-            SchedulePreviewUpdate(item);
+            if (renaming)
+            {
+                // Explorer-style new item: go straight to inline rename. The normal
+                // focus-retry queue is intentionally skipped here — it refocuses the
+                // cell/row at ContextIdle/ApplicationIdle right after BeginEdit and
+                // would drop us back out of edit mode.
+                Dispatcher.BeginInvoke(() => BeginRenameNewItem(grid, item, 0), DispatcherPriority.Background);
+            }
+            else
+            {
+                FocusSelectedListingItem(grid, iconView, item);
+                SchedulePreviewUpdate(item);
+            }
         }
+    }
+
+    /// <summary>
+    /// Selects the row, makes its name cell current, and enters inline edit mode.
+    /// Retries at Background priority until the row container is realized and
+    /// <see cref="DataGrid.BeginEdit()"/> succeeds (virtualized rows are not
+    /// generated until a layout pass after the items are added).
+    /// </summary>
+    private void BeginRenameNewItem(DataGrid grid, FileItem item, int attempt)
+    {
+        var nameColumn = grid == LeftGrid ? LeftNameColumn : RightNameColumn;
+
+        grid.IsReadOnly = false;
+        grid.SelectedItem = item;
+        grid.ScrollIntoView(item);
+        grid.UpdateLayout();
+
+        var realized = grid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow;
+        if (realized)
+        {
+            grid.CurrentCell = new DataGridCellInfo(item, nameColumn);
+            grid.Focus();
+            if (grid.BeginEdit())
+            {
+                return;
+            }
+        }
+
+        if (attempt < 8)
+        {
+            Dispatcher.BeginInvoke(() => BeginRenameNewItem(grid, item, attempt + 1), DispatcherPriority.Background);
+        }
+    }
+
+    private void SetPendingRename(Pane pane, bool value)
+    {
+        if (pane == Pane.Left)
+        {
+            _leftPendingRename = value;
+        }
+        else
+        {
+            _rightPendingRename = value;
+        }
+    }
+
+    private bool TakePendingRename(Pane pane)
+    {
+        if (pane == Pane.Left)
+        {
+            var value = _leftPendingRename;
+            _leftPendingRename = false;
+            return value;
+        }
+
+        var rightValue = _rightPendingRename;
+        _rightPendingRename = false;
+        return rightValue;
     }
 
     private void FocusSelectedListingItem(DataGrid grid, ListBox iconView, FileItem item)

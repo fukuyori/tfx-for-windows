@@ -70,7 +70,9 @@
       "Bash(rm -f \"D:/home/source/csharp/tfx-for-windows/.git/index.lock\" && git commit -a -m \"0.7.2\" && echo \"---\" && git log --oneline -1 && echo \"--- remaining status ---\" && git status --short)",
       "Bash(dir /s /b \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\")",
       "Bash(grep -E \"\\\\.\\(xaml|cs\\)$\")",
-      "PowerShell(pwsh -NoProfile -File \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\\\\scripts\\\\build-zip.ps1\")"
+      "PowerShell(pwsh -NoProfile -File \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\\\\scripts\\\\build-zip.ps1\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

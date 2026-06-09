@@ -5,8 +5,6 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
-using Microsoft.VisualBasic.FileIO;
-using VbFileSystem = Microsoft.VisualBasic.FileIO.FileSystem;
 using Path = System.IO.Path;
 
 namespace Tfx;
@@ -266,56 +264,37 @@ public partial class MainWindow
     /// </summary>
     private void ExecuteDrop(string[] paths, string destination, DragDropEffects effect)
     {
-        var leftBehind = new List<string>();
-        var failed = new List<string>();
+        if (effect == DragDropEffects.Link)
+        {
+            ExecuteCreateShortcuts(paths, destination);
+            return;
+        }
 
+        var move = effect == DragDropEffects.Move;
+
+        // Skip items that are already in the destination folder (dragging within
+        // the same folder), which would otherwise be a no-op move or a self-copy.
+        var sources = paths
+            .Where(p => !(move && FsHelpers.SamePath(Path.GetDirectoryName(p) ?? "", destination)))
+            .ToArray();
+        if (sources.Length == 0)
+        {
+            return;
+        }
+
+        CopyOrMoveWithProgress(sources, destination, move);
+    }
+
+    private void ExecuteCreateShortcuts(string[] paths, string destination)
+    {
+        var failed = new List<string>();
         foreach (var source in paths)
         {
             try
             {
-                if (effect == DragDropEffects.Link)
-                {
-                    var lnkName = Loc.F("{0} - Shortcut.lnk", Path.GetFileName(source));
-                    var lnkPath = FsHelpers.NextAvailablePath(Path.Combine(destination, lnkName));
-                    FsHelpers.CreateShortcut(source, lnkPath);
-                }
-                else
-                {
-                    var requestedTarget = Path.Combine(destination, Path.GetFileName(source));
-                    if (effect == DragDropEffects.Move && FsHelpers.SamePath(source, requestedTarget))
-                    {
-                        continue;
-                    }
-
-                    var target = FsHelpers.NextAvailablePath(requestedTarget);
-                    if (Directory.Exists(source))
-                    {
-                        if (effect == DragDropEffects.Move)
-                        {
-                            VbFileSystem.MoveDirectory(source, target);
-                        }
-                        else
-                        {
-                            VbFileSystem.CopyDirectory(source, target);
-                        }
-                    }
-                    else if (File.Exists(source))
-                    {
-                        if (effect == DragDropEffects.Move)
-                        {
-                            File.Move(source, target);
-                        }
-                        else
-                        {
-                            File.Copy(source, target);
-                        }
-                    }
-
-                    if (effect == DragDropEffects.Move && (File.Exists(source) || Directory.Exists(source)))
-                    {
-                        leftBehind.Add(Path.GetFileName(source));
-                    }
-                }
+                var lnkName = Loc.F("{0} - Shortcut.lnk", Path.GetFileName(source));
+                var lnkPath = FsHelpers.NextAvailablePath(Path.Combine(destination, lnkName));
+                FsHelpers.CreateShortcut(source, lnkPath);
             }
             catch (Exception ex)
             {
@@ -325,15 +304,59 @@ public partial class MainWindow
 
         Reload(LeftGrid);
         Reload(RightGrid);
-
-        if (leftBehind.Count > 0)
-        {
-            SetStatus(Loc.F("Source remained for: {0}", string.Join(", ", leftBehind)));
-        }
-        else if (failed.Count > 0)
+        if (failed.Count > 0)
         {
             SetStatus(Loc.F("Failed: {0}", string.Join(", ", failed)));
         }
+    }
+
+    /// <summary>
+    /// Copies or moves the sources into <paramref name="destination"/> through the
+    /// Windows shell, which shows its standard progress dialog for long operations
+    /// and handles name collisions natively. Both panes reload afterwards.
+    /// </summary>
+    /// <remarks>
+    /// Runs on a dedicated STA thread. <c>IFileOperation.PerformOperations</c> pumps
+    /// its own modal message loop / shows a dialog; doing that on the UI thread from
+    /// inside the drop handler — which for an intra-app drag is nested inside the
+    /// source's <c>DoDragDrop</c> modal loop (and that loop also pumps the WPF
+    /// dispatcher, so a mere <c>BeginInvoke</c> can still run nested) — is an
+    /// input-synchronous re-entrant COM call that crashes the process. A separate
+    /// STA thread is fully decoupled from the drag loop.
+    /// </remarks>
+    private void CopyOrMoveWithProgress(IReadOnlyList<string> sources, string destination, bool move)
+    {
+        var sourcesCopy = sources.ToArray();
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+
+        var thread = new System.Threading.Thread(() =>
+        {
+            var aborted = false;
+            try
+            {
+                ShellFileOperation.CopyOrMove(hwnd, sourcesCopy, destination, move, out aborted);
+            }
+            catch
+            {
+                // Best effort; failures surface via the shell's own error UI.
+            }
+
+            Dispatcher.BeginInvoke(() =>
+            {
+                Reload(LeftGrid);
+                Reload(RightGrid);
+                if (aborted)
+                {
+                    SetStatus(Loc.T("Operation cancelled or incomplete"));
+                }
+            });
+        })
+        {
+            IsBackground = true,
+            Name = "tfx-file-op"
+        };
+        thread.SetApartmentState(System.Threading.ApartmentState.STA);
+        thread.Start();
     }
 
     /// <summary>

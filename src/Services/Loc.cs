@@ -78,6 +78,9 @@ internal static class Loc
         ["Delete permanently"] = "完全に削除",
         ["New Folder"] = "新規フォルダー",
         ["New File"] = "新規ファイル",
+        // Default on-disk names for Explorer-style inline create (then renamed).
+        ["New folder"] = "新規フォルダー",
+        ["New file"] = "新規ファイル",
         ["Folder name"] = "フォルダー名",
         ["File name"] = "ファイル名",
         ["New File.txt"] = "新規ファイル.txt",
@@ -124,6 +127,7 @@ internal static class Loc
         ["Cut {0} item(s)"] = "{0} 個を切り取りました",
         ["Copied {0} item(s)"] = "{0} 個をコピーしました",
         ["Pasted {0} item(s)"] = "{0} 個を貼り付けました",
+        ["Operation cancelled or incomplete"] = "操作はキャンセルされたか、完了していません",
         ["Pasted {0}; source remained for: {1}"] = "{0} 個を貼り付けました。元が残ったもの: {1}",
         ["Pasted {0}; failed: {1}"] = "{0} 個を貼り付けました。失敗: {1}",
         ["Source remained for: {0}"] = "元が残ったもの: {0}",

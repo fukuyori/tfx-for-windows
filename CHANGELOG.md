@@ -1,11 +1,22 @@
 # Changelog
 
-## 0.7.90
+## 0.8.0
+
+### New file / folder: inline naming
+
+- New File and New Folder no longer pop a name dialog. Like Explorer, they create the item with a default name ("新規フォルダー" / "新規ファイル", or "New folder" / "New file") and drop it straight into inline rename in the list — type the name and press **Enter** to confirm, or **Esc** to keep the default.
+
+### Copy / move progress
+
+- Drag-and-drop and clipboard paste now copy/move through the Windows shell `IFileOperation`, so a long operation shows the standard Windows progress dialog (time remaining, speed, **Cancel**) and quick ones finish without any dialog. All dragged/pasted items share a single dialog. Name collisions are now resolved with Windows' native **replace / skip / keep both** prompts (previously tfx silently auto-renamed to "name (2)"), and the operation is undoable. Creating shortcuts (drag with the link effect) is unchanged.
 
 ### Fixes
 
 - **Folder tree single click again reflects the folder in the file list.** 0.7.9 changed a single click to select-only; it now navigates the active file list to the clicked folder again (without force-expanding it), while **double-click** continues to toggle expand / collapse.
+- **Crash moving files between panes in split view.** The shell `IFileOperation` progress-sink parameter was marshaled as a VARIANT instead of a pointer, causing an access violation; it now marshals correctly, and the operation runs on a dedicated STA thread so it is fully decoupled from the drag-drop modal loop.
+- **Rename keeps the renamed item selected.** After confirming a rename the list reloads; the renamed row is now reselected again (the pending-selection name was being overwritten by the reload).
 - **Build fix: include `src/Services/ShellDragImage.cs`.** The 0.7.9 drag-preview source file was missing from the commit, so a clean checkout failed to build.
+- Unhandled exceptions are now logged to `%APPDATA%\tfx\crash.log` (UI-thread, fatal/native, and unobserved-task exceptions) to aid diagnosis.
 
 ### Packaging
 

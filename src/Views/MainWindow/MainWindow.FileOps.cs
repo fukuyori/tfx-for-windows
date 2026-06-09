@@ -153,67 +153,33 @@ public partial class MainWindow
 
         var destination = GetCurrentPath(_activeGrid);
         var files = Clipboard.GetFileDropList().Cast<string>().ToArray();
-        var succeeded = 0;
-        var failed = new List<string>();
-        var leftBehind = new List<string>();
-
-        foreach (var source in files)
+        if (files.Length == 0)
         {
-            var requestedTarget = Path.Combine(destination, Path.GetFileName(source));
-            var isMove = _cutBuffer.Contains(source, StringComparer.OrdinalIgnoreCase);
-            if (isMove && FsHelpers.SamePath(source, requestedTarget))
-            {
-                continue;
-            }
+            return;
+        }
 
-            var target = FsHelpers.NextAvailablePath(requestedTarget);
+        // Cut + paste = move; plain copy = copy. The clipboard set is uniformly one
+        // or the other (set by Cut/Copy), so decide once for the whole batch.
+        var move = files.All(f => _cutBuffer.Contains(f, StringComparer.OrdinalIgnoreCase));
+
+        // Skip items already in the destination folder for a move (self-move).
+        var sources = files
+            .Where(f => !(move && FsHelpers.SamePath(Path.GetDirectoryName(f) ?? "", destination)))
+            .ToArray();
+
+        var aborted = false;
+        if (sources.Length > 0)
+        {
             try
             {
-                if (Directory.Exists(source))
-                {
-                    if (isMove)
-                    {
-                        // Use VbFileSystem.MoveDirectory: it falls back to copy + delete
-                        // across volumes, where Directory.Move would throw IOException.
-                        VbFileSystem.MoveDirectory(source, target);
-                    }
-                    else
-                    {
-                        VbFileSystem.CopyDirectory(source, target);
-                    }
-                }
-                else if (File.Exists(source))
-                {
-                    if (isMove)
-                    {
-                        File.Move(source, target);
-                    }
-                    else
-                    {
-                        File.Copy(source, target);
-                    }
-                }
-                else
-                {
-                    failed.Add(Path.GetFileName(source));
-                    continue;
-                }
-
-                // Post-move verification: if a move claimed to succeed but the
-                // source still exists, the underlying copy-then-delete swallowed
-                // a delete failure. Track for user feedback.
-                if (isMove && (File.Exists(source) || Directory.Exists(source)))
-                {
-                    leftBehind.Add(Path.GetFileName(source));
-                }
-                else
-                {
-                    succeeded++;
-                }
+                // The Windows shell shows its standard progress dialog for long
+                // operations and handles name collisions natively.
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                ShellFileOperation.CopyOrMove(hwnd, sources, destination, move, out aborted);
             }
             catch (Exception ex)
             {
-                failed.Add($"{Path.GetFileName(source)} ({ex.Message})");
+                SetStatus(ex.Message);
             }
         }
 
@@ -221,18 +187,9 @@ public partial class MainWindow
         Reload(LeftGrid);
         Reload(RightGrid);
 
-        if (failed.Count == 0 && leftBehind.Count == 0)
-        {
-            SetStatus(Loc.F("Pasted {0} item(s)", succeeded));
-        }
-        else if (leftBehind.Count > 0)
-        {
-            SetStatus(Loc.F("Pasted {0}; source remained for: {1}", succeeded, string.Join(", ", leftBehind)));
-        }
-        else
-        {
-            SetStatus(Loc.F("Pasted {0}; failed: {1}", succeeded, string.Join(", ", failed)));
-        }
+        SetStatus(aborted
+            ? Loc.T("Operation cancelled or incomplete")
+            : Loc.F("Pasted {0} item(s)", sources.Length));
     }
 
     private void MoveSelectionToTrash()
@@ -273,18 +230,11 @@ public partial class MainWindow
 
     private void NewFolder()
     {
-        var name = PromptForName(Loc.T("New Folder"), Loc.T("Folder name"), Loc.T("New Folder"));
-        if (!TryNormalizeNewItemName(name, out var itemName))
-        {
-            return;
-        }
-
         try
         {
-            var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), itemName));
+            var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), Loc.T("New folder")));
             Directory.CreateDirectory(path);
-            Reload(_activeGrid);
-            SetStatus(Loc.F("Created {0}", path));
+            BeginInlineCreate(Path.GetFileName(path));
         }
         catch (Exception ex)
         {
@@ -294,18 +244,11 @@ public partial class MainWindow
 
     private void NewFile()
     {
-        var name = PromptForName(Loc.T("New File"), Loc.T("File name"), Loc.T("New File.txt"));
-        if (!TryNormalizeNewItemName(name, out var itemName))
-        {
-            return;
-        }
-
         try
         {
-            var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), itemName));
+            var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), Loc.T("New file")));
             File.WriteAllBytes(path, []);
-            Reload(_activeGrid);
-            SetStatus(Loc.F("Created {0}", path));
+            BeginInlineCreate(Path.GetFileName(path));
         }
         catch (Exception ex)
         {
@@ -313,35 +256,24 @@ public partial class MainWindow
         }
     }
 
-    private string? PromptForName(string title, string label, string defaultValue)
+    /// <summary>
+    /// After creating a new item with a default name, reloads the active pane and
+    /// drops the new row into inline rename (Explorer-style): the user types the
+    /// final name and presses Enter (or Esc to keep the default name).
+    /// </summary>
+    private void BeginInlineCreate(string createdName)
     {
-        var dialog = new NamePromptDialog(title, label, defaultValue);
-        return dialog.ShowDialog() == true ? dialog.EnteredText : null;
+        // Pass the name through Reload's selectName parameter: Reload itself calls
+        // SetPendingSelectionName, so setting it beforehand would be overwritten.
+        // The rename flag is separate and survives the reload.
+        SetPendingRename(ActivePane, true);
+        Reload(_activeGrid, createdName);
     }
 
     private static bool Confirm(string message, string confirmText)
     {
         var dialog = new ConfirmDialog("tfx", message, confirmText);
         return dialog.ShowDialog() == true;
-    }
-
-    private bool TryNormalizeNewItemName(string? rawName, out string name)
-    {
-        name = (rawName ?? "").Trim();
-        if (string.IsNullOrEmpty(name))
-        {
-            return false;
-        }
-
-        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
-            name.Contains(Path.DirectorySeparatorChar) ||
-            name.Contains(Path.AltDirectorySeparatorChar))
-        {
-            SetStatus(Loc.F("Invalid name: {0}", name));
-            return false;
-        }
-
-        return true;
     }
 
     private void StartRename(DataGrid grid, FileItem item)
@@ -409,15 +341,17 @@ public partial class MainWindow
             return;
         }
 
-        // Restore selection on the renamed entry after the reload so the
-        // user keeps their place (and so arrow keys keep navigating).
+        // Restore selection on the renamed entry after the reload so the user
+        // keeps their place (and so arrow keys keep navigating). The name must be
+        // passed through Reload's selectName parameter — Reload itself calls
+        // SetPendingSelectionName, so setting it beforehand would be overwritten.
         var renamedName = Path.GetFileName(target);
-        SetPendingSelectionName(PaneOf(grid), renamedName);
+        var renamedPane = PaneOf(grid);
 
         Dispatcher.BeginInvoke(() =>
         {
-            Reload(LeftGrid);
-            Reload(RightGrid);
+            Reload(LeftGrid, renamedPane == Pane.Left ? renamedName : null);
+            Reload(RightGrid, renamedPane == Pane.Right ? renamedName : null);
         }, DispatcherPriority.Background);
     }
 
