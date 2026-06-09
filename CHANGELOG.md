@@ -1,10 +1,23 @@
 # Changelog
 
-## 0.7.8
+## 0.7.9
 
 ### Folder tree show/hide toggle
 
 - New toolbar toggle (and `Ctrl+B` shortcut, configurable as `[shortcuts] toggleFolderTree`) shows or hides the left sidebar (pinned folders + folder tree), collapsing it and its splitter so the file panes get the space. The state persists across runs (`settings.json` `ShowFolderTree`) and can be forced at launch with `config.toml` `[startup] folderTree = "show" / "hide" / "restore"`. The layout toolbar buttons are ordered: folder tree, split pane, swap panes, preview, terminal pane.
+- Added a **collapse-all** button next to the folder-tree header and a `collapseFolders` shortcut (default `Ctrl+Shift+B`, configurable) that collapses every node in the tree back to the roots.
+
+### Drag-and-drop preview
+
+- Dragging files from a pane now shows an Explorer-style translucent preview that follows the cursor — the item's icon glyph plus its name, or an item count for a multi-selection. Implemented via the Windows shell `IDragSourceHelper` attached to the drag's data object, so it also renders while dragging into other applications. (Right-button drags already used the shell's native drag image.)
+
+### Folder tree: click behavior
+
+- In the folder tree, a single click now only **selects** (highlights) a node — it no longer immediately navigates the file list. **Double-click** opens a folder (expands it and shows its contents in the active file list) when it is closed, or closes it (collapses) when it is open. A folder with no subfolders simply opens its contents. The expander chevron still toggles on a single click.
+
+### Monochrome file-list icons
+
+- The file list and icon view now use single-color, theme-aware outline glyphs (Segoe Fluent Icons / MDL2) chosen by file kind — folder, text/document, code, image, audio, video, archive — instead of the Windows shell bitmaps. This gives a consistent outline look that follows the dark / light theme foreground color.
 
 ### Focus navigation shortcuts
 

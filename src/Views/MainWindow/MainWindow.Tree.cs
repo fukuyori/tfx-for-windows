@@ -101,6 +101,44 @@ public partial class MainWindow
         }
     }
 
+    private void CollapseAllFolders_Click(object sender, RoutedEventArgs e) => CollapseAllFolders();
+
+    /// <summary>Collapses every node in the folder tree back to the roots.</summary>
+    private void CollapseAllFolders()
+    {
+        CollapseFolderItems();
+
+        // A folder-tree sync (QueueFolderTreeSyncToActivePane, posted at
+        // DispatcherPriority.Loaded) may still be pending and would re-expand the
+        // active path right after this collapse — making it look like one click
+        // didn't fully close the tree. Re-run the collapse at a lower priority so
+        // it runs after any such pending reveal and wins.
+        Dispatcher.BeginInvoke(CollapseFolderItems, System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private void CollapseFolderItems()
+    {
+        foreach (var obj in FolderTree.Items)
+        {
+            if (obj is TreeViewItem item)
+            {
+                CollapseTreeItem(item);
+            }
+        }
+    }
+
+    private static void CollapseTreeItem(TreeViewItem item)
+    {
+        foreach (var child in item.Items)
+        {
+            if (child is TreeViewItem childItem)
+            {
+                CollapseTreeItem(childItem);
+            }
+        }
+        item.IsExpanded = false;
+    }
+
     private void FolderTree_Expanded(object sender, RoutedEventArgs e)
     {
         if (e.OriginalSource is not TreeViewItem item || item.Tag is not string path)
@@ -113,33 +151,66 @@ public partial class MainWindow
 
     private void FolderTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
+        // A single click now only selects (highlights) the node. Opening a folder
+        // — navigating the active file list into it — happens on double-click (see
+        // FolderTree_MouseDoubleClick). The _syncingFolderTree guard is kept so a
+        // programmatic selection from SyncFolderTreeToPath stays a no-op here.
         if (_syncingFolderTree)
         {
             return;
         }
-
-        if (FolderTree.SelectedItem is TreeViewItem item && item.Tag is string path && Directory.Exists(path))
-        {
-            Navigate(_activeGrid, path, true);
-        }
     }
 
-    private void FolderTree_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    /// <summary>
+    /// Double-click on a folder node: open it (expand + show its contents in the
+    /// active file list) when it is closed, or close it (collapse) when it is
+    /// open. A node with no subfolders simply opens its contents.
+    /// </summary>
+    /// <remarks>
+    /// Handled on the tunneling <c>PreviewMouseLeftButtonDown</c> (not
+    /// <c>MouseDoubleClick</c>): the inner <see cref="TreeViewItem"/> handles the
+    /// bubbling mouse-down for selection / its own expand toggle first, which would
+    /// otherwise cancel out our toggle. The preview pass runs before that, and
+    /// <c>e.ClickCount == 2</c> identifies the double-click.
+    /// </remarks>
+    private void FolderTree_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (e.ClickCount != 2)
+        {
+            return; // single click: let the default selection happen
+        }
+
         var node = e.OriginalSource as DependencyObject;
         while (node != null && node is not TreeView)
         {
+            // The expander chevron toggles itself; don't double-handle it.
             if (node is System.Windows.Controls.Primitives.ToggleButton)
             {
                 return;
             }
 
-            if (node is TreeViewItem item && item.Tag is string path && Directory.Exists(path))
+            if (node is TreeViewItem item && item.Tag is string path)
             {
-                if (!string.Equals(GetCurrentPath(_activeGrid), path, StringComparison.OrdinalIgnoreCase))
+                var hasChildren = item.Items.Count > 0;
+                if (hasChildren && item.IsExpanded)
                 {
-                    Navigate(_activeGrid, path, true);
+                    // Open → close.
+                    item.IsExpanded = false;
                 }
+                else
+                {
+                    // Closed (or a leaf) → open: reveal subfolders and show the
+                    // folder's contents in the active file list.
+                    if (hasChildren)
+                    {
+                        item.IsExpanded = true;
+                    }
+                    if (Directory.Exists(path))
+                    {
+                        Navigate(_activeGrid, path, true);
+                    }
+                }
+                e.Handled = true;
                 return;
             }
 

@@ -132,6 +132,7 @@ public partial class MainWindow
         }
 
         var data = BuildFileDropData(realPaths, isRightDrag);
+        AttachDragImage(data, paths.Length);
         var allowedEffects = hasArchive
             ? DragDropEffects.Copy
             : DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link;
@@ -170,6 +171,23 @@ public partial class MainWindow
         {
             _nativeRightDragInProgress = false;
         }
+    }
+
+    /// <summary>
+    /// Attaches an Explorer-style translucent drag preview (icon glyph + name, or
+    /// an item count for a multi-selection) to the drag's <see cref="DataObject"/>.
+    /// </summary>
+    private void AttachDragImage(DataObject data, int count)
+    {
+        var primary = _pendingFileDragItem;
+        if (primary is null)
+        {
+            return;
+        }
+
+        var label = count > 1 ? Loc.F("{0} items", count) : primary.Name;
+        var scale = System.Windows.Media.VisualTreeHelper.GetDpi(this).DpiScaleX;
+        ShellDragImage.Attach(data, primary.IconGlyph, label, scale);
     }
 
     private static DataObject BuildFileDropData(string[] paths, bool isRightDrag)

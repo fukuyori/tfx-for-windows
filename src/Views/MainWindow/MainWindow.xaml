@@ -264,8 +264,11 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    <TextBlock x:Name="FoldersHeader" DockPanel.Dock="Top" Text="FOLDERS" Foreground="{DynamicResource TfxMuted}" Margin="10,4,10,4" />
-                    <TreeView x:Name="FolderTree" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" SelectedItemChanged="FolderTree_SelectedItemChanged" PreviewMouseLeftButtonUp="FolderTree_PreviewMouseLeftButtonUp" />
+                    <DockPanel DockPanel.Dock="Top" Margin="10,4,4,4">
+                        <Button x:Name="CollapseAllButton" DockPanel.Dock="Right" Style="{StaticResource ToolbarButton}" Click="CollapseAllFolders_Click" ToolTip="Collapse all folders" Content="&#xE738;" />
+                        <TextBlock x:Name="FoldersHeader" Text="FOLDERS" Foreground="{DynamicResource TfxMuted}" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TreeView x:Name="FolderTree" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" SelectedItemChanged="FolderTree_SelectedItemChanged" PreviewMouseLeftButtonDown="FolderTree_PreviewMouseLeftButtonDown" />
                 </DockPanel>
             </Border>
 
@@ -295,7 +298,7 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
-                                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center" SnapsToDevicePixels="True" />
+                                                <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="15" Width="18" Margin="0,0,6,0" Foreground="{DynamicResource TfxForeground}" VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" />
                                                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                         </DataTemplate>
@@ -344,7 +347,7 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Width="108" Margin="6,7">
-                                        <Image Source="{Binding LargeIcon}" Width="32" Height="32" HorizontalAlignment="Center" Stretch="None" SnapsToDevicePixels="True" />
+                                        <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="30" HorizontalAlignment="Center" Foreground="{DynamicResource TfxForeground}" />
                                         <TextBlock Text="{Binding Name}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
                                     </StackPanel>
                                 </DataTemplate>
@@ -376,7 +379,7 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
-                                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center" SnapsToDevicePixels="True" />
+                                                <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="15" Width="18" Margin="0,0,6,0" Foreground="{DynamicResource TfxForeground}" VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" />
                                                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                         </DataTemplate>
@@ -425,7 +428,7 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Width="108" Margin="6,7">
-                                        <Image Source="{Binding LargeIcon}" Width="32" Height="32" HorizontalAlignment="Center" Stretch="None" SnapsToDevicePixels="True" />
+                                        <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="30" HorizontalAlignment="Center" Foreground="{DynamicResource TfxForeground}" />
                                         <TextBlock Text="{Binding Name}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
                                     </StackPanel>
                                 </DataTemplate>

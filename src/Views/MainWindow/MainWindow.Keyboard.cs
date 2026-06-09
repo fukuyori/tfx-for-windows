@@ -13,6 +13,7 @@ public partial class MainWindow
         ["openTerminal"] = "ctrl+shift+t",
         ["togglePreview"] = "ctrl+shift+p",
         ["toggleFolderTree"] = "ctrl+b",
+        ["collapseFolders"] = "ctrl+shift+b",
         ["toggleRendered"] = "ctrl+shift+r",
         ["loadExternalImages"] = "ctrl+shift+i",
         ["toggleSplit"] = "ctrl+backslash",
@@ -231,6 +232,11 @@ public partial class MainWindow
         else if (IsShortcut("toggleFolderTree", e))
         {
             ToggleFolderTree();
+            e.Handled = true;
+        }
+        else if (IsShortcut("collapseFolders", e))
+        {
+            CollapseAllFolders();
             e.Handled = true;
         }
         else if (IsShortcut("toggleRendered", e) && RenderedToggle.IsVisible)

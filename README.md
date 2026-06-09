@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.7.8
+Version: 0.7.9
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -22,10 +22,10 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 ## Highlights
 
 - Two file panes (single or split) with independent navigation history
-- Folder tree sidebar plus persistent pinned folders
+- Folder tree sidebar (toolbar show/hide toggle and collapse-all button; single-click selects, double-click opens or closes a folder) plus persistent pinned folders
 - Editable address bar with clickable breadcrumb segments and free-text input
-- Two view modes: **Details** (multi-column metadata) and **Icons** (large-icon grid)
-- New File / New Folder, inline rename, drag-and-drop with full Windows modifier-key conventions, shortcut (`.lnk`) creation
+- Two view modes: **Details** (multi-column metadata) and **Icons** (large-icon grid), with monochrome, theme-aware file-type icons
+- New File / New Folder, inline rename, drag-and-drop with full Windows modifier-key conventions and an Explorer-style translucent drag preview, shortcut (`.lnk`) creation
 - Zip compression and extraction from the file pane or context menu, plus read-only browsing inside `.zip` files (open, drag out to other apps)
 - Right-click context menu (Windows 11–style ordering), "Open with..." dialog, sortable columns, customizable column visibility and order
 - Image / text preview pane with rendered Markdown, HTML, CSV / TSV tables, and pretty-printed JSON (toggle between rendered view and source)
@@ -56,7 +56,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.7.8 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.7.9 |
 +---------------------------------------------------------------------+
 ```
 
@@ -112,6 +112,7 @@ The native title bar is replaced by custom chrome when transparency is enabled. 
 | `Ctrl + Shift + .` | Toggle hidden files |
 | `Ctrl + \` | Toggle split pane |
 | `Ctrl + B` | Toggle folder tree (sidebar) |
+| `Ctrl + Shift + B` | Collapse all folders in the tree |
 | `Ctrl + Shift + P` | Toggle preview pane |
 | `Ctrl + Shift + R` | Toggle rendered / source view (while a Markdown / HTML / CSV / JSON preview is shown) |
 | `Ctrl + Shift + I` | Load external images for the current preview (when offered) |
@@ -323,6 +324,20 @@ Or build the release artifact:
 
 The script writes `artifacts\release\tfx-for-windows-<version>-win-x64\Tfx.exe`. By default the app is published as a self-contained single executable. Existing files are overwritten in place; the release folder itself is not deleted.
 
+### Packaging
+
+Both packaging scripts consume the already-built `Tfx.exe` above (run `build-release.ps1` first) and read the version from `Tfx.csproj`.
+
+```powershell
+# Portable ZIP -> artifacts\release\tfx-for-windows-<version>-win-x64-portable.zip
+.\scripts\build-zip.ps1
+
+# Installer -> artifacts\release\tfx-for-windows-<version>-setup.exe
+.\scripts\build-installer.ps1
+```
+
+The ZIP contains a single top-level folder with `Tfx.exe`, `LICENSE`, `NOTICE`, and the READMEs. The installer is built with [Inno Setup 6](https://jrsoftware.org/isdl.php) (`winget install JRSoftware.InnoSetup`); if `ISCC.exe` is not on `PATH` or in the default location, pass `-IsccPath`. The installer adds Start Menu (and optional desktop) shortcuts and an uninstaller, and installs to `Program Files\tfx`.
+
 ---
 
 ## Project structure
@@ -332,6 +347,9 @@ Tfx.csproj
 App.xaml / App.xaml.cs              Application bootstrap; brushes; default control styles
 AssemblyInfo.cs                     WPF theme info
 scripts/build-release.ps1           Release publish helper
+scripts/build-zip.ps1               Portable ZIP packager (from built binary)
+scripts/build-installer.ps1         Installer builder (Inno Setup; from built binary)
+scripts/tfx.iss                     Inno Setup installer definition
 
 src/Views/MainWindow/MainWindow.xaml
                                     Main window layout

@@ -67,7 +67,10 @@
       "PowerShell(Start-Sleep -Seconds 12; $p = Get-Process -Name Tfx -ErrorAction SilentlyContinue; if \\($p\\) { \"Tfx process running: PID $\\($p.Id\\), MainWindowTitle='$\\($p.MainWindowTitle\\)'\" } else { \"Tfx process NOT found\" })",
       "PowerShell(Start-Sleep -Seconds 2; $left = @\\(Get-Process -Name Tfx -ErrorAction SilentlyContinue\\); \"count=$\\($left.Count\\)\"; $left | ForEach-Object { \"PID=$\\($_.Id\\) title='$\\($_.MainWindowTitle\\)'\" })",
       "PowerShell(Get-CimInstance Win32_Process -Filter \"Name='git.exe'\")",
-      "Bash(rm -f \"D:/home/source/csharp/tfx-for-windows/.git/index.lock\" && git commit -a -m \"0.7.2\" && echo \"---\" && git log --oneline -1 && echo \"--- remaining status ---\" && git status --short)"
+      "Bash(rm -f \"D:/home/source/csharp/tfx-for-windows/.git/index.lock\" && git commit -a -m \"0.7.2\" && echo \"---\" && git log --oneline -1 && echo \"--- remaining status ---\" && git status --short)",
+      "Bash(dir /s /b \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\")",
+      "Bash(grep -E \"\\\\.\\(xaml|cs\\)$\")",
+      "PowerShell(pwsh -NoProfile -File \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\\\\scripts\\\\build-zip.ps1\")"
     ]
   }
 }

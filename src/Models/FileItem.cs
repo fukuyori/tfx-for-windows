@@ -18,6 +18,14 @@ public sealed class FileItem : INotifyPropertyChanged
     public ImageSource? Icon { get; init; }
     public ImageSource? LargeIcon { get; init; }
 
+    /// <summary>
+    /// Monochrome, theme-colored glyph (Segoe MDL2 Assets / Segoe Fluent Icons)
+    /// shown in the file list and icon view instead of the Windows shell bitmap.
+    /// Chosen by file kind so folders / text / code / media share one outline
+    /// visual language.
+    /// </summary>
+    public string IconGlyph { get; init; } = DocumentGlyph;
+
     // These five change when a file is modified externally. They use backing
     // fields with INPC so the DataGrid re-renders the row when DiffApply detects
     // a metadata change and calls UpdateMutableFrom.
@@ -115,6 +123,40 @@ public sealed class FileItem : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    // Segoe MDL2 Assets / Segoe Fluent Icons glyphs for the monochrome file-list
+    // icons. Code points exist in both fonts so they render on Windows 10 and 11.
+    private const string FolderGlyph = "";    // Folder
+    private const string DocumentGlyph = "";  // Document (default file / text)
+
+    /// <summary>Picks a glyph for a file name by extension category.</summary>
+    internal static string GlyphForName(string name, bool isDirectory)
+    {
+        if (isDirectory)
+        {
+            return FolderGlyph;
+        }
+
+        var ext = Path.GetExtension(name).TrimStart('.').ToLowerInvariant();
+        return ext switch
+        {
+            "txt" or "md" or "markdown" or "log" or "rtf" or "csv" or "tsv"
+                or "ini" or "cfg" or "conf" or "toml" or "yaml" or "yml"
+                or "json" or "xml" or "doc" or "docx" or "odt" or "pdf" => DocumentGlyph,
+            "cs" or "js" or "mjs" or "ts" or "jsx" or "tsx" or "py" or "java"
+                or "c" or "cc" or "cpp" or "h" or "hpp" or "go" or "rs" or "rb"
+                or "php" or "lua" or "sh" or "ps1" or "psm1" or "bat" or "cmd"
+                or "html" or "htm" or "css" or "scss" or "sql" or "vb" => "",   // Code
+            "png" or "jpg" or "jpeg" or "gif" or "bmp" or "webp" or "svg"
+                or "ico" or "tif" or "tiff" or "heic" or "heif" => "",          // Photo2
+            "mp3" or "wav" or "flac" or "aac" or "ogg" or "oga" or "m4a"
+                or "wma" or "mid" or "midi" => "",                              // MusicNote
+            "mp4" or "mkv" or "mov" or "avi" or "wmv" or "webm" or "flv"
+                or "m4v" or "mpg" or "mpeg" => "",                              // Video
+            "zip" or "7z" or "rar" or "gz" or "tar" or "tgz" or "bz2" or "xz" => "",  // ZipFolder
+            _ => DocumentGlyph,
+        };
+    }
+
     public static FileItem Parent(string path, bool loadSmallIcon, bool loadLargeIcon) => new()
     {
         Name = "..",
@@ -123,6 +165,7 @@ public sealed class FileItem : INotifyPropertyChanged
         IsDirectory = true,
         IsParent = true,
         AttributeText = Loc.T("Directory"),
+        IconGlyph = FolderGlyph,
         Icon = loadSmallIcon ? IconCache.GetFolderIcon() : null,
         LargeIcon = loadLargeIcon ? IconCache.GetFolderIconLarge() : null
     };
@@ -144,6 +187,7 @@ public sealed class FileItem : INotifyPropertyChanged
             CreatedText = FormatDate(created),
             OwnerText = includeOwner ? SafeOwner(info) : "",
             AttributeText = FormatAttributes(info.Attributes),
+            IconGlyph = FolderGlyph,
             Icon = loadSmallIcon ? IconCache.GetFolderIcon() : null,
             LargeIcon = loadLargeIcon ? IconCache.GetFolderIconLarge() : null
         };
@@ -180,6 +224,7 @@ public sealed class FileItem : INotifyPropertyChanged
             CreatedText = "",
             OwnerText = "",
             AttributeText = isDirectory ? Loc.T("Directory") : "",
+            IconGlyph = GlyphForName(name, isDirectory),
             Icon = isDirectory
                 ? (loadSmallIcon ? IconCache.GetFolderIcon() : null)
                 : (loadSmallIcon ? IconCache.GetFileIcon(name) : null),
@@ -209,6 +254,7 @@ public sealed class FileItem : INotifyPropertyChanged
             CreatedText = FormatDate(created),
             OwnerText = includeOwner ? SafeOwner(info) : "",
             AttributeText = FormatAttributes(info.Attributes),
+            IconGlyph = GlyphForName(info.Name, false),
             Icon = loadSmallIcon ? IconCache.GetFileIcon(info.FullName) : null,
             LargeIcon = loadLargeIcon ? IconCache.GetFileIconLarge(info.FullName) : null
         };

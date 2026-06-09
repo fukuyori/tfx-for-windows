@@ -729,6 +729,7 @@ public sealed class AppConfig
         openTerminal = "ctrl+shift+t"
         togglePreview = "ctrl+shift+p"
         toggleFolderTree = "ctrl+b"
+        collapseFolders = "ctrl+shift+b"
         toggleRendered = "ctrl+shift+r"
         loadExternalImages = "ctrl+shift+i"
         toggleSplit = "ctrl+backslash"

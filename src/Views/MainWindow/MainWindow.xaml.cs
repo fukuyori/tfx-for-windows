@@ -314,6 +314,7 @@ public partial class MainWindow : Window
         CloseButton.ToolTip = Loc.T("Close");
         PinnedHeader.Text = Loc.T("PINNED");
         FoldersHeader.Text = Loc.T("FOLDERS");
+        CollapseAllButton.ToolTip = Loc.F("Collapse all folders ({0})", ShortcutText("collapseFolders"));
     }
 
     private void LoadSettings()

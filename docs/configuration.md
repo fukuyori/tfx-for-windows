@@ -54,6 +54,7 @@ reload = "f5"
 openTerminal = "ctrl+shift+t"
 togglePreview = "ctrl+shift+p"
 toggleFolderTree = "ctrl+b"
+collapseFolders = "ctrl+shift+b"
 toggleSplit = "ctrl+backslash"
 swapPanes = "ctrl+shift+x"
 focusSearch = "ctrl+f"
@@ -280,6 +281,7 @@ Supported action keys:
 | `openTerminal` | `ctrl+shift+t` | Open the configured external terminal at the active folder. |
 | `togglePreview` | `ctrl+shift+p` | Show or hide the preview pane. |
 | `toggleFolderTree` | `ctrl+b` | Show or hide the folder tree (left sidebar). |
+| `collapseFolders` | `ctrl+shift+b` | Collapse every node in the folder tree back to the roots. |
 | `toggleRendered` | `ctrl+shift+r` | Toggle rendered vs. source view (Markdown / HTML / CSV / JSON preview). Active only while that toggle is visible. |
 | `loadExternalImages` | `ctrl+shift+i` | Load external (https) images for the current preview, once. Active only while the button is visible. |
 | `toggleSplit` | `ctrl+backslash` | Show or hide split view. |
