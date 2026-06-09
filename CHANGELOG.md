@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.90
+
+### Fixes
+
+- **Folder tree single click again reflects the folder in the file list.** 0.7.9 changed a single click to select-only; it now navigates the active file list to the clicked folder again (without force-expanding it), while **double-click** continues to toggle expand / collapse.
+- **Build fix: include `src/Services/ShellDragImage.cs`.** The 0.7.9 drag-preview source file was missing from the commit, so a clean checkout failed to build.
+
+### Packaging
+
+- Added `scripts/build-zip.ps1` (portable ZIP → `tfx-for-windows-<version>-win-x64-portable.zip`) and `scripts/build-installer.ps1` + `scripts/tfx.iss` (Inno Setup installer → `tfx-for-windows-<version>-setup.exe`). Both consume the already-built single-file `Tfx.exe` and read the version from `Tfx.csproj`.
+
 ## 0.7.9
 
 ### Folder tree show/hide toggle

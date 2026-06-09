@@ -151,20 +151,24 @@ public partial class MainWindow
 
     private void FolderTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
-        // A single click now only selects (highlights) the node. Opening a folder
-        // — navigating the active file list into it — happens on double-click (see
-        // FolderTree_MouseDoubleClick). The _syncingFolderTree guard is kept so a
-        // programmatic selection from SyncFolderTreeToPath stays a no-op here.
+        // A single click (selection change) reflects the folder in the active file
+        // list. The _syncingFolderTree guard prevents the programmatic selection
+        // made by SyncFolderTreeToPath from navigating back recursively.
         if (_syncingFolderTree)
         {
             return;
         }
+
+        if (FolderTree.SelectedItem is TreeViewItem item && item.Tag is string path && Directory.Exists(path))
+        {
+            Navigate(_activeGrid, path, true);
+        }
     }
 
     /// <summary>
-    /// Double-click on a folder node: open it (expand + show its contents in the
-    /// active file list) when it is closed, or close it (collapse) when it is
-    /// open. A node with no subfolders simply opens its contents.
+    /// Double-click on a folder node toggles its expand / collapse state (open or
+    /// close the subtree). Navigating the active file list is left to the single
+    /// click (selection change) — see <see cref="FolderTree_SelectedItemChanged"/>.
     /// </summary>
     /// <remarks>
     /// Handled on the tunneling <c>PreviewMouseLeftButtonDown</c> (not
@@ -177,7 +181,7 @@ public partial class MainWindow
     {
         if (e.ClickCount != 2)
         {
-            return; // single click: let the default selection happen
+            return; // single click: leave selection / navigation to the defaults
         }
 
         var node = e.OriginalSource as DependencyObject;
@@ -189,28 +193,14 @@ public partial class MainWindow
                 return;
             }
 
-            if (node is TreeViewItem item && item.Tag is string path)
+            if (node is TreeViewItem item && item.Tag is string)
             {
-                var hasChildren = item.Items.Count > 0;
-                if (hasChildren && item.IsExpanded)
+                // Only toggle nodes that actually have subfolders.
+                if (item.Items.Count > 0)
                 {
-                    // Open → close.
-                    item.IsExpanded = false;
+                    item.IsExpanded = !item.IsExpanded; // open <-> close
+                    e.Handled = true;
                 }
-                else
-                {
-                    // Closed (or a leaf) → open: reveal subfolders and show the
-                    // folder's contents in the active file list.
-                    if (hasChildren)
-                    {
-                        item.IsExpanded = true;
-                    }
-                    if (Directory.Exists(path))
-                    {
-                        Navigate(_activeGrid, path, true);
-                    }
-                }
-                e.Handled = true;
                 return;
             }
 
@@ -252,7 +242,6 @@ public partial class MainWindow
         _syncingFolderTree = true;
         try
         {
-            current.IsExpanded = true;
             var accumulated = root;
             var rest = path.Length > root.Length ? path[root.Length..] : "";
             var parts = rest.Split(
@@ -261,6 +250,11 @@ public partial class MainWindow
 
             foreach (var part in parts)
             {
+                // `current` is an ancestor of the target here, so expand it to
+                // reveal and realize the next level. The target node itself (the
+                // final `current` after the loop) is left at its own expanded /
+                // collapsed state so double-click stays in control of open/close.
+                current.IsExpanded = true;
                 EnsureFolderNodeChildren(current);
                 accumulated = Path.Combine(accumulated, part);
                 var next = current.Items
@@ -273,7 +267,6 @@ public partial class MainWindow
                 }
 
                 current = next;
-                current.IsExpanded = true;
             }
 
             current.IsSelected = true;
