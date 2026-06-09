@@ -24,6 +24,23 @@
         <SolidColorBrush x:Key="TfxSelectionOverlay" Color="#7DD3FC" Opacity="0.2" />
         <SolidColorBrush x:Key="TfxHitSurface" Color="#FFFFFF" Opacity="0.01" />
 
+        <!-- Highlights a folder's name in the file list when a drag would drop
+             into that folder. A constant transparent 1px border + padding keeps
+             the layout stable; only the colors change when IsDropTarget is true. -->
+        <Style x:Key="DropTargetNameBorder" TargetType="Border">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="3,0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDropTarget}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource TfxSelectionOverlay}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource TfxAccent}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource TfxHover}" />
             <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />

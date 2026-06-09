@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Path = System.IO.Path;
 
@@ -205,6 +206,8 @@ public partial class MainWindow
 
     private void CompleteFileDrag(DragDropEffects effect, bool suppressNextContextMenu)
     {
+        SetDropHighlight(null);
+
         if (suppressNextContextMenu)
         {
             _suppressNextContextMenu = true;
@@ -221,18 +224,31 @@ public partial class MainWindow
 
     private void Grid_Drop(object sender, DragEventArgs e)
     {
+        SetDropHighlight(null);
+
         if (sender is not DependencyObject view || !e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             return;
         }
 
-        var destination = ResolveDropDestination(view, e);
+        var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+        var kind = ClassifyDropTarget(e.OriginalSource as DependencyObject, out var targetItem);
+
+        // Drop onto an executable's name → run it with the dropped files as args.
+        if (kind == DropTargetKind.RunExecutable && targetItem is not null)
+        {
+            e.Handled = true;
+            e.Effects = DragDropEffects.Link;
+            LaunchWithArguments(targetItem.FullPath, paths);
+            return;
+        }
+
+        var destination = DropDestinationFor(kind, targetItem, view);
         if (ArchivePath.Contains(destination))
         {
             e.Handled = true;
             return;
         }
-        var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
 
         // Right-button drag started from a tfx pane: pop the Copy / Move /
         // Shortcut / Cancel menu and act on the user's choice.
@@ -401,51 +417,178 @@ public partial class MainWindow
     {
         if (sender is not DependencyObject view)
         {
+            SetDropHighlight(null);
             e.Effects = DragDropEffects.None;
             e.Handled = true;
             return;
         }
 
-        var destination = ResolveDropDestination(view, e);
+        var kind = ClassifyDropTarget(e.OriginalSource as DependencyObject, out var targetItem);
+
+        if (kind == DropTargetKind.RunExecutable)
+        {
+            // "Open with": the dropped files become the program's arguments.
+            SetDropHighlight(targetItem);
+            e.Effects = DragDropEffects.Link;
+            e.Handled = true;
+            return;
+        }
+
+        var destination = DropDestinationFor(kind, targetItem, view);
         if (ArchivePath.Contains(destination))
         {
+            SetDropHighlight(null);
             e.Effects = DragDropEffects.None;
             e.Handled = true;
             return;
         }
 
         e.Effects = ResolveDropEffect(e, destination);
+        // Highlight the target folder's name only when the drop will go into it.
+        SetDropHighlight(kind == DropTargetKind.IntoFolder && e.Effects != DragDropEffects.None ? targetItem : null);
         e.Handled = true;
     }
 
-    private string ResolveDropDestination(DependencyObject view, DragEventArgs e)
+    private void Grid_DragLeave(object sender, DragEventArgs e)
     {
-        if (TryGetDropFolder(e.OriginalSource as DependencyObject, out var folderPath))
+        // DragLeave also fires when moving between child elements; only clear the
+        // highlight when the cursor has actually left the listing bounds.
+        if (sender is FrameworkElement fe)
         {
-            return folderPath;
+            var p = e.GetPosition(fe);
+            if (p.X < 0 || p.Y < 0 || p.X > fe.ActualWidth || p.Y > fe.ActualHeight)
+            {
+                SetDropHighlight(null);
+            }
         }
-
-        return GetCurrentPath(SideOf(view));
     }
 
-    private static bool TryGetDropFolder(DependencyObject? source, out string folderPath)
+    private enum DropTargetKind { CurrentFolder, IntoFolder, RunExecutable }
+
+    /// <summary>
+    /// Classifies a drop over <paramref name="source"/>: into the hovered folder
+    /// (over its name), run the hovered executable with the dropped files as
+    /// arguments (over its name), or — for anything else (other columns, regular
+    /// files, empty space) — the current folder.
+    /// </summary>
+    private DropTargetKind ClassifyDropTarget(DependencyObject? source, out FileItem? targetItem)
     {
-        var row = FindVisualAncestor<DataGridRow>(source);
-        if (row?.Item is FileItem rowItem && (rowItem.IsDirectory || rowItem.IsParent))
+        targetItem = null;
+        if (!TryGetNameTargetItem(source, out var item) || item is null)
         {
-            folderPath = rowItem.FullPath;
-            return true;
+            return DropTargetKind.CurrentFolder;
+        }
+        if (item.IsDirectory || item.IsParent)
+        {
+            targetItem = item;
+            return DropTargetKind.IntoFolder;
+        }
+        if (IsExecutableTarget(item))
+        {
+            targetItem = item;
+            return DropTargetKind.RunExecutable;
+        }
+        return DropTargetKind.CurrentFolder;
+    }
+
+    private string DropDestinationFor(DropTargetKind kind, FileItem? targetItem, DependencyObject view) =>
+        kind == DropTargetKind.IntoFolder && targetItem is not null
+            ? targetItem.FullPath
+            : GetCurrentPath(SideOf(view));
+
+    /// <summary>
+    /// The FileItem whose name area is under the cursor: in Details view the
+    /// tagged Border around the icon + name, in Icons view the whole tile. Returns
+    /// any item (folder or file) — the caller decides what to do with it.
+    /// </summary>
+    private static bool TryGetNameTargetItem(DependencyObject? source, out FileItem? item)
+    {
+        item = null;
+
+        for (var node = source; node is not null; node = GetParentSafe(node))
+        {
+            if (node is DataGrid || node is ListBox)
+            {
+                break;
+            }
+            if (node is Border { Tag: "dropname" } border && border.DataContext is FileItem fi)
+            {
+                item = fi;
+                return true;
+            }
         }
 
         var listBoxItem = FindVisualAncestor<ListBoxItem>(source);
-        if (listBoxItem?.Content is FileItem iconItem && (iconItem.IsDirectory || iconItem.IsParent))
+        if (listBoxItem?.Content is FileItem iconItem)
         {
-            folderPath = iconItem.FullPath;
+            item = iconItem;
             return true;
         }
 
-        folderPath = "";
         return false;
+    }
+
+    private static readonly HashSet<string> ExecutableDropExtensions =
+        new(StringComparer.OrdinalIgnoreCase) { ".exe", ".com", ".bat", ".cmd", ".lnk" };
+
+    private static bool IsExecutableTarget(FileItem item) =>
+        !item.IsDirectory
+        && !item.IsParent
+        && !ArchivePath.Contains(item.FullPath)
+        && ExecutableDropExtensions.Contains(Path.GetExtension(item.FullPath));
+
+    /// <summary>Launches a program with the dropped files as its arguments ("Open with").</summary>
+    private void LaunchWithArguments(string exePath, string[] arguments)
+    {
+        var args = arguments.ToArray();
+        // Deferred so it runs outside the drop / drag-drop modal loop.
+        Dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = exePath,
+                    UseShellExecute = true,
+                    WorkingDirectory = Path.GetDirectoryName(exePath) ?? ""
+                };
+                foreach (var arg in args)
+                {
+                    psi.ArgumentList.Add(arg);
+                }
+                System.Diagnostics.Process.Start(psi);
+                SetStatus(Loc.F("Opened {0} with {1} item(s)", Path.GetFileName(exePath), args.Length));
+            }
+            catch (Exception ex)
+            {
+                SetStatus(Loc.F("Failed to open: {0}", ex.Message));
+            }
+        }, System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private static DependencyObject? GetParentSafe(DependencyObject node) =>
+        node is Visual or System.Windows.Media.Media3D.Visual3D
+            ? VisualTreeHelper.GetParent(node)
+            : LogicalTreeHelper.GetParent(node);
+
+    private FileItem? _dropHighlightItem;
+
+    /// <summary>Highlights (only) the given folder's name as the current drop target.</summary>
+    private void SetDropHighlight(FileItem? item)
+    {
+        if (ReferenceEquals(_dropHighlightItem, item))
+        {
+            return;
+        }
+        if (_dropHighlightItem is not null)
+        {
+            _dropHighlightItem.IsDropTarget = false;
+        }
+        _dropHighlightItem = item;
+        if (_dropHighlightItem is not null)
+        {
+            _dropHighlightItem.IsDropTarget = true;
+        }
     }
 
     private static DragDropEffects ResolveDropEffect(DragEventArgs e, string destinationPath)

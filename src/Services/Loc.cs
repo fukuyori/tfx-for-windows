@@ -132,6 +132,8 @@ internal static class Loc
         ["Pasted {0}; failed: {1}"] = "{0} 個を貼り付けました。失敗: {1}",
         ["Source remained for: {0}"] = "元が残ったもの: {0}",
         ["Failed: {0}"] = "失敗: {0}",
+        ["Opened {0} with {1} item(s)"] = "{0} を {1} 個の項目で開きました",
+        ["Failed to open: {0}"] = "起動に失敗しました: {0}",
         ["Move {0} item(s) to Recycle Bin?"] = "{0} 個をごみ箱へ移動しますか?",
         ["Created {0}"] = "作成しました: {0}",
         ["New folder failed: {0}"] = "新規フォルダー作成に失敗しました: {0}",

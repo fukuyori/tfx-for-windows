@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.1
+
+### Drag-and-drop: clearer drop target
+
+- Dropping onto a file row now only drops **into a folder** when the cursor is over the folder's name (icon + name). Dropping on the other columns (date modified, attributes, …), the empty space to the right, or the empty list area drops into the **current folder** instead. When a drop would go into a folder, that folder's name is **highlighted** so the target is obvious.
+- Dropping files onto an **executable's name** (`.exe`, `.com`, `.bat`, `.cmd`, `.lnk`) now runs that program with the dropped files as its arguments (Explorer-style "open with"); the executable's name highlights as the target.
+
+### Fixes
+
+- **Build fix: include `src/Services/ShellFileOperation.cs`.** The 0.8.0 copy/move source file was missing from the commit, so a clean checkout failed to build.
+
 ## 0.8.0
 
 ### New file / folder: inline naming

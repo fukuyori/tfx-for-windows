@@ -101,6 +101,19 @@ public sealed class FileItem : INotifyPropertyChanged
         || !string.Equals(OwnerText, other.OwnerText, StringComparison.Ordinal)
         || !string.Equals(AttributeText, other.AttributeText, StringComparison.Ordinal);
 
+    private bool _isDropTarget;
+
+    /// <summary>
+    /// True while a drag is hovering this folder's name and a drop would move/copy
+    /// into it. Bound by the Name column to highlight the folder. Transient UI
+    /// state — not persisted.
+    /// </summary>
+    public bool IsDropTarget
+    {
+        get => _isDropTarget;
+        set { if (_isDropTarget != value) { _isDropTarget = value; Raise(nameof(IsDropTarget)); } }
+    }
+
     private string _gitStatusText = "";
 
     /// <summary>

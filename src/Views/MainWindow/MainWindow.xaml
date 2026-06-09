@@ -188,7 +188,7 @@
             </Grid>
         </Border>
 
-        <StatusBar DockPanel.Dock="Bottom" Background="{DynamicResource TfxChrome}" Foreground="{DynamicResource TfxMuted}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,1,0,0">
+        <StatusBar DockPanel.Dock="Bottom" Background="{DynamicResource TfxChrome}" Foreground="{DynamicResource TfxMuted}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,1,0,0" Padding="12,6" MinHeight="32">
             <StatusBar.ItemsPanel>
                 <ItemsPanelTemplate>
                     <DockPanel HorizontalAlignment="Stretch" LastChildFill="False" />
@@ -292,15 +292,17 @@
                         </ItemsControl>
                         <local:PathBar x:Name="LeftPathBar" DockPanel.Dock="Top" Margin="6,6,6,4" PathRequested="LeftPathBar_PathRequested" />
                         <Grid>
-                        <DataGrid x:Name="LeftGrid" ItemsSource="{Binding LeftItems}" IsReadOnly="True" VirtualizingPanel.VirtualizationMode="Standard" ColumnReordered="FileGrid_ColumnReordered" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
+                        <DataGrid x:Name="LeftGrid" ItemsSource="{Binding LeftItems}" IsReadOnly="True" VirtualizingPanel.VirtualizationMode="Standard" ColumnReordered="FileGrid_ColumnReordered" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" DragLeave="Grid_DragLeave" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn x:Name="LeftNameColumn" Header="Name" Width="280" MinWidth="200" SortMemberPath="Name" CanUserResize="True">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
-                                                <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="15" Width="18" Margin="0,0,6,0" Foreground="{DynamicResource TfxForeground}" VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" />
-                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
+                                            <Border Style="{StaticResource DropTargetNameBorder}" Tag="dropname" Margin="6,0,0,0" HorizontalAlignment="Left">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="15" Width="18" Margin="0,0,6,0" Foreground="{DynamicResource TfxForeground}" VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" />
+                                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Border>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                     <DataGridTemplateColumn.CellEditingTemplate>
@@ -324,7 +326,7 @@
                                  SelectionChanged="IconView_SelectionChanged" MouseDoubleClick="IconView_MouseDoubleClick"
                                  GotFocus="IconView_GotFocus" PreviewMouseLeftButtonDown="IconView_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseRightButtonDown="IconView_PreviewMouseRightButtonDown"
                                  ContextMenuOpening="IconView_ContextMenuOpening" PreviewMouseMove="IconView_PreviewMouseMove"
-                                 AllowDrop="True" DragOver="Grid_DragOver" Drop="Grid_Drop">
+                                 AllowDrop="True" DragOver="Grid_DragOver" Drop="Grid_Drop" DragLeave="Grid_DragLeave">
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel />
@@ -373,15 +375,17 @@
                         </ItemsControl>
                         <local:PathBar x:Name="RightPathBar" DockPanel.Dock="Top" Margin="6,6,6,4" PathRequested="RightPathBar_PathRequested" />
                         <Grid>
-                        <DataGrid x:Name="RightGrid" ItemsSource="{Binding RightItems}" IsReadOnly="True" VirtualizingPanel.VirtualizationMode="Standard" ColumnReordered="FileGrid_ColumnReordered" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
+                        <DataGrid x:Name="RightGrid" ItemsSource="{Binding RightItems}" IsReadOnly="True" VirtualizingPanel.VirtualizationMode="Standard" ColumnReordered="FileGrid_ColumnReordered" MouseDoubleClick="Grid_MouseDoubleClick" SelectionChanged="Grid_SelectionChanged" GotFocus="Grid_GotFocus" AllowDrop="True" Drop="Grid_Drop" DragOver="Grid_DragOver" DragLeave="Grid_DragLeave" PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseMove="Grid_PreviewMouseMove" PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown" ContextMenuOpening="Grid_ContextMenuOpening" CellEditEnding="Grid_CellEditEnding" Sorting="Grid_Sorting" CanUserResizeColumns="True">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn x:Name="RightNameColumn" Header="Name" Width="280" MinWidth="200" SortMemberPath="Name" CanUserResize="True">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
-                                                <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="15" Width="18" Margin="0,0,6,0" Foreground="{DynamicResource TfxForeground}" VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" />
-                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
+                                            <Border Style="{StaticResource DropTargetNameBorder}" Tag="dropname" Margin="6,0,0,0" HorizontalAlignment="Left">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="15" Width="18" Margin="0,0,6,0" Foreground="{DynamicResource TfxForeground}" VerticalAlignment="Center" HorizontalAlignment="Center" TextAlignment="Center" />
+                                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Border>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                     <DataGridTemplateColumn.CellEditingTemplate>
@@ -405,7 +409,7 @@
                                  SelectionChanged="IconView_SelectionChanged" MouseDoubleClick="IconView_MouseDoubleClick"
                                  GotFocus="IconView_GotFocus" PreviewMouseLeftButtonDown="IconView_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Listing_PreviewMouseLeftButtonUp" PreviewMouseRightButtonDown="IconView_PreviewMouseRightButtonDown"
                                  ContextMenuOpening="IconView_ContextMenuOpening" PreviewMouseMove="IconView_PreviewMouseMove"
-                                 AllowDrop="True" DragOver="Grid_DragOver" Drop="Grid_Drop">
+                                 AllowDrop="True" DragOver="Grid_DragOver" Drop="Grid_Drop" DragLeave="Grid_DragLeave">
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel />

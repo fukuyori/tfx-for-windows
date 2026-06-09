@@ -38,7 +38,9 @@
   #panes { position: relative; flex: 1 1 auto; min-height: 0; }
   .pane {
     position: absolute; inset: 0;
-    padding: 4px;
+    /* Extra bottom padding gives the last row clearance so it is never clipped
+       by the container's bottom edge (FitAddon subtracts this padding). */
+    padding: 4px 4px 8px 4px;
     box-sizing: border-box;
     display: none;
   }
@@ -204,6 +206,15 @@
     post({ type: "resize", cols: terms.shell.cols, rows: terms.shell.rows });
     post({ type: "ready" });
 
+    // Re-fit after the font is ready and after layout settles. The first fit can
+    // run before the WebView has its final size / before glyph metrics are final,
+    // which otherwise leaves the bottom row clipped.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { fitAll(); });
+    }
+    setTimeout(function () { fitAll(); }, 50);
+    setTimeout(function () { fitAll(); }, 250);
+
     // Apply a tab switch requested before init finished (e.g. a command opened
     // the pane to show its Output); otherwise default to the Shell tab.
     if (pendingActivate) {
@@ -261,7 +272,28 @@
   }
   function fitOne(target) {
     var f = fits[target];
-    if (f) { try { f.fit(); } catch (e) { /* ignore pre-layout fit */ } }
+    if (!f) { return; }
+    try { f.fit(); } catch (e) { return; /* ignore pre-layout fit */ }
+
+    // FitAddon computes rows from a theoretical cell height, but the DOM renderer
+    // rounds each row up to whole pixels, so rows * actualRowHeight can exceed the
+    // measured area and clip the bottom row. Re-measure the real rendered row
+    // height and drop a row if the rows no longer fit.
+    try {
+      var t = terms[target];
+      var pane = document.getElementById(target === "output" ? "pane-output" : "pane-shell");
+      if (!t || !pane) { return; }
+      var rowEl = pane.querySelector(".xterm-rows > div");
+      if (!rowEl) { return; }
+      var cellH = rowEl.getBoundingClientRect().height;
+      if (cellH <= 0) { return; }
+      var cs = window.getComputedStyle(pane);
+      var avail = pane.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      var fitRows = Math.max(1, Math.floor(avail / cellH));
+      if (t.rows > fitRows) {
+        t.resize(t.cols, fitRows);
+      }
+    } catch (e) { /* best effort */ }
   }
 
   function activate(target) {

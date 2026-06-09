@@ -293,8 +293,24 @@ public partial class MainWindow
             }
         };
 
-        core.Navigate("https://tfx.terminal/terminal.html");
+        // Cache-bust by the page's byte length so an updated terminal.html is
+        // always re-fetched (WebView2 otherwise serves the previously cached page
+        // from the virtual host, masking changes across versions).
+        var token = GetTerminalAssetToken(assetDir);
+        core.Navigate($"https://tfx.terminal/terminal.html?v={token}");
         return true;
+    }
+
+    private static string GetTerminalAssetToken(string assetDir)
+    {
+        try
+        {
+            return new FileInfo(Path.Combine(assetDir, "terminal.html")).Length.ToString();
+        }
+        catch
+        {
+            return "0";
+        }
     }
 
     /// <summary>Messages from the xterm.js page (loaded / ready / input / resize / error).</summary>
