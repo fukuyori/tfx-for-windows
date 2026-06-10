@@ -381,7 +381,12 @@ public partial class MainWindow
         FocusElement(_settings.ViewMode == ViewMode.Icons ? iconView : _activeGrid);
     }
 
-    private void MoveActiveListingSelection(Key key)
+    // Range-selection state for Shift+Up/Down/PageUp/PageDown in the listing.
+    // _anchor is the fixed end of the range; _lead is the moving (focused) end.
+    private int _listingAnchorIndex = -1;
+    private int _listingLeadIndex = -1;
+
+    private void MoveActiveListingSelection(Key key, bool extend = false)
     {
         var iconView = IconViewOf(ActivePane);
         var items = _settings.ViewMode == ViewMode.Icons ? iconView.Items : _activeGrid.Items;
@@ -391,28 +396,37 @@ public partial class MainWindow
             return;
         }
 
+        var lastIndex = items.Count - 1;
         var current = _settings.ViewMode == ViewMode.Icons
             ? iconView.SelectedItem
             : _activeGrid.SelectedItem;
         var currentIndex = current is null ? -1 : items.IndexOf(current);
-        var lastIndex = items.Count - 1;
+
+        // Re-anchor when the selection moved outside keyboard navigation (e.g. a
+        // mouse click), so a following Shift+arrow extends from the new spot.
+        if (_listingLeadIndex != currentIndex)
+        {
+            _listingAnchorIndex = currentIndex;
+            _listingLeadIndex = currentIndex;
+        }
+
+        var leadIndex = _listingLeadIndex;
 
         int nextIndex;
-        if (currentIndex < 0)
+        if (leadIndex < 0)
         {
-            // No selection (e.g. just after a rename or focus loss): land on
-            // the first item (which is always the ".." parent row when one
-            // exists).
+            // No selection (e.g. just after a rename or focus loss): land on the
+            // first item (the ".." parent row when one exists).
             nextIndex = 0;
         }
-        else if (key == Key.Up && currentIndex == 0)
+        else if (!extend && key == Key.Up && leadIndex == 0)
         {
-            // ".." + Up wraps to the bottom of the listing.
+            // ".." + Up wraps to the bottom of the listing (single-select only).
             nextIndex = lastIndex;
         }
-        else if (key == Key.Down && currentIndex == lastIndex)
+        else if (!extend && key == Key.Down && leadIndex == lastIndex)
         {
-            // Last entry + Down wraps to "..".
+            // Last entry + Down wraps to ".." (single-select only).
             nextIndex = 0;
         }
         else
@@ -424,7 +438,7 @@ public partial class MainWindow
                 Key.PageDown => 10,
                 _ => 1, // Down
             };
-            nextIndex = Math.Clamp(currentIndex + step, 0, lastIndex);
+            nextIndex = Math.Clamp(leadIndex + step, 0, lastIndex);
         }
 
         if (items[nextIndex] is not FileItem item)
@@ -433,25 +447,86 @@ public partial class MainWindow
             return;
         }
 
+        var extending = extend && _listingAnchorIndex >= 0 && _listingAnchorIndex <= lastIndex;
+
         _syncingSelection = true;
         try
         {
-            _activeGrid.SelectedItems.Clear();
-            _activeGrid.SelectedItem = item;
-            _activeGrid.ScrollIntoView(item);
+            if (extending)
+            {
+                SelectListingRange(items, iconView, _listingAnchorIndex, nextIndex, item);
+            }
+            else
+            {
+                _listingAnchorIndex = nextIndex;
+                _activeGrid.SelectedItems.Clear();
+                _activeGrid.SelectedItem = item;
+                _activeGrid.ScrollIntoView(item);
 
-            iconView.SelectedItems.Clear();
-            iconView.SelectedItem = item;
-            iconView.ScrollIntoView(item);
+                iconView.SelectedItems.Clear();
+                iconView.SelectedItem = item;
+                iconView.ScrollIntoView(item);
+            }
+            _listingLeadIndex = nextIndex;
         }
         finally
         {
             _syncingSelection = false;
         }
 
-        FocusSelectedListingItemNow(_activeGrid, iconView, item);
-        SchedulePreviewUpdate(item);
+        if (extending)
+        {
+            // Do NOT focus the lead cell/row here: focusing a cell makes the
+            // DataGrid/ListBox collapse the Extended selection back to that single
+            // row. Focus is already inside the listing, so subsequent Shift+arrow
+            // keys keep working via the tracked anchor/lead indices.
+            SchedulePreviewUpdate(SelectedItems(_activeGrid));
+        }
+        else
+        {
+            FocusSelectedListingItemNow(_activeGrid, iconView, item);
+            SchedulePreviewUpdate(item);
+        }
         UpdateStatus();
+    }
+
+    /// <summary>Selects the inclusive range [anchor, lead] in both listing views.</summary>
+    private void SelectListingRange(ItemCollection items, ListBox iconView, int anchor, int lead, FileItem leadItem)
+    {
+        var lo = Math.Min(anchor, lead);
+        var hi = Math.Max(anchor, lead);
+        var range = new List<FileItem>();
+        for (var i = lo; i <= hi; i++)
+        {
+            if (items[i] is FileItem fi)
+            {
+                range.Add(fi);
+            }
+        }
+
+        // Set SelectedItem FIRST: the Selector.SelectedItem setter collapses the
+        // selection to that single item, so it must run before adding the rest of
+        // the range (doing it last would wipe the range). leadItem stays the
+        // primary/current item, which keeps the anchor/lead bookkeeping correct.
+        _activeGrid.SelectedItem = leadItem;
+        foreach (var fi in range)
+        {
+            if (!ReferenceEquals(fi, leadItem))
+            {
+                _activeGrid.SelectedItems.Add(fi);
+            }
+        }
+        _activeGrid.ScrollIntoView(leadItem);
+
+        iconView.SelectedItem = leadItem;
+        foreach (var fi in range)
+        {
+            if (!ReferenceEquals(fi, leadItem))
+            {
+                iconView.SelectedItems.Add(fi);
+            }
+        }
+        iconView.ScrollIntoView(leadItem);
     }
 
     private static void FocusElement(IInputElement element)

@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.8.1
+Version: 0.8.2
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -57,7 +57,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.1 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.2 |
 +---------------------------------------------------------------------+
 ```
 
@@ -109,6 +109,7 @@ The native title bar is replaced by custom chrome when transparency is enabled. 
 | `Ctrl + 1` | Move focus to the file list |
 | `Ctrl + 2` | Move focus to the terminal pane (opens it if hidden) |
 | `Up` / `Down` | Move selection in active view |
+| `Shift + Up` / `Shift + Down` | Extend selection (range) |
 | `Ctrl + Shift + T` | Open Terminal in current folder |
 | `Ctrl + Shift + .` | Toggle hidden files |
 | `Ctrl + \` | Toggle split pane |

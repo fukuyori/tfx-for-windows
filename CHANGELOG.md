@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.2
+
+### Keyboard range selection
+
+- **Shift+Up/Down** (and **Shift+PageUp/PageDown**) in the file list now extends the selection to select multiple files/folders, anchored at the item where the range started. Plain Up/Down still moves a single selection.
+
+### Fixes
+
+- **Build fix: `src/Services/ShellFileOperation.cs` is now included.** The file (added in 0.8.0 for shell copy/move) had still not been committed, so a clean checkout failed to build.
+
 ## 0.8.1
 
 ### Drag-and-drop: clearer drop target

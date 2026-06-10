@@ -401,10 +401,12 @@ public partial class MainWindow
         // a Tab switch — sometimes focus ends up on the container and the
         // built-in handler does nothing. Intercepting here makes navigation
         // deterministic regardless of where focus landed inside the pane.
+        // Shift extends the selection (range); otherwise it is a single move.
         if (!inTextBox && e.Key is Key.Up or Key.Down or Key.PageUp or Key.PageDown
             && (IsFocusInActiveListing() || ShouldStartListingNavigation()))
         {
-            MoveActiveListingSelection(e.Key);
+            var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+            MoveActiveListingSelection(e.Key, shift);
             e.Handled = true;
             return;
         }
