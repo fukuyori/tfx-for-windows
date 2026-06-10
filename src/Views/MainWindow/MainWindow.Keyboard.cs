@@ -352,6 +352,31 @@ public partial class MainWindow
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var inTextBox = Keyboard.FocusedElement is TextBox;
 
+        // Clipboard copy / cut / paste for the file list, handled in the tunneling
+        // pass so the DataGrid's built-in Ctrl+C (and any other control handling)
+        // can't intercept them before the bubbling Window_KeyDown runs.
+        if (!inTextBox && IsFocusInActiveListing())
+        {
+            if (IsShortcut("copyItems", e))
+            {
+                CopySelection(false);
+                e.Handled = true;
+                return;
+            }
+            if (IsShortcut("cutItems", e))
+            {
+                if (!InArchiveContext) CopySelection(true);
+                e.Handled = true;
+                return;
+            }
+            if (IsShortcut("pasteItems", e))
+            {
+                if (!InArchiveContext) PasteIntoActivePane();
+                e.Handled = true;
+                return;
+            }
+        }
+
         // Alt+Left / Alt+Right / Alt+Up navigation. WPF delivers Alt combos as
         // Key.System (real key in SystemKey), and the DataGrid / ListBox can
         // consume arrow keys via bubbling before the bubbling Window_KeyDown

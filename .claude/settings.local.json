@@ -72,7 +72,12 @@
       "Bash(grep -E \"\\\\.\\(xaml|cs\\)$\")",
       "PowerShell(pwsh -NoProfile -File \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\\\\scripts\\\\build-zip.ps1\")",
       "Bash(Get-ChildItem -Path \"D:\\\\home\\\\source\\\\csharp\\\\tfx-for-windows\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(gh issue *)",
+      "Bash(git rev-list *)",
+      "Bash(timeout 15 git ls-remote --tags origin)",
+      "Bash(dotnet sln *)",
+      "Bash(git tag *)"
     ]
   }
 }

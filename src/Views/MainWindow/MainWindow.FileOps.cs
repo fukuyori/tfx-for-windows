@@ -167,29 +167,24 @@ public partial class MainWindow
             .Where(f => !(move && FsHelpers.SamePath(Path.GetDirectoryName(f) ?? "", destination)))
             .ToArray();
 
-        var aborted = false;
-        if (sources.Length > 0)
+        _cutBuffer = [];
+        if (sources.Length == 0)
         {
-            try
-            {
-                // The Windows shell shows its standard progress dialog for long
-                // operations and handles name collisions natively.
-                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-                ShellFileOperation.CopyOrMove(hwnd, sources, destination, move, out aborted);
-            }
-            catch (Exception ex)
-            {
-                SetStatus(ex.Message);
-            }
+            return;
         }
 
-        _cutBuffer = [];
-        Reload(LeftGrid);
-        Reload(RightGrid);
+        // A copy whose sources all live in the destination folder is an in-place
+        // copy → auto-rename to "name - Copy" (Explorer behavior) instead of the
+        // shell's "source and destination are the same" skip/cancel error.
+        var sameFolderCopy = !move &&
+            sources.All(f => FsHelpers.SamePath(Path.GetDirectoryName(f) ?? "", destination));
 
-        SetStatus(aborted
-            ? Loc.T("Operation cancelled or incomplete")
-            : Loc.F("Pasted {0} item(s)", sources.Length));
+        // Run through the same shell-operation path as drag-and-drop (a dedicated
+        // STA thread). That reliably shows the Windows standard progress and
+        // name-collision dialogs (replace / skip / keep both); doing it inline on
+        // the UI thread did not surface the collision dialog. Reload + status are
+        // handled by CopyOrMoveWithProgress.
+        CopyOrMoveWithProgress(sources, destination, move, sameFolderCopy);
     }
 
     private void MoveSelectionToTrash()
@@ -204,6 +199,8 @@ public partial class MainWindow
         {
             return;
         }
+
+        var focusIndex = FirstSelectedListingIndex(items);
 
         foreach (var item in items)
         {
@@ -224,8 +221,7 @@ public partial class MainWindow
             }
         }
 
-        Reload(LeftGrid);
-        Reload(RightGrid);
+        RefreshActivePaneAfterMutation(focusIndex);
     }
 
     private void NewFolder()
@@ -246,7 +242,7 @@ public partial class MainWindow
     {
         try
         {
-            var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), Loc.T("New file")));
+            var path = FsHelpers.NextAvailablePath(Path.Combine(GetCurrentPath(_activeGrid), Loc.T("New file") + ".txt"));
             File.WriteAllBytes(path, []);
             BeginInlineCreate(Path.GetFileName(path));
         }
@@ -395,6 +391,8 @@ public partial class MainWindow
             return;
         }
 
+        var focusIndex = FirstSelectedListingIndex(items);
+
         foreach (var item in items)
         {
             try
@@ -414,8 +412,7 @@ public partial class MainWindow
             }
         }
 
-        Reload(LeftGrid);
-        Reload(RightGrid);
+        RefreshActivePaneAfterMutation(focusIndex);
     }
 
     private void CompressSelection()

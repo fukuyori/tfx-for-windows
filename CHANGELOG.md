@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.3
+
+### Clipboard & file operations
+
+- **Ctrl+C / Ctrl+X / Ctrl+V now work reliably in the file list.** They are handled in the tunneling key pass and the DataGrid's built-in `Ctrl+C` (which copied cell text and broke paste) is disabled (`ClipboardCopyMode="None"`).
+- **Paste now shows the Windows standard name-collision dialog** (replace / skip / keep both) like drag-and-drop — paste runs through the same shell `IFileOperation` path.
+- **Copying into the same folder auto-creates "name - Copy"** (Explorer behavior) instead of the shell's "source and destination are the same" skip/cancel error.
+- **Copy / move / delete now refresh the list in place** (diff update) instead of clearing and repopulating — no flicker, and the current selection and keyboard focus are preserved. After a delete, focus lands on the neighbouring row.
+
+### Editing & creation
+
+- During inline rename of a new item, **clicking the empty area of the list commits the name** (Explorer-style confirm-on-click).
+- **New File** now creates `新規ファイル.txt` (`New file.txt`) with a `.txt` extension; the name (without extension) is pre-selected for editing.
+
+### Selection
+
+- **Shift+Up/Down/PageUp/PageDown** extends the selection (range selection).
+
 ## 0.8.2
 
 ### Keyboard range selection

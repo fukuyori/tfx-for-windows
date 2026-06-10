@@ -31,6 +31,14 @@ public partial class MainWindow
             return;
         }
 
+        // If an inline rename is active (grid temporarily editable) and the click
+        // is outside the editor, commit the name first — Explorer-like
+        // confirm-on-click, including clicks on the empty area of the list.
+        if (!grid.IsReadOnly && FindVisualAncestor<TextBox>(e.OriginalSource as DependencyObject) is null)
+        {
+            grid.CommitEdit(DataGridEditingUnit.Row, true);
+        }
+
         if (FindVisualAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject) is not null)
         {
             return;
@@ -298,7 +306,13 @@ public partial class MainWindow
             return;
         }
 
-        CopyOrMoveWithProgress(sources, destination, move);
+        // A copy whose sources all live in the destination folder is an in-place
+        // copy → auto-rename to "name - Copy" (Explorer behavior) instead of the
+        // shell's "source and destination are the same" skip/cancel error.
+        var sameFolderCopy = !move &&
+            sources.All(p => FsHelpers.SamePath(Path.GetDirectoryName(p) ?? "", destination));
+
+        CopyOrMoveWithProgress(sources, destination, move, sameFolderCopy);
     }
 
     private void ExecuteCreateShortcuts(string[] paths, string destination)
@@ -340,7 +354,7 @@ public partial class MainWindow
     /// input-synchronous re-entrant COM call that crashes the process. A separate
     /// STA thread is fully decoupled from the drag loop.
     /// </remarks>
-    private void CopyOrMoveWithProgress(IReadOnlyList<string> sources, string destination, bool move)
+    private void CopyOrMoveWithProgress(IReadOnlyList<string> sources, string destination, bool move, bool renameOnCollision = false)
     {
         var sourcesCopy = sources.ToArray();
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
@@ -350,7 +364,7 @@ public partial class MainWindow
             var aborted = false;
             try
             {
-                ShellFileOperation.CopyOrMove(hwnd, sourcesCopy, destination, move, out aborted);
+                ShellFileOperation.CopyOrMove(hwnd, sourcesCopy, destination, move, renameOnCollision, out aborted);
             }
             catch
             {
@@ -359,8 +373,12 @@ public partial class MainWindow
 
             Dispatcher.BeginInvoke(() =>
             {
-                Reload(LeftGrid);
-                Reload(RightGrid);
+                // Use the in-place diff refresh (not a full Reload) so the new
+                // items appear without clearing the lists — this preserves the
+                // current selection and keyboard focus and avoids the flicker of a
+                // clear-and-repopulate.
+                _ = ReloadDiffAsync(LeftGrid);
+                _ = ReloadDiffAsync(RightGrid);
                 if (aborted)
                 {
                     SetStatus(Loc.T("Operation cancelled or incomplete"));

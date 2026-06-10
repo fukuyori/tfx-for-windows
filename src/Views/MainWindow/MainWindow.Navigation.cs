@@ -386,6 +386,75 @@ public partial class MainWindow
     private int _listingAnchorIndex = -1;
     private int _listingLeadIndex = -1;
 
+    /// <summary>The smallest active-listing index among the given items (0 if none).</summary>
+    private int FirstSelectedListingIndex(IReadOnlyList<FileItem> selection)
+    {
+        var items = _settings.ViewMode == ViewMode.Icons ? IconViewOf(ActivePane).Items : _activeGrid.Items;
+        var min = int.MaxValue;
+        foreach (var s in selection)
+        {
+            var idx = items.IndexOf(s);
+            if (idx >= 0 && idx < min)
+            {
+                min = idx;
+            }
+        }
+        return min == int.MaxValue ? 0 : min;
+    }
+
+    /// <summary>
+    /// Diff-refreshes both panes after a mutation (delete) so the lists update in
+    /// place without flicker, then selects/focuses the active listing row at
+    /// <paramref name="focusIndex"/> (clamped) so focus stays on a sensible
+    /// neighbour of the removed item.
+    /// </summary>
+    private async void RefreshActivePaneAfterMutation(int focusIndex)
+    {
+        var pane = ActivePane;
+        await ReloadDiffAsync(GridOf(pane));
+        _ = ReloadDiffAsync(GridOf(pane == Pane.Left ? Pane.Right : Pane.Left));
+        if (pane == ActivePane)
+        {
+            SelectAndFocusActiveIndex(focusIndex);
+        }
+    }
+
+    private void SelectAndFocusActiveIndex(int index)
+    {
+        var iconView = IconViewOf(ActivePane);
+        var items = _settings.ViewMode == ViewMode.Icons ? iconView.Items : _activeGrid.Items;
+        if (items.Count == 0)
+        {
+            FocusActiveListing();
+            return;
+        }
+
+        var i = Math.Clamp(index, 0, items.Count - 1);
+        if (items[i] is not FileItem item)
+        {
+            FocusActiveListing();
+            return;
+        }
+
+        _syncingSelection = true;
+        try
+        {
+            _activeGrid.SelectedItems.Clear();
+            _activeGrid.SelectedItem = item;
+            _activeGrid.ScrollIntoView(item);
+
+            iconView.SelectedItems.Clear();
+            iconView.SelectedItem = item;
+            iconView.ScrollIntoView(item);
+        }
+        finally
+        {
+            _syncingSelection = false;
+        }
+
+        FocusSelectedListingItemNow(_activeGrid, iconView, item);
+    }
+
     private void MoveActiveListingSelection(Key key, bool extend = false)
     {
         var iconView = IconViewOf(ActivePane);

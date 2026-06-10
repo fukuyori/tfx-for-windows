@@ -13,6 +13,7 @@ namespace Tfx;
 internal static class ShellFileOperation
 {
     // FOF_* / FOFX_* operation flags.
+    private const uint FOF_RENAMEONCOLLISION = 0x0008;
     private const uint FOF_NOCONFIRMMKDIR = 0x0200;
     private const uint FOFX_ADDUNDORECORD = 0x20000000;
     private const uint FOFX_SHOWELEVATIONPROMPT = 0x00040000;
@@ -28,6 +29,7 @@ internal static class ShellFileOperation
         IReadOnlyList<string> sources,
         string destinationFolder,
         bool move,
+        bool renameOnCollision,
         out bool aborted)
     {
         aborted = false;
@@ -42,7 +44,14 @@ internal static class ShellFileOperation
         try
         {
             op = (IFileOperation)new FileOperation();
-            op.SetOperationFlags(FOF_NOCONFIRMMKDIR | FOFX_ADDUNDORECORD | FOFX_SHOWELEVATIONPROMPT);
+            var flags = FOF_NOCONFIRMMKDIR | FOFX_ADDUNDORECORD | FOFX_SHOWELEVATIONPROMPT;
+            if (renameOnCollision)
+            {
+                // Auto-rename to "name - Copy" instead of erroring/prompting —
+                // matches Explorer's same-folder paste behavior.
+                flags |= FOF_RENAMEONCOLLISION;
+            }
+            op.SetOperationFlags(flags);
             if (ownerHwnd != IntPtr.Zero)
             {
                 op.SetOwnerWindow(ownerHwnd);
