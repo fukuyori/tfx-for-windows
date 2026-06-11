@@ -74,6 +74,7 @@ extractZip = "ctrl+shift+e"
 copyItems = "ctrl+c"
 cutItems = "ctrl+x"
 pasteItems = "ctrl+v"
+pasteAsText = "ctrl+shift+v"
 selectAll = "ctrl+a"
 
 # [startup]
@@ -296,7 +297,8 @@ openTerminal = "ctrl+shift+t"
 | `extractZip` | `ctrl+shift+e` | zip 展開。 |
 | `copyItems` | `ctrl+c` | Copy。 |
 | `cutItems` | `ctrl+x` | Cut。 |
-| `pasteItems` | `ctrl+v` | Paste。 |
+| `pasteItems` | `ctrl+v` | Paste（ファイル、またはクリップボードの画像/CSV/URL/リッチテキスト→`.rtf`/テキストからファイル作成）。 |
+| `pasteAsText` | `ctrl+shift+v` | クリップボードのテキストを .txt ファイルとして貼り付け（リッチテキストより優先）。 |
 | `selectAll` | `ctrl+a` | すべて選択。 |
 | `newTab` | `ctrl+t` | アクティブペインに新しいタブを開く。 |
 | `closeTab` | `ctrl+w` | アクティブタブを閉じる。 |

@@ -35,6 +35,7 @@ public partial class MainWindow
         ["copyItems"] = "ctrl+c",
         ["cutItems"] = "ctrl+x",
         ["pasteItems"] = "ctrl+v",
+        ["pasteAsText"] = "ctrl+shift+v",
         ["selectAll"] = "ctrl+a",
         ["newTab"] = "ctrl+t",
         ["closeTab"] = "ctrl+w",
@@ -372,6 +373,12 @@ public partial class MainWindow
             if (IsShortcut("pasteItems", e))
             {
                 if (!InArchiveContext) PasteIntoActivePane();
+                e.Handled = true;
+                return;
+            }
+            if (IsShortcut("pasteAsText", e))
+            {
+                if (!InArchiveContext) PasteAsPlainText();
                 e.Handled = true;
                 return;
             }

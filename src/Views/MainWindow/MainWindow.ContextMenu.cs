@@ -92,7 +92,12 @@ public partial class MainWindow
         var hasSelection = selection.Length > 0;
         var oneSelected = selection.Length == 1;
         var hasZipSelection = selection.Any(i => !i.IsDirectory && System.IO.Path.GetExtension(i.FullPath).Equals(".zip", StringComparison.OrdinalIgnoreCase) && !ArchivePath.Contains(i.FullPath));
-        var hasClipboard = Clipboard.ContainsFileDropList();
+        // Paste handles files, or — when the clipboard holds no files — creates a
+        // file from its content (CSV / image / text).
+        var hasClipboard = Clipboard.ContainsFileDropList()
+            || Clipboard.ContainsData(DataFormats.CommaSeparatedValue)
+            || Clipboard.ContainsImage()
+            || Clipboard.ContainsText();
         var inArchive = ArchivePath.Contains(GetCurrentPath(grid));
         var selectionHasArchive = selection.Any(s => ArchivePath.Contains(s.FullPath));
         var writableContext = !inArchive && !selectionHasArchive;
@@ -161,6 +166,12 @@ public partial class MainWindow
         var paste = new MenuItem { Header = Loc.T("Paste"), InputGestureText = ShortcutText("pasteItems"), IsEnabled = hasClipboard && !inArchive };
         paste.Click += (_, _) => PasteIntoActivePane();
         menu.Items.Add(paste);
+
+        // "Paste special": create a file from a chosen clipboard format.
+        if (!inArchive && BuildPasteSpecialMenu() is { } pasteSpecial)
+        {
+            menu.Items.Add(pasteSpecial);
+        }
 
         var copyCurrentPath = new MenuItem { Header = Loc.T("Copy current path"), IsEnabled = oneSelected };
         copyCurrentPath.Click += (_, _) => CopySelectedPath(selection);
@@ -233,6 +244,50 @@ public partial class MainWindow
         menu.Items.Add(perm);
 
         return menu;
+    }
+
+    /// <summary>
+    /// Builds the "Paste special" submenu listing each clipboard format that can be
+    /// turned into a file (text / rich text / HTML / image / CSV / URL). Returns
+    /// null when the clipboard holds nothing pasteable as a file.
+    /// </summary>
+    private MenuItem? BuildPasteSpecialMenu()
+    {
+        var root = new MenuItem { Header = Loc.T("Paste special") };
+
+        if (ClipboardHasUrl())
+        {
+            root.Items.Add(MakePasteItem(Loc.T("As URL (.url)"), PasteAsUrl));
+        }
+        if (ClipboardHasCsv())
+        {
+            root.Items.Add(MakePasteItem(Loc.T("As CSV (.csv)"), PasteAsCsv));
+        }
+        if (ClipboardHasImage())
+        {
+            root.Items.Add(MakePasteItem(Loc.T("As image (.png)"), PasteAsImage));
+        }
+        if (Clipboard.ContainsData(DataFormats.Html))
+        {
+            root.Items.Add(MakePasteItem(Loc.T("As HTML (.html)"), PasteAsHtml));
+        }
+        if (Clipboard.ContainsData(DataFormats.Rtf))
+        {
+            root.Items.Add(MakePasteItem(Loc.T("As rich text (.rtf)"), PasteAsRichText));
+        }
+        if (Clipboard.ContainsText())
+        {
+            root.Items.Add(MakePasteItem(Loc.T("As text (.txt)"), PasteAsPlainText));
+        }
+
+        return root.Items.Count > 0 ? root : null;
+    }
+
+    private static MenuItem MakePasteItem(string header, Action action)
+    {
+        var item = new MenuItem { Header = header };
+        item.Click += (_, _) => action();
+        return item;
     }
 
     /// <summary>

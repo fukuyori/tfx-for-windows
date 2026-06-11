@@ -74,6 +74,7 @@ extractZip = "ctrl+shift+e"
 copyItems = "ctrl+c"
 cutItems = "ctrl+x"
 pasteItems = "ctrl+v"
+pasteAsText = "ctrl+shift+v"
 selectAll = "ctrl+a"
 
 # [startup]
@@ -302,7 +303,8 @@ Supported action keys:
 | `extractZip` | `ctrl+shift+e` | Extract selected zip archives. |
 | `copyItems` | `ctrl+c` | Copy selected items. |
 | `cutItems` | `ctrl+x` | Cut selected items. |
-| `pasteItems` | `ctrl+v` | Paste into the active folder. |
+| `pasteItems` | `ctrl+v` | Paste into the active folder (files, or a new file from clipboard image / CSV / URL / rich text → `.rtf` / text). |
+| `pasteAsText` | `ctrl+shift+v` | Paste the clipboard text as a plain-text (.txt) file (overrides rich text). |
 | `selectAll` | `ctrl+a` | Select all visible items. |
 | `newTab` | `ctrl+t` | Open a new tab in the active pane. |
 | `closeTab` | `ctrl+w` | Close the active tab. |

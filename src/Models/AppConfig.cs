@@ -751,6 +751,7 @@ public sealed class AppConfig
         copyItems = "ctrl+c"
         cutItems = "ctrl+x"
         pasteItems = "ctrl+v"
+        pasteAsText = "ctrl+shift+v"
         selectAll = "ctrl+a"
         newTab = "ctrl+t"
         closeTab = "ctrl+w"

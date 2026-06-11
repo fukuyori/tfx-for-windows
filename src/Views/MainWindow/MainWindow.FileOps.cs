@@ -2,8 +2,10 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -146,11 +148,20 @@ public partial class MainWindow
 
     private void PasteIntoActivePane()
     {
-        if (!Clipboard.ContainsFileDropList())
+        // Files on the clipboard → copy/move them (the usual case). Otherwise fall
+        // back to creating a file from the clipboard content (image / CSV / text).
+        if (Clipboard.ContainsFileDropList())
         {
-            return;
+            PasteFilesFromClipboard();
         }
+        else
+        {
+            PasteClipboardContentAsFile();
+        }
+    }
 
+    private void PasteFilesFromClipboard()
+    {
         var destination = GetCurrentPath(_activeGrid);
         var files = Clipboard.GetFileDropList().Cast<string>().ToArray();
         if (files.Length == 0)
@@ -185,6 +196,493 @@ public partial class MainWindow
         // the UI thread did not surface the collision dialog. Reload + status are
         // handled by CopyOrMoveWithProgress.
         CopyOrMoveWithProgress(sources, destination, move, sameFolderCopy);
+    }
+
+    /// <summary>
+    /// Creates a file in the active folder from the clipboard's content when it
+    /// holds no files: spreadsheet/CSV → .csv, an image → .png, plain text → .txt.
+    /// The new file lands in inline rename so the user can name it.
+    /// </summary>
+    private void PasteClipboardContentAsFile()
+    {
+        var destination = GetCurrentPath(_activeGrid);
+        if (string.IsNullOrEmpty(destination) || ArchivePath.Contains(destination))
+        {
+            return;
+        }
+
+        try
+        {
+            string? created = null;
+
+            if (TryGetClipboardCsv(out var csvBytes))
+            {
+                created = WriteClipboardFile(destination, Loc.T("Pasted data") + ".csv", csvBytes);
+            }
+            else if (TryGetClipboardPng(out var pngBytes))
+            {
+                created = WriteClipboardFile(destination, Loc.T("Pasted image") + ".png", pngBytes);
+            }
+            else
+            {
+                var hasText = Clipboard.ContainsText();
+                var text = hasText ? Clipboard.GetText() : string.Empty;
+
+                if (hasText && TryGetUrl(text, out var url))
+                {
+                    // Internet shortcut (.url): double-clicking opens it in the
+                    // default browser.
+                    var content = $"[InternetShortcut]\r\nURL={url}\r\n";
+                    created = WriteClipboardFile(destination, UrlShortcutName(url) + ".url",
+                        new UTF8Encoding(false).GetBytes(content));
+                }
+                else if (TryGetClipboardRtf(out var rtfBytes))
+                {
+                    // Rich text (e.g. Word) → .rtf. Use Ctrl+Shift+V or the context
+                    // menu's "Paste as text" to paste it as plain text instead.
+                    created = WriteClipboardFile(destination, Loc.T("Pasted rich text") + ".rtf", rtfBytes);
+                }
+                else if (hasText)
+                {
+                    created = WriteClipboardFile(destination, Loc.T("Pasted text") + ".txt",
+                        new UTF8Encoding(false).GetBytes(text));
+                }
+            }
+
+            if (created is not null)
+            {
+                BeginInlineCreate(Path.GetFileName(created));
+            }
+            else
+            {
+                SetStatus(Loc.T("Clipboard has no pasteable content"));
+            }
+        }
+        catch (Exception ex)
+        {
+            SetStatus(Loc.F("Paste failed: {0}", ex.Message));
+        }
+    }
+
+    private static string WriteClipboardFile(string directory, string defaultName, byte[] bytes)
+    {
+        var path = FsHelpers.NextAvailablePath(Path.Combine(directory, defaultName));
+        File.WriteAllBytes(path, bytes);
+        return path;
+    }
+
+    /// <summary>Creates a file from the given bytes in the active folder and opens inline rename.</summary>
+    private void CreateClipboardFile(byte[] bytes, string defaultName)
+    {
+        var destination = GetCurrentPath(_activeGrid);
+        if (string.IsNullOrEmpty(destination) || ArchivePath.Contains(destination))
+        {
+            return;
+        }
+        try
+        {
+            var created = WriteClipboardFile(destination, defaultName, bytes);
+            BeginInlineCreate(Path.GetFileName(created));
+        }
+        catch (Exception ex)
+        {
+            SetStatus(Loc.F("Paste failed: {0}", ex.Message));
+        }
+    }
+
+    /// <summary>Pastes the clipboard's text as a plain-text (.txt) file.</summary>
+    private void PasteAsPlainText()
+    {
+        if (!Clipboard.ContainsText())
+        {
+            SetStatus(Loc.T("Clipboard has no text"));
+            return;
+        }
+        var text = Clipboard.GetText();
+        CreateClipboardFile(new UTF8Encoding(false).GetBytes(text), Loc.T("Pasted text") + ".txt");
+    }
+
+    /// <summary>Pastes the clipboard's rich text as an .rtf file.</summary>
+    private void PasteAsRichText()
+    {
+        if (!TryGetClipboardRtf(out var bytes))
+        {
+            SetStatus(Loc.T("Clipboard has no rich text"));
+            return;
+        }
+        CreateClipboardFile(bytes, Loc.T("Pasted rich text") + ".rtf");
+    }
+
+    private static bool TryGetClipboardRtf(out byte[] bytes)
+    {
+        bytes = [];
+        if (!Clipboard.ContainsData(DataFormats.Rtf))
+        {
+            return false;
+        }
+        var data = Clipboard.GetData(DataFormats.Rtf);
+        bytes = data switch
+        {
+            MemoryStream ms => ms.ToArray(),
+            byte[] raw => raw,
+            string s => new UTF8Encoding(false).GetBytes(s),
+            _ => [],
+        };
+        return bytes.Length > 0;
+    }
+
+    // ---- "Paste special": create a file from a specific clipboard format ----
+
+    private void PasteAsCsv()
+    {
+        if (!TryGetClipboardCsv(out var bytes))
+        {
+            SetStatus(Loc.T("Clipboard has no CSV"));
+            return;
+        }
+        CreateClipboardFile(bytes, Loc.T("Pasted data") + ".csv");
+    }
+
+    private void PasteAsImage()
+    {
+        if (!TryGetClipboardPng(out var bytes))
+        {
+            SetStatus(Loc.T("Clipboard has no image"));
+            return;
+        }
+        CreateClipboardFile(bytes, Loc.T("Pasted image") + ".png");
+    }
+
+    private void PasteAsUrl()
+    {
+        if (!Clipboard.ContainsText() || !TryGetUrl(Clipboard.GetText(), out var url))
+        {
+            SetStatus(Loc.T("Clipboard has no URL"));
+            return;
+        }
+        var content = $"[InternetShortcut]\r\nURL={url}\r\n";
+        CreateClipboardFile(new UTF8Encoding(false).GetBytes(content), UrlShortcutName(url) + ".url");
+    }
+
+    private void PasteAsHtml()
+    {
+        if (!TryGetClipboardHtml(out var html))
+        {
+            SetStatus(Loc.T("Clipboard has no HTML"));
+            return;
+        }
+        CreateClipboardFile(new UTF8Encoding(false).GetBytes(html), Loc.T("Pasted HTML") + ".html");
+    }
+
+    /// <summary>Extracts the HTML document from the clipboard's CF_HTML payload (strips the header).</summary>
+    private static bool TryGetClipboardHtml(out string html)
+    {
+        html = "";
+        if (!Clipboard.ContainsData(DataFormats.Html))
+        {
+            return false;
+        }
+
+        var data = Clipboard.GetData(DataFormats.Html);
+        var cf = data switch
+        {
+            string s => s,
+            MemoryStream ms => Encoding.UTF8.GetString(ms.ToArray()),
+            byte[] raw => Encoding.UTF8.GetString(raw),
+            _ => "",
+        };
+        if (string.IsNullOrEmpty(cf))
+        {
+            return false;
+        }
+
+        // CF_HTML's StartHTML / EndHTML are byte offsets into the UTF-8 buffer.
+        var bytes = Encoding.UTF8.GetBytes(cf);
+        var start = ReadCfHtmlOffset(cf, "StartHTML:");
+        var end = ReadCfHtmlOffset(cf, "EndHTML:");
+        if (start >= 0 && end > start && end <= bytes.Length)
+        {
+            html = Encoding.UTF8.GetString(bytes, start, end - start);
+            return html.Length > 0;
+        }
+
+        // Fallback: from the first <html>/<!doctype> marker.
+        var idx = cf.IndexOf("<!doctype", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+        {
+            idx = cf.IndexOf("<html", StringComparison.OrdinalIgnoreCase);
+        }
+        html = idx >= 0 ? cf[idx..] : cf;
+        return html.Length > 0;
+    }
+
+    private static int ReadCfHtmlOffset(string cf, string key)
+    {
+        var i = cf.IndexOf(key, StringComparison.OrdinalIgnoreCase);
+        if (i < 0)
+        {
+            return -1;
+        }
+        i += key.Length;
+        var j = i;
+        while (j < cf.Length && char.IsDigit(cf[j]))
+        {
+            j++;
+        }
+        return int.TryParse(cf[i..j], out var value) ? value : -1;
+    }
+
+    private static bool ClipboardHasFormat(string name)
+    {
+        try
+        {
+            return Clipboard.GetDataObject()?.GetFormats(false)
+                .Any(f => f.Equals(name, StringComparison.OrdinalIgnoreCase)) ?? false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool ClipboardHasCsv() => ClipboardHasFormat("CSV");
+
+    private static bool ClipboardHasImage() =>
+        Clipboard.ContainsImage()
+        || ClipboardHasFormat("PNG")
+        || ClipboardHasFormat("DeviceIndependentBitmap")
+        || ClipboardHasFormat("Format17");
+
+    private static bool ClipboardHasUrl() =>
+        Clipboard.ContainsText() && TryGetUrl(Clipboard.GetText(), out _);
+
+    /// <summary>
+    /// Spreadsheet apps (Excel, LibreOffice) put a CSV rendering on the clipboard.
+    /// The format is enumerated case-insensitively (Excel registers it as "Csv",
+    /// WPF's DataFormats.CommaSeparatedValue is "CSV", and a case-sensitive match
+    /// misses it). Falls back to converting the tab-separated Unicode text to CSV
+    /// when a spreadsheet is the source but no CSV blob is available.
+    /// </summary>
+    private static bool TryGetClipboardCsv(out byte[] bytes)
+    {
+        bytes = [];
+
+        IDataObject? data;
+        try { data = Clipboard.GetDataObject(); }
+        catch { return false; }
+        if (data is null)
+        {
+            return false;
+        }
+
+        string[] formats;
+        try { formats = data.GetFormats(false); }
+        catch { formats = []; }
+
+        // 1) Native CSV blob.
+        var csvFormat = formats.FirstOrDefault(f => f.Equals("CSV", StringComparison.OrdinalIgnoreCase));
+        if (csvFormat is not null)
+        {
+            object? raw = null;
+            try { raw = data.GetData(csvFormat, false); }
+            catch { }
+            if (TryExtractBytes(raw, out bytes) && bytes.Length > 0)
+            {
+                return true;
+            }
+        }
+
+        // 2) Spreadsheet source without a usable CSV blob → convert the
+        //    tab-separated Unicode text to CSV (UTF-8 with BOM so Excel re-opens
+        //    it with the right encoding).
+        var looksLikeSpreadsheet = formats.Any(f =>
+            f.Contains("CSV", StringComparison.OrdinalIgnoreCase) ||
+            f.Contains("Biff", StringComparison.OrdinalIgnoreCase) ||
+            f.Contains("XML Spreadsheet", StringComparison.OrdinalIgnoreCase) ||
+            f.Contains("SYLK", StringComparison.OrdinalIgnoreCase));
+        if (looksLikeSpreadsheet && Clipboard.ContainsText())
+        {
+            var tsv = Clipboard.GetText();
+            if (!string.IsNullOrEmpty(tsv) && tsv.Contains('\t'))
+            {
+                var csv = TsvToCsv(tsv);
+                bytes = [.. new UTF8Encoding(true).GetPreamble(), .. new UTF8Encoding(false).GetBytes(csv)];
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryExtractBytes(object? data, out byte[] bytes)
+    {
+        bytes = data switch
+        {
+            MemoryStream ms => ms.ToArray(),
+            byte[] raw => raw,
+            string s => Encoding.Default.GetBytes(s),
+            _ => [],
+        };
+        return bytes.Length > 0;
+    }
+
+    private static string TsvToCsv(string tsv)
+    {
+        var sb = new StringBuilder();
+        var rows = tsv.Replace("\r\n", "\n").TrimEnd('\n').Split('\n');
+        foreach (var row in rows)
+        {
+            var cells = row.Split('\t');
+            for (var i = 0; i < cells.Length; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(',');
+                }
+                sb.Append(CsvQuote(cells[i]));
+            }
+            sb.Append("\r\n");
+        }
+        return sb.ToString();
+    }
+
+    private static string CsvQuote(string field) =>
+        field.IndexOfAny([',', '"', '\n', '\r']) >= 0
+            ? "\"" + field.Replace("\"", "\"\"") + "\""
+            : field;
+
+    /// <summary>True when the clipboard text is a single absolute http(s) URL.</summary>
+    private static bool TryGetUrl(string? text, out string url)
+    {
+        url = (text ?? "").Trim();
+        if (url.Length == 0 || url.IndexOfAny([' ', '\t', '\r', '\n']) >= 0)
+        {
+            return false;
+        }
+        return (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            && Uri.TryCreate(url, UriKind.Absolute, out _);
+    }
+
+    /// <summary>A sensible file name for a URL shortcut (last path segment or host).</summary>
+    private string UrlShortcutName(string url)
+    {
+        try
+        {
+            var uri = new Uri(url);
+            var segment = uri.Segments.Length > 0 ? uri.Segments[^1].Trim('/') : "";
+            var name = string.IsNullOrEmpty(segment) ? uri.Host : Uri.UnescapeDataString(segment);
+            foreach (var c in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(c, '_');
+            }
+            name = name.Trim();
+            return string.IsNullOrEmpty(name) ? Loc.T("Pasted link") : name;
+        }
+        catch
+        {
+            return Loc.T("Pasted link");
+        }
+    }
+
+    private static bool TryGetClipboardPng(out byte[] bytes)
+    {
+        bytes = [];
+
+        // 1) Raw PNG payload (best — preserves transparency).
+        if (Clipboard.ContainsData("PNG") && Clipboard.GetData("PNG") is MemoryStream pngStream)
+        {
+            bytes = pngStream.ToArray();
+            if (bytes.Length > 0)
+            {
+                return true;
+            }
+        }
+
+        // 2) Standard CF_BITMAP / CF_DIB via WPF.
+        BitmapSource? image = null;
+        try { image = Clipboard.GetImage(); }
+        catch { }
+        if (image is not null && EncodePng(image, out bytes))
+        {
+            return true;
+        }
+
+        // 3) DIBV5 / DIB that WPF's GetImage()/ContainsImage() doesn't recognize —
+        //    common for PDF viewers, scanners and some browsers. Wrap the raw DIB
+        //    in a BMP file header so it can be decoded, then encode as PNG.
+        foreach (var format in new[] { "Format17" /* CF_DIBV5 */, DataFormats.Dib })
+        {
+            object? data = null;
+            try { data = Clipboard.GetData(format); }
+            catch { }
+            if (data is MemoryStream dib && DibToBitmap(dib.ToArray()) is { } src && EncodePng(src, out bytes))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool EncodePng(BitmapSource source, out byte[] bytes)
+    {
+        try
+        {
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(source));
+            using var output = new MemoryStream();
+            encoder.Save(output);
+            bytes = output.ToArray();
+            return bytes.Length > 0;
+        }
+        catch
+        {
+            bytes = [];
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Decodes a packed DIB (BITMAPINFOHEADER / V4 / V5 + pixels, no file header)
+    /// by prepending a BMP file header. Handles the formats PDF viewers / scanners
+    /// place on the clipboard that <see cref="Clipboard.GetImage"/> can't read.
+    /// </summary>
+    private static BitmapSource? DibToBitmap(byte[] dib)
+    {
+        if (dib.Length < 40)
+        {
+            return null;
+        }
+
+        try
+        {
+            var headerSize = BitConverter.ToInt32(dib, 0);
+            var bitCount = BitConverter.ToInt16(dib, 14);
+            var compression = BitConverter.ToInt32(dib, 16);
+            var clrUsed = BitConverter.ToInt32(dib, 32);
+
+            var paletteBytes = bitCount <= 8 ? (clrUsed != 0 ? clrUsed : 1 << bitCount) * 4 : 0;
+            // BI_BITFIELDS masks follow a plain BITMAPINFOHEADER; V4/V5 embed them.
+            var maskBytes = compression == 3 && headerSize == 40 ? 12 : 0;
+            var offBits = 14 + headerSize + maskBytes + paletteBytes;
+            var fileSize = 14 + dib.Length;
+
+            var bmp = new byte[fileSize];
+            bmp[0] = (byte)'B';
+            bmp[1] = (byte)'M';
+            BitConverter.GetBytes(fileSize).CopyTo(bmp, 2);
+            BitConverter.GetBytes(offBits).CopyTo(bmp, 10);
+            Array.Copy(dib, 0, bmp, 14, dib.Length);
+
+            using var ms = new MemoryStream(bmp);
+            var decoder = new BmpBitmapDecoder(ms, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            return decoder.Frames.Count > 0 ? decoder.Frames[0] : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void MoveSelectionToTrash()

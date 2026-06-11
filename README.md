@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.8.3
+Version: 0.8.4
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -27,6 +27,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Two view modes: **Details** (multi-column metadata) and **Icons** (large-icon grid), with monochrome, theme-aware file-type icons
 - New File (`.txt`) / New Folder with Explorer-style inline naming — type the name and press Enter, or click the empty list area to confirm; inline rename; drag-and-drop with full Windows modifier-key conventions and an Explorer-style translucent drag preview; shortcut (`.lnk`) creation
 - Copy / move / paste through the Windows shell: the standard progress dialog (time remaining, speed, cancel) appears for long operations, with native replace / skip / keep-both conflict prompts (copying into the same folder makes a "- Copy"); lists refresh in place, preserving the selection and keyboard focus
+- Paste clipboard content as a new file when the clipboard holds no files: spreadsheet/CSV → `.csv`, image → `.png` (incl. the DIB/DIBV5 scanners and PDF viewers use), URL → `.url`, rich text → `.rtf`, text → `.txt`. A "Paste special" context submenu lets you choose the format (including HTML)
 - Zip compression and extraction from the file pane or context menu, plus read-only browsing inside `.zip` files (open, drag out to other apps)
 - Right-click context menu (Windows 11–style ordering), "Open with..." dialog, sortable columns, customizable column visibility and order
 - Image / text preview pane with rendered Markdown, HTML, CSV / TSV tables, and pretty-printed JSON (toggle between rendered view and source)
@@ -57,7 +58,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.3 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.4 |
 +---------------------------------------------------------------------+
 ```
 
@@ -96,6 +97,7 @@ The native title bar is replaced by custom chrome when transparency is enabled. 
 | `Delete` | Move selection to Recycle Bin |
 | `Shift + Delete` | Permanently delete selection |
 | `Ctrl + C` / `Ctrl + X` / `Ctrl + V` | Copy / Cut / Paste |
+| `Ctrl + Shift + V` | Paste clipboard text as a `.txt` file |
 | `Ctrl + A` | Select all in active view |
 | `Ctrl + Shift + N` | New folder |
 | `Ctrl + N` | New file |

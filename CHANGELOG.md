@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.4
+
+### Clipboard & file operations
+
+- **Paste creates a file from clipboard content** when the clipboard holds no files: spreadsheet/CSV data (e.g. from Excel) → `.csv`, an image → `.png` (including the CF_DIB / CF_DIBV5 that scanners and PDF viewers use), a URL → `.url` internet shortcut, plain text → `.txt`. The new file opens in inline rename so it can be named.
+- **Rich text:** when the clipboard holds rich text (e.g. from Word), `Ctrl+V` creates a `.rtf` file. `Ctrl+Shift+V` (`pasteAsText`) pastes it as plain text (`.txt`) instead.
+- **"Paste special" context submenu** lists every clipboard format that can be turned into a file — URL (`.url`), CSV (`.csv`), image (`.png`), HTML (`.html`, with the CF_HTML header stripped), rich text (`.rtf`), text (`.txt`) — showing only the formats actually present.
+- Excel/spreadsheet CSV detection is now case-insensitive and falls back to converting tab-separated text to CSV, so `Ctrl+V` reliably produces `.csv`.
+
 ## 0.8.3
 
 ### Clipboard & file operations
