@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
@@ -39,6 +41,19 @@ public partial class MainWindow
     private bool _cwdSyncPending;
     private readonly List<byte> _cwdSyncBytes = new();
     private DispatcherTimer? _cwdSyncTimer;
+
+    // Passive cwd tracking via OSC 7 / OSC 9;9 escape sequences emitted by the
+    // shell (Windows Terminal integration, oh-my-posh, Starship, …). These are
+    // invisible control sequences, so the cwd is captured without printing any
+    // command to the prompt. Scanned on the PTY reader thread; the latest value
+    // is used by the "sync to terminal folder" button when no multiplexer query
+    // applies. State below is touched only on the single reader thread.
+    private volatile string? _terminalTrackedCwd;
+    private bool _oscInEscape;       // saw ESC, awaiting ]
+    private bool _oscCollecting;     // inside an OSC body
+    private bool _oscSawEscInBody;   // saw ESC inside body, awaiting \ (ST)
+    private readonly List<byte> _oscBytes = new();  // OSC body (no introducer / ST)
+    private readonly List<byte> _oscRaw = new();    // full raw OSC, re-emitted if not a cwd one
 
     /// <summary>
     /// Shared WebView2 environment for both the terminal and the preview. The
@@ -561,6 +576,7 @@ public partial class MainWindow
         var cwd = ResolveTerminalCwd();
         var commandLine = ResolveTerminalShell();
         _terminalShellKind = DetectShellKind(commandLine);
+        commandLine = InjectCwdReporting(commandLine, _terminalShellKind);
         try
         {
             _terminalPty = new ConPty();
@@ -579,31 +595,72 @@ public partial class MainWindow
     /// <summary>PTY → xterm. Raw bytes are base64-encoded so they survive intact.</summary>
     private void OnTerminalPtyOutput(byte[] data)
     {
-        var b64 = Convert.ToBase64String(data);
+        // Capture the cwd from OSC 7 / OSC 9;9 and strip those sequences so the
+        // terminal never renders them — otherwise shells that emit them (prompt
+        // hooks, oh-my-posh, …) leave stray characters in the line during input.
+        // Runs on this single reader thread.
+        var visible = FilterAndTrackOsc(data);
+        if (visible.Length == 0)
+        {
+            return;
+        }
+
+        var b64 = Convert.ToBase64String(visible);
         Dispatcher.BeginInvoke(() =>
         {
             PostToTerminal(new { type = "output", dataB64 = b64 });
             if (_cwdSyncPending)
             {
-                TryParseCwdSync(data);
+                TryParseCwdSync(visible);
             }
         });
     }
 
     /// <summary>
-    /// Sends a built-in "print current directory" command to the running shell,
-    /// then (in <see cref="OnTerminalPtyOutput"/>) reads the marked output and
-    /// navigates the active file pane to that folder. The command and its output
-    /// stay visible in the terminal by design.
+    /// Navigates the active file pane to the terminal's current directory. When a
+    /// multiplexer (wtmux/tmux) is running in this pane, its current path is read
+    /// directly via <c>wtmux display-message</c> run as a separate process — no
+    /// command is typed into the shell. Otherwise a built-in "print current
+    /// directory" command is sent to the shell and its marked output is read in
+    /// <see cref="OnTerminalPtyOutput"/>.
     /// </summary>
     private void TerminalSyncCwd_Click(object sender, RoutedEventArgs e)
     {
-        if (_terminalPty is not { IsRunning: true })
+        var pty = _terminalPty;
+        if (pty is not { IsRunning: true })
         {
             return;
         }
 
-        var command = _terminalShellKind switch
+        // Multiplexer present → query it out-of-band (nothing typed into the shell).
+        if (TryGetMultiplexerCwd(out var muxPath))
+        {
+            NavigateSyncedCwd(muxPath);
+            SetStatus(Loc.F("Synced to {0}", muxPath));
+            Terminal.Focus();
+            return;
+        }
+
+        // The active shell may be a sub-shell launched inside the one tfx started
+        // (e.g. `cmd` typed at a PowerShell prompt). Re-detect it from the process
+        // tree so the right method is used and a stale tracked value isn't trusted.
+        var activeKind = DetectActiveShellKind(pty.ProcessId);
+
+        // OSC-tracked cwd is reliable only for a PowerShell foreground (tfx injects
+        // the reporter there). A cmd / bash sub-shell doesn't update it, so its
+        // value would be stale — fall through to that shell's own query instead.
+        var tracked = _terminalTrackedCwd;
+        if (activeKind == TerminalShellKind.PowerShell &&
+            !string.IsNullOrEmpty(tracked) && Directory.Exists(tracked))
+        {
+            NavigateSyncedCwd(tracked);
+            Terminal.Focus();
+            return;
+        }
+
+        // Ask the active shell to print its working directory, bracketed by the
+        // start/end markers so the output is parsed regardless of trailing newline.
+        var command = activeKind switch
         {
             TerminalShellKind.Cmd => $"echo {CwdMarker}%CD%{CwdMarkerEnd}",
             TerminalShellKind.Bash => $"printf '{CwdMarker}%s{CwdMarkerEnd}\\n' \"$PWD\"",
@@ -613,13 +670,339 @@ public partial class MainWindow
         BeginCwdSync();
         try
         {
-            _terminalPty.WriteBytes(Encoding.UTF8.GetBytes(command + "\r"));
+            pty.WriteBytes(Encoding.UTF8.GetBytes(command + "\r"));
         }
         catch
         {
             EndCwdSync();
         }
         Terminal.Focus();
+    }
+
+    /// <summary>
+    /// When a wtmux/tmux process is running inside this pane's shell, reads its
+    /// current pane path via <c>wtmux display-message -p '#{pane_current_path}'</c>
+    /// (run as a child process, not typed into the terminal). Returns false when no
+    /// multiplexer is detected in this pane or the query yields no usable path.
+    /// </summary>
+    private bool TryGetMultiplexerCwd(out string path)
+    {
+        path = "";
+        var shellPid = _terminalPty?.ProcessId ?? 0;
+        if (shellPid == 0)
+        {
+            return false;
+        }
+
+        // Detect whether wtmux is actually running IN THIS PANE: a wtmux process
+        // must be a descendant of this pane's shell. This prevents an unrelated
+        // wtmux server running elsewhere from hijacking a plain-shell pane.
+        GetShellProcessTree(shellPid, out var descendants, out var hasWtmux);
+        if (!hasWtmux)
+        {
+            return false;
+        }
+
+        // Enumerate clients. A bare `display-message` has no "current client" when
+        // run from outside the session, so the session is resolved explicitly:
+        // match the client PID to this pane's shell subtree, falling back to the
+        // sole session (safe now that wtmux is confirmed present in this pane).
+        var clients = RunWtmux("list-clients", "-F", "#{client_pid}\t#{session_id}");
+        if (string.IsNullOrWhiteSpace(clients))
+        {
+            return false;
+        }
+
+        var sessions = new HashSet<string>();
+        string? session = null;
+        foreach (var line in clients.Split('\n'))
+        {
+            var parts = line.Trim().Split('\t');
+            if (parts.Length < 2)
+            {
+                continue;
+            }
+            var sess = parts[1].Trim();
+            if (sess.Length > 0)
+            {
+                sessions.Add(sess);
+            }
+            if (int.TryParse(parts[0].Trim(), out var clientPid) && descendants.Contains(clientPid))
+            {
+                session = sess;
+                break;
+            }
+        }
+        session ??= sessions.Count == 1 ? sessions.First() : null;
+        if (session is null)
+        {
+            return false;
+        }
+
+        var result = RunWtmux("display-message", "-p", "-t", session, "#{pane_current_path}");
+        if (string.IsNullOrWhiteSpace(result))
+        {
+            SetStatus(Loc.F("wtmux query failed (session {0})", session));
+            return false;
+        }
+        path = result.Trim();
+        return path.Length > 0;
+    }
+
+    private void NavigateSyncedCwd(string candidate)
+    {
+        candidate = candidate.Trim().Trim('"');
+        if (candidate.Length == 0 || ArchivePath.Contains(candidate))
+        {
+            return;
+        }
+        try
+        {
+            if (Directory.Exists(candidate))
+            {
+                var full = Path.GetFullPath(candidate);
+                if (!string.Equals(GetCurrentPath(_activeGrid), full, StringComparison.OrdinalIgnoreCase))
+                {
+                    Navigate(_activeGrid, full, true);
+                }
+            }
+        }
+        catch
+        {
+            // ignore an unreadable path
+        }
+    }
+
+    /// <summary>Runs the wtmux CLI with the given args; returns stdout, or null on any failure.</summary>
+    private static string? RunWtmux(params string[] args)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "wtmux",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            foreach (var a in args)
+            {
+                psi.ArgumentList.Add(a);
+            }
+
+            using var proc = Process.Start(psi);
+            if (proc is null)
+            {
+                return null;
+            }
+            var output = proc.StandardOutput.ReadToEnd();
+            if (!proc.WaitForExit(1500))
+            {
+                try { proc.Kill(entireProcessTree: true); } catch { }
+                return null;
+            }
+            return proc.ExitCode == 0 ? output : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Walks the process table once and returns the PID subtree rooted at
+    /// <paramref name="rootPid"/> (including itself), plus whether any process in
+    /// that subtree is a wtmux executable (i.e. wtmux is running in this pane).
+    /// </summary>
+    private static void GetShellProcessTree(int rootPid, out HashSet<int> descendants, out bool hasWtmux)
+    {
+        descendants = new HashSet<int> { rootPid };
+        hasWtmux = false;
+
+        var children = new Dictionary<int, List<int>>();
+        var names = new Dictionary<int, string>();
+
+        var snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == IntPtr.Zero || snapshot == new IntPtr(-1))
+        {
+            return;
+        }
+        try
+        {
+            var entry = new PROCESSENTRY32 { dwSize = (uint)Marshal.SizeOf<PROCESSENTRY32>() };
+            if (!Process32First(snapshot, ref entry))
+            {
+                return;
+            }
+            do
+            {
+                var pid = (int)entry.th32ProcessID;
+                var ppid = (int)entry.th32ParentProcessID;
+                if (!children.TryGetValue(ppid, out var list))
+                {
+                    list = [];
+                    children[ppid] = list;
+                }
+                list.Add(pid);
+                names[pid] = entry.szExeFile ?? "";
+            }
+            while (Process32Next(snapshot, ref entry));
+        }
+        finally
+        {
+            CloseHandle(snapshot);
+        }
+
+        var queue = new Queue<int>();
+        queue.Enqueue(rootPid);
+        while (queue.Count > 0)
+        {
+            var p = queue.Dequeue();
+            if (children.TryGetValue(p, out var kids))
+            {
+                foreach (var k in kids)
+                {
+                    if (descendants.Add(k))
+                    {
+                        queue.Enqueue(k);
+                    }
+                }
+            }
+        }
+
+        foreach (var pid in descendants)
+        {
+            if (names.TryGetValue(pid, out var name) &&
+                name.StartsWith("wtmux", StringComparison.OrdinalIgnoreCase))
+            {
+                hasWtmux = true;
+                break;
+            }
+        }
+    }
+
+    private const uint TH32CS_SNAPPROCESS = 0x00000002;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct PROCESSENTRY32
+    {
+        public uint dwSize;
+        public uint cntUsage;
+        public uint th32ProcessID;
+        public IntPtr th32DefaultHeapID;
+        public uint th32ModuleID;
+        public uint cntThreads;
+        public uint th32ParentProcessID;
+        public int pcPriClassBase;
+        public uint dwFlags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string szExeFile;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
+
+    [DllImport("kernel32.dll", SetLastError = true, EntryPoint = "Process32FirstW")]
+    private static extern bool Process32First(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+
+    [DllImport("kernel32.dll", SetLastError = true, EntryPoint = "Process32NextW")]
+    private static extern bool Process32Next(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr hObject);
+
+    /// <summary>
+    /// Determines the shell currently in the foreground of the pane by walking the
+    /// process tree from the shell tfx started and taking the deepest descendant
+    /// that is itself a shell (so `cmd` typed inside PowerShell is detected as cmd).
+    /// Falls back to the launch-time shell kind when nothing deeper is found.
+    /// </summary>
+    private TerminalShellKind DetectActiveShellKind(int shellPid)
+    {
+        if (shellPid == 0)
+        {
+            return _terminalShellKind;
+        }
+
+        var children = new Dictionary<int, List<int>>();
+        var names = new Dictionary<int, string>();
+
+        var snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == IntPtr.Zero || snapshot == new IntPtr(-1))
+        {
+            return _terminalShellKind;
+        }
+        try
+        {
+            var entry = new PROCESSENTRY32 { dwSize = (uint)Marshal.SizeOf<PROCESSENTRY32>() };
+            if (!Process32First(snapshot, ref entry))
+            {
+                return _terminalShellKind;
+            }
+            do
+            {
+                var pid = (int)entry.th32ProcessID;
+                var ppid = (int)entry.th32ParentProcessID;
+                if (!children.TryGetValue(ppid, out var list))
+                {
+                    list = [];
+                    children[ppid] = list;
+                }
+                list.Add(pid);
+                names[pid] = entry.szExeFile ?? "";
+            }
+            while (Process32Next(snapshot, ref entry));
+        }
+        finally
+        {
+            CloseHandle(snapshot);
+        }
+
+        var best = _terminalShellKind;
+        var bestDepth = -1;
+        var queue = new Queue<(int Pid, int Depth)>();
+        var seen = new HashSet<int> { shellPid };
+        queue.Enqueue((shellPid, 0));
+        while (queue.Count > 0)
+        {
+            var (pid, depth) = queue.Dequeue();
+            if (names.TryGetValue(pid, out var name) && ShellKindFromExe(name) is { } kind && depth >= bestDepth)
+            {
+                best = kind;
+                bestDepth = depth;
+            }
+            if (children.TryGetValue(pid, out var kids))
+            {
+                foreach (var k in kids)
+                {
+                    if (seen.Add(k))
+                    {
+                        queue.Enqueue((k, depth + 1));
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
+    private static TerminalShellKind? ShellKindFromExe(string exe)
+    {
+        var s = exe.ToLowerInvariant();
+        if (s.StartsWith("cmd", StringComparison.Ordinal))
+        {
+            return TerminalShellKind.Cmd;
+        }
+        if (s.StartsWith("powershell", StringComparison.Ordinal) || s.StartsWith("pwsh", StringComparison.Ordinal))
+        {
+            return TerminalShellKind.PowerShell;
+        }
+        if (s.StartsWith("bash", StringComparison.Ordinal) || s.StartsWith("wsl", StringComparison.Ordinal) ||
+            s is "sh.exe" or "sh")
+        {
+            return TerminalShellKind.Bash;
+        }
+        return null;
     }
 
     private static TerminalShellKind DetectShellKind(string commandLine)
@@ -713,6 +1096,151 @@ public partial class MainWindow
             ? s
             : System.Text.RegularExpressions.Regex.Replace(s, "\x1b\\[[0-9;?]*[ -/]*[@-~]", "");
 
+    // ─── Passive cwd tracking via OSC 7 / OSC 9;9 ───────────────────────────
+    // Scans the raw PTY byte stream (across reads) for the shell's invisible
+    // working-directory notifications and stores the latest path in
+    // _terminalTrackedCwd. No command is sent and nothing is shown in the pane.
+
+    private byte[] FilterAndTrackOsc(byte[] data)
+    {
+        var output = new List<byte>(data.Length);
+        foreach (var b in data)
+        {
+            if (_oscCollecting)
+            {
+                _oscRaw.Add(b);
+                if (_oscSawEscInBody)
+                {
+                    _oscSawEscInBody = false;
+                    // ESC \ terminates the OSC; anything else means it was malformed.
+                    EndOscCollect(output, terminated: b == 0x5c);
+                    continue;
+                }
+                if (b is 0x07 or 0x9c) // BEL or C1 ST
+                {
+                    EndOscCollect(output, terminated: true);
+                    continue;
+                }
+                if (b == 0x1b) // possible start of ESC \
+                {
+                    _oscSawEscInBody = true;
+                    continue;
+                }
+                _oscBytes.Add(b);
+                if (_oscBytes.Count > 4096) // runaway → give up and pass it through
+                {
+                    EndOscCollect(output, terminated: false);
+                }
+                continue;
+            }
+
+            if (_oscInEscape)
+            {
+                _oscInEscape = false;
+                if (b == 0x5d) // ESC ]  = OSC introducer → start buffering (held back)
+                {
+                    _oscCollecting = true;
+                    _oscBytes.Clear();
+                    _oscRaw.Clear();
+                    _oscRaw.Add(0x1b);
+                    _oscRaw.Add(0x5d);
+                }
+                else
+                {
+                    output.Add(0x1b); // a non-OSC escape (CSI, …) → emit the held ESC …
+                    if (b == 0x1b)
+                    {
+                        _oscInEscape = true; // … another ESC: keep holding
+                    }
+                    else
+                    {
+                        output.Add(b); // … and this byte
+                    }
+                }
+                continue;
+            }
+
+            if (b == 0x1b) // hold the ESC until we know whether it is ESC ]
+            {
+                _oscInEscape = true;
+                continue;
+            }
+            output.Add(b);
+        }
+        return output.ToArray();
+    }
+
+    /// <summary>
+    /// Ends the current OSC: if it is a cwd notification (OSC 7 / OSC 9;9) it is
+    /// consumed (path captured, not forwarded); otherwise the raw sequence is
+    /// passed through to the terminal unchanged.
+    /// </summary>
+    private void EndOscCollect(List<byte> output, bool terminated)
+    {
+        _oscCollecting = false;
+        _oscSawEscInBody = false;
+
+        var body = Encoding.UTF8.GetString(_oscBytes.ToArray());
+        var isCwd = body.StartsWith("7;", StringComparison.Ordinal)
+                 || body.StartsWith("9;9;", StringComparison.Ordinal);
+        if (terminated && isCwd)
+        {
+            var path = ParseOscCwd(body);
+            if (!string.IsNullOrEmpty(path))
+            {
+                _terminalTrackedCwd = path;
+            }
+            // consumed: not forwarded to the terminal
+        }
+        else
+        {
+            output.AddRange(_oscRaw); // not a cwd OSC (or malformed) → forward as-is
+        }
+        _oscBytes.Clear();
+        _oscRaw.Clear();
+    }
+
+    /// <summary>Extracts a filesystem path from an OSC 7 or OSC 9;9 body, or null.</summary>
+    private static string? ParseOscCwd(string body)
+    {
+        if (body.StartsWith("7;", StringComparison.Ordinal))
+        {
+            return PathFromFileUri(body[2..]);
+        }
+        if (body.StartsWith("9;9;", StringComparison.Ordinal))
+        {
+            var p = body[4..].Trim().Trim('"');
+            if (p.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+            {
+                return PathFromFileUri(p);
+            }
+            return p.Length > 0 ? p : null;
+        }
+        return null;
+    }
+
+    private static string? PathFromFileUri(string uri)
+    {
+        uri = uri.Trim();
+        if (uri.Length == 0)
+        {
+            return null;
+        }
+        try
+        {
+            if (uri.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+            {
+                var local = new Uri(uri).LocalPath;
+                return string.IsNullOrEmpty(local) ? null : local;
+            }
+            return uri; // some shells emit a bare path after OSC 7
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private void OnTerminalExited()
     {
         Dispatcher.BeginInvoke(() =>
@@ -756,6 +1284,47 @@ public partial class MainWindow
     }
 
     /// <summary>
+    /// Augments the shell command line so the shell reports its working directory
+    /// via an invisible <c>OSC 9;9</c> on each prompt — tfx strips and tracks it
+    /// (see <see cref="FilterAndTrackOsc"/>), giving the "sync to terminal folder"
+    /// button an accurate cwd without printing anything to the prompt. Currently
+    /// done for PowerShell (the default shell); other shells fall back to OSC from
+    /// their own shell integration, or to the visible marker command.
+    /// </summary>
+    private static string InjectCwdReporting(string commandLine, TerminalShellKind kind)
+    {
+        if (kind != TerminalShellKind.PowerShell)
+        {
+            return commandLine;
+        }
+
+        // Don't clobber an explicit command/script the user configured.
+        var lower = commandLine.ToLowerInvariant();
+        if (lower.Contains("-command") || lower.Contains("-encodedcommand") ||
+            lower.Contains("-file") || lower.Contains(" -c ") || lower.EndsWith(" -c") ||
+            lower.Contains(" -e ") || lower.EndsWith(" -e"))
+        {
+            return commandLine;
+        }
+
+        // Runs after the profile (so it wraps oh-my-posh / Starship / a custom
+        // prompt) and emits OSC 9;9 only for real filesystem locations. Passed as
+        // -EncodedCommand (base64 UTF-16LE) to avoid command-line quoting issues;
+        // -NoExit keeps the interactive session after the setup runs.
+        const string setup =
+            "$global:__tfxOrigPrompt = $function:prompt; " +
+            "function global:prompt { " +
+            "$__l = $ExecutionContext.SessionState.Path.CurrentLocation; " +
+            "if ($__l -and $__l.Provider.Name -eq 'FileSystem') { " +
+            "[Console]::Out.Write([char]27 + ']9;9;' + $__l.ProviderPath + [char]7) } " +
+            "if ($global:__tfxOrigPrompt) { & $global:__tfxOrigPrompt } " +
+            "else { 'PS ' + $__l.Path + '> ' } }";
+
+        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(setup));
+        return $"{commandLine} -NoExit -EncodedCommand {encoded}";
+    }
+
+    /// <summary>
     /// Tears down the PTY (shell) only. The WebView2 page and its readiness
     /// flags are intentionally kept so the same xterm instance is reused on the
     /// next open; the caller sends a "reset" message to clear the screen and a
@@ -766,6 +1335,8 @@ public partial class MainWindow
         // The shell is gone; the next open must explicitly request it again (so
         // reopening only for command Output doesn't resurrect a shell).
         _shellRequested = false;
+        // Drop the tracked cwd so a fresh shell starts without a stale value.
+        _terminalTrackedCwd = null;
         if (_terminalPty is not null)
         {
             _terminalPty.OutputReceived -= OnTerminalPtyOutput;

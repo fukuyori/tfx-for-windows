@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.8.4
+Version: 0.8.5
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -58,7 +58,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.4 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.5 |
 +---------------------------------------------------------------------+
 ```
 
@@ -460,6 +460,8 @@ The shell thumbnail provider (Stage 5) returns `0x8004B2xx` errors for OneDrive 
 - Network locations work if mounted as drives or by typing UNC paths in the address bar.
 - Zip browsing is read-only. Entries previewed or opened are extracted on demand to `%TEMP%\tfx\archive-<id>\…` and the folder is cleaned up when the window closes. Nested zips are not auto-mounted; opening a `.zip` inside an archive extracts it first.
 - The configured terminal command is started via `ShellExecute`, so executables on `PATH`, registered app aliases (e.g. `wt`, `pwsh`, `code`), and `.cmd` / `.bat` / `.lnk` targets all work. If the configured command fails to start, the launcher silently falls back to `powershell.exe` so the user is never stuck with a broken configuration.
+- **"Sync file list to terminal folder" — cwd detection:** tfx resolves the terminal's current directory without printing anything to the prompt. For its built-in **PowerShell** it automatically injects an invisible `OSC 9;9` cwd reporter at startup (passed as `-EncodedCommand`, run after your profile so it wraps oh-my-posh / Starship / a custom prompt, and only for real filesystem locations); tfx strips that sequence from the display, so nothing is shown. It also honours `OSC 7` / `OSC 9;9` emitted by any shell integration (Windows Terminal, oh-my-posh, Starship, …). Under wtmux it queries wtmux out-of-band (see below). Only when none of these is available — e.g. `cmd` or a custom shell that emits no cwd sequence — does it fall back to a visible `[tfx:cwd]…[tfx:end]` command. tfx navigates only when the resolved path is an existing directory.
+- **"Sync file list to terminal folder" under wtmux:** when running [wtmux](https://github.com/fukuyori/wtmux) in the built-in terminal, tfx reads the current path from wtmux (`display-message -p '#{pane_current_path}'`). For wtmux to know the path, enable its prompt hook — set `cwd_prompt_hook = true` in wtmux's `config.toml`, or run `wtmux -P on` at startup. Without the hook wtmux reports its startup directory, so the sync lands on the wrong folder. The prompt hook wraps the shell prompt and emits an `OSC 9;9` cwd notification on each prompt; it applies to PowerShell / cmd but not custom shells (e.g. `wsl.exe`), and it can interact with tools that replace the prompt or with raw-escape logging — see the wtmux docs for details. tfx itself only navigates when the reported path is an existing directory, so a non-filesystem or stale path is ignored rather than causing a wrong jump.
 - Git integration requires the `git` executable on `PATH`. Without it, the **Git** column stays empty and the branch label in the status bar is hidden. Runs `git status --porcelain=v2 --branch --untracked-files=normal --no-renames` with an 8-second timeout; the parser handles ordinary changes (X / Y status), untracked (`?`), conflicted (`u`), and ignored (`!`) entries, plus type-2 rename / copy records.
 - PDF previews are cached on disk under `%LocalAppData%\tfx\pdf-cache\` (LRU, 200 entries). Re-selecting a previously-rendered PDF is essentially free even after restarting tfx; an external edit invalidates the cached entry automatically because the cache key includes the file's last-write time and length. The disk cache can be cleared by deleting that folder.
 

@@ -116,6 +116,8 @@ internal static class Loc
         ["Reset"] = "既定に戻す",
         ["Terminal settings updated"] = "ターミナル設定を更新しました",
         ["Terminal failed to start: {0}"] = "ターミナルの起動に失敗しました: {0}",
+        ["Synced to {0}"] = "{0} へ同期しました",
+        ["wtmux query failed (session {0})"] = "wtmux クエリに失敗しました (session {0})",
         ["Toggle terminal pane"] = "ターミナルペイン表示切替",
         ["Toggle terminal pane ({0})"] = "ターミナルペイン表示切替 ({0})",
         ["Close terminal (Ctrl+`)"] = "ターミナルを閉じる (Ctrl+`)",

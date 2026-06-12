@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.5
+
+### Terminal
+
+- **"Sync file list to terminal folder" no longer prints to the prompt.** For the built-in PowerShell, tfx auto-injects an invisible `OSC 9;9` cwd reporter at startup (via `-EncodedCommand`, run after the profile so it wraps oh-my-posh / Starship / a custom prompt, filesystem locations only). It also honours `OSC 7` / `OSC 9;9` emitted by any shell integration. Under wtmux it queries the multiplexer out-of-band — `wtmux list-clients` to resolve this pane's session, then `display-message -p -t <session> '#{pane_current_path}'`, run as a separate process so nothing is typed into the shell. A sub-shell started inside the pane (e.g. `cmd` at a PowerShell prompt) is re-detected from the process tree so the correct method is used. Only when none of these is available does it fall back to a short visible marker command.
+- **Stray characters during input fixed.** tfx consumes the `OSC 7` / `OSC 9;9` cwd sequences it tracks and strips them from the display, so shells that emit them (including the injected reporter) no longer leave garbage in the line. Other escape sequences (titles, colors, hyperlinks, progress) pass through unchanged.
+
 ## 0.8.4
 
 ### Clipboard & file operations

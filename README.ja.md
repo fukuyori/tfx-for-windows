@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 読み方: **Tafix**
-Version: 0.8.4
+Version: 0.8.5
 
 [English](README.md) | 日本語
 
@@ -186,6 +186,8 @@ ZIP は単一のトップレベルフォルダーに `Tfx.exe`・`LICENSE`・`NO
 - Markdown / HTML preview は WebView2 を使います。JavaScript は無効化され、Markdown は Markdig の `.DisableHtml()` と CSP で保護されます。
 - PDF preview は disk cache、shell cache、外部 `pdftoppm`、`Windows.Data.Pdf`、shell thumbnail provider の順に試します。
 - Git 連携には `git` が `PATH` 上に必要です。見つからない場合、Git 列と branch 表示は静かに無効化されます。
+- **「ターミナルのフォルダーへ同期」の cwd 取得:** tfx は**プロンプトに文字を出さずに**カレントディレクトリを取得します。内蔵の **PowerShell** には、起動時に**非表示の `OSC 9;9` cwd レポーターを自動注入**します（`-EncodedCommand` で渡し、プロファイル読み込み後に実行して oh-my-posh / Starship / 独自プロンプトを内側で呼び、FileSystem の場所のときだけ送出）。そのシーケンスは tfx が画面から除去するので何も表示されません。加えて、各種シェル統合（Windows Terminal、oh-my-posh、Starship 等）が出す `OSC 7` / `OSC 9;9` も利用します。wtmux 使用時は wtmux に問い合わせます（下記）。これらが無い場合（`cmd` や cwd を出さないカスタムシェル等）のみ、可視の `[tfx:cwd]…[tfx:end]` コマンドにフォールバックします。移動は返ったパスが実在ディレクトリのときのみ行います。
+- **ターミナルで wtmux を使う場合の「ターミナルのフォルダーへ同期」:** 内蔵ターミナルで [wtmux](https://github.com/fukuyori/wtmux) を使用しているとき、tfx は wtmux からカレントパスを取得します（`display-message -p '#{pane_current_path}'`）。wtmux がパスを把握できるよう、**prompt hook を有効化**してください。wtmux の `config.toml` で `cwd_prompt_hook = true` を設定するか、起動時に `wtmux -P on` を実行します。hook が無効だと wtmux は起動時ディレクトリを返すため、同期先が正しくなりません。なお prompt hook はシェルの prompt をラップして毎回 `OSC 9;9`（cwd 通知）を送出します。PowerShell / cmd には効きますが `wsl.exe` などのカスタムシェルには効かず、prompt を直接上書きするツールや raw escape を記録するツールと干渉する可能性があります（詳細は wtmux 側ドキュメント参照）。tfx 側は返ってきたパスが実在ディレクトリのときのみ移動するため、ファイルシステム外や古いパスは無視され、誤遷移は起きません。
 - zip 内部は読み取り専用です。zip 内での rename / delete / paste / new file などは無効です。
 
 ---

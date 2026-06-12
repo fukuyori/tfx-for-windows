@@ -37,6 +37,10 @@ internal sealed class ConPty : IDisposable
 
     public bool IsRunning => _process is { HasExited: false };
 
+    /// <summary>PID of the shell process (0 if not started). Used to detect a
+    /// multiplexer running inside this pane.</summary>
+    public int ProcessId => _process?.Id ?? 0;
+
     /// <summary>
     /// Starts <paramref name="commandLine"/> in a new pseudo console of the
     /// given size, with <paramref name="workingDirectory"/> as its cwd.
