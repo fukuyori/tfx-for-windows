@@ -77,7 +77,8 @@
       "Bash(git rev-list *)",
       "Bash(timeout 15 git ls-remote --tags origin)",
       "Bash(dotnet sln *)",
-      "Bash(git tag *)"
+      "Bash(git tag *)",
+      "PowerShell(Get-Content \"$env:APPDATA\\\\tfx\\\\config.toml\" | Select-String -Pattern \"terminal|startup|preview|folderTree|\\\\[\" -Context 0,0)"
     ]
   }
 }

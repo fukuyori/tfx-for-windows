@@ -640,6 +640,10 @@ public partial class MainWindow : Window
             _settings.LeftPaneRatio = Math.Clamp(LeftPaneColumn.ActualWidth / totalPaneWidth, 0.15, 0.85);
         }
 
+        // Persist the terminal pane's visibility + height (captures the live height
+        // when it's open so a drag-resize survives close/reopen and app restarts).
+        CaptureTerminalSettings();
+
         var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_settingsPath, json);
     }

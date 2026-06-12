@@ -28,7 +28,13 @@ public partial class MainWindow
     // cwd-printing command to the shell, and the output is scanned for the
     // marker line to drive the active pane.
     private enum TerminalShellKind { PowerShell, Cmd, Bash }
+    // The path is bracketed by a start and end marker so it can be extracted
+    // without relying on a trailing newline — terminal multiplexers (tmux/wtmux)
+    // redraw via the alternate screen and cursor moves, so the marker line often
+    // has no CR/LF after it. Both markers are emitted by a single print, so they
+    // stay contiguous in the output regardless of redraws.
     private const string CwdMarker = "[tfx:cwd]";
+    private const string CwdMarkerEnd = "[tfx:end]";
     private TerminalShellKind _terminalShellKind = TerminalShellKind.PowerShell;
     private bool _cwdSyncPending;
     private readonly List<byte> _cwdSyncBytes = new();
@@ -127,13 +133,16 @@ public partial class MainWindow
             _ = EnsureTerminalStartedAsync();
             Dispatcher.BeginInvoke(() =>
             {
-                // Re-opening after a previous close: the WebView/xterm page is
-                // still alive but the PTY was torn down. Send "reset" so xterm
-                // clears the old session and re-fits; its resize message then
-                // spawns a fresh shell via StartOrResizePty.
-                if (_terminalWebReady && _terminalPty is null)
+                // Re-opening: when the session is still alive, just re-fit to the
+                // restored pane size — this keeps the scrollback and resumes the
+                // same shell. Only when there is no session (first open, or after
+                // the shell exited) do we "reset" so the page's next resize spawns
+                // a fresh shell via StartOrResizePty.
+                if (_terminalWebReady)
                 {
-                    PostToTerminal(new { type = "reset" });
+                    PostToTerminal(_terminalPty is null
+                        ? new { type = "reset" }
+                        : new { type = "fit" });
                 }
                 Terminal.Focus();
                 // When the pane was opened to run a command in the Output tab,
@@ -147,13 +156,19 @@ public partial class MainWindow
         else
         {
             _terminalPaneOpen = false;
+            // Remember the current (possibly user-dragged) height before collapsing
+            // so reopening restores that size instead of the default.
+            if (TerminalRow.Height.IsAbsolute && TerminalRow.Height.Value >= 80)
+            {
+                _settings.TerminalPaneHeight = TerminalRow.Height.Value;
+            }
             TerminalSplitter.Visibility = Visibility.Collapsed;
             TerminalHost.Visibility = Visibility.Collapsed;
             TerminalRow.Height = new GridLength(0);
-            // Closing ends the shell session: tear down the PTY so the next
-            // open starts a brand-new shell. The WebView2 page is kept (cheap
-            // to reuse); we don't reset xterm here because it's not visible.
-            DisposeTerminalIfAny();
+            // Closing only HIDES the pane — the shell session keeps running so the
+            // next open resumes it (the WebView2 page and xterm buffer stay alive).
+            // The session is torn down only when the shell itself exits (the user
+            // types `exit`), handled in OnTerminalExited.
         }
         TerminalPaneButton.IsChecked = visible;
     }
@@ -523,7 +538,13 @@ public partial class MainWindow
     {
         if (_terminalPty is not null)
         {
-            _terminalPty.Resize(_terminalCols, _terminalRows);
+            // While the pane is hidden the WebView collapses to ~0 height and the
+            // page can report a 1-row fit. Don't shrink the live session to that;
+            // keep its size until the pane is shown again (reopen re-fits it).
+            if (_terminalPaneOpen)
+            {
+                _terminalPty.Resize(_terminalCols, _terminalRows);
+            }
             return;
         }
 
@@ -584,9 +605,9 @@ public partial class MainWindow
 
         var command = _terminalShellKind switch
         {
-            TerminalShellKind.Cmd => $"echo {CwdMarker} %CD%",
-            TerminalShellKind.Bash => $"printf '{CwdMarker} %s\\n' \"$PWD\"",
-            _ => $"Write-Output (\"{CwdMarker} \" + $PWD.ProviderPath)",
+            TerminalShellKind.Cmd => $"echo {CwdMarker}%CD%{CwdMarkerEnd}",
+            TerminalShellKind.Bash => $"printf '{CwdMarker}%s{CwdMarkerEnd}\\n' \"$PWD\"",
+            _ => $"Write-Output (\"{CwdMarker}\" + $PWD.ProviderPath + \"{CwdMarkerEnd}\")",
         };
 
         BeginCwdSync();
@@ -625,7 +646,7 @@ public partial class MainWindow
         _cwdSyncBytes.Clear();
         if (_cwdSyncTimer is null)
         {
-            _cwdSyncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            _cwdSyncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             _cwdSyncTimer.Tick += (_, _) => EndCwdSync();
         }
         _cwdSyncTimer.Stop();
@@ -642,7 +663,7 @@ public partial class MainWindow
     private void TryParseCwdSync(byte[] data)
     {
         _cwdSyncBytes.AddRange(data);
-        if (_cwdSyncBytes.Count > 65536)
+        if (_cwdSyncBytes.Count > 262144)
         {
             EndCwdSync();
             return;
@@ -653,13 +674,16 @@ public partial class MainWindow
         while ((idx = text.IndexOf(CwdMarker, idx, StringComparison.Ordinal)) >= 0)
         {
             var start = idx + CwdMarker.Length;
-            var end = text.IndexOfAny(new[] { '\r', '\n' }, start);
+            var end = text.IndexOf(CwdMarkerEnd, start, StringComparison.Ordinal);
             if (end < 0)
             {
-                break; // the marker line hasn't fully arrived yet
+                break; // the closing marker hasn't arrived yet
             }
 
-            var candidate = StripAnsi(text[start..end]).Trim().Trim('"');
+            // Strip ANSI/cursor sequences and any CR/LF a line-wrap may have
+            // injected between the markers; a path contains neither.
+            var candidate = StripAnsi(text[start..end])
+                .Replace("\r", "").Replace("\n", "").Trim().Trim('"');
             if (candidate.Length > 0 && !ArchivePath.Contains(candidate))
             {
                 try
@@ -680,7 +704,7 @@ public partial class MainWindow
                     // ignore and keep scanning
                 }
             }
-            idx = end;
+            idx = end + CwdMarkerEnd.Length;
         }
     }
 

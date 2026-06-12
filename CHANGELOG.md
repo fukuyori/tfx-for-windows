@@ -9,6 +9,12 @@
 - **"Paste special" context submenu** lists every clipboard format that can be turned into a file — URL (`.url`), CSV (`.csv`), image (`.png`), HTML (`.html`, with the CF_HTML header stripped), rich text (`.rtf`), text (`.txt`) — showing only the formats actually present.
 - Excel/spreadsheet CSV detection is now case-insensitive and falls back to converting tab-separated text to CSV, so `Ctrl+V` reliably produces `.csv`.
 
+### Terminal
+
+- **Closing the terminal pane no longer ends the session.** The shell keeps running while the pane is hidden, so reopening resumes the same session (scrollback preserved, re-fit to the pane). The session is torn down only when the shell itself exits (e.g. you type `exit`).
+- **The pane height is remembered** across close/reopen and app restarts (a drag-resize now persists; previously it always reverted to the default).
+- **"Sync file list to terminal folder" now works under terminal multiplexers** (tmux/wtmux). The current directory is bracketed by start/end markers so it is parsed without relying on a trailing newline, which the alternate-screen redraw omits.
+
 ## 0.8.3
 
 ### Clipboard & file operations

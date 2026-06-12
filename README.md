@@ -38,7 +38,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - User-editable `%APPDATA%\tfx\config.toml` for tfx-compatible font, color, shortcut, startup, terminal, and per-extension open-with settings
 - Light and translucent themes from `config.toml`, including custom WPF chrome for transparent windows
 - Configurable terminal launcher: "Open Terminal here" opens at the active pane's folder by default, or uses a user-specified executable and optional argument template from **Terminal Settings...** or `config.toml`
-- Built-in terminal pane (xterm.js in WebView2, toggled with `Ctrl+J`): a real ConPTY shell docked at the window bottom — configurable shell / font / colors via `config.toml [terminal]`, a header `^C` interrupt button, copy / paste, and drag files from a pane onto it to insert their paths. Each open starts a fresh shell
+- Built-in terminal pane (xterm.js in WebView2, toggled with `Ctrl+J`): a real ConPTY shell docked at the window bottom — configurable shell / font / colors via `config.toml [terminal]`, a header `^C` interrupt button, copy / paste, and drag files from a pane onto it to insert their paths. Closing the pane keeps the session running so reopening resumes it (with its scrollback and pane height); the session ends only when the shell exits (e.g. you type `exit`)
 - Status bar with item counts, selection size, active drive's free space (cached and refreshed in the background to stay responsive on slow network drives), Git branch, and the current version
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
