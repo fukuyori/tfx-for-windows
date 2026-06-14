@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.6
+
+### Fonts
+
+- **The `[font] mono` setting is now actually applied** — it sets the font for the file list, folder tree, and text / CSV previews (and the terminal pane). Previously it was parsed but ignored, so only `ui` had any effect.
+- **Per-pane font overrides in `[font]`:** `fileList`, `preview`, `terminal`, `folderTree`, each with an optional `*Size`, override the global mono font / size for that pane. When unset, a pane uses `mono` (and the global `size`); when `mono` is also unset, it keeps inheriting the UI font, so existing configs are unaffected.
+
 ## 0.8.5
 
 ### Terminal

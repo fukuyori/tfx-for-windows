@@ -428,12 +428,16 @@ public partial class MainWindow
         _terminalInitSent = true;
 
         var theme = BuildTerminalTheme();
+        // Terminal font: dedicated [terminal] shell font → [font] terminal → global
+        // mono → built-in default. Size: [terminal] fontSize → [font] terminalSize
+        // → the saved pane size.
+        var terminalFamily = _config.Terminal.Font ?? _config.FontTerminal ?? _config.FontMono;
         var options = new
         {
-            fontFamily = string.IsNullOrWhiteSpace(_config.Terminal.Font)
+            fontFamily = string.IsNullOrWhiteSpace(terminalFamily)
                 ? "Cascadia Mono, Consolas, monospace"
-                : _config.Terminal.Font,
-            fontSize = _config.Terminal.FontSize ?? _settings.TerminalPaneFontSize,
+                : terminalFamily,
+            fontSize = _config.Terminal.FontSize ?? _config.FontTerminalSize ?? _settings.TerminalPaneFontSize,
             scrollback = 5000,
             // Transparent unless the user set an explicit background color.
             allowTransparency = !_config.Terminal.Colors.ContainsKey("background"),

@@ -13,6 +13,18 @@ public sealed class AppConfig
     public string? FontUi { get; private set; }
     public string? FontMono { get; private set; }
     public double? FontSize { get; private set; }
+
+    // Per-pane font overrides ([font] fileList / preview / terminal / folderTree,
+    // each with an optional *Size). A null family falls back to FontMono; a null
+    // size falls back to the global FontSize.
+    public string? FontFileList { get; private set; }
+    public double? FontFileListSize { get; private set; }
+    public string? FontPreview { get; private set; }
+    public double? FontPreviewSize { get; private set; }
+    public string? FontTerminal { get; private set; }
+    public double? FontTerminalSize { get; private set; }
+    public string? FontFolderTree { get; private set; }
+    public double? FontFolderTreeSize { get; private set; }
     public Dictionary<string, Color> Colors { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, double> Opacity { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, AppShortcut> Shortcuts { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -209,18 +221,29 @@ public sealed class AppConfig
 
     private static void ParseFont(AppConfig config, string key, string value)
     {
-        if (key.Equals("size", StringComparison.OrdinalIgnoreCase))
+        // Numeric size keys (global + per-pane).
+        bool TrySize(string name, Action<double> set)
         {
+            if (!key.Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
             if (TryParseDouble(value, out var size) && size is >= 8 and <= 40)
             {
-                config.FontSize = size;
+                set(size);
             }
             else
             {
-                config.Errors.Add($"Invalid font size: {value}");
+                config.Errors.Add($"Invalid font size for {key}: {value}");
             }
-            return;
+            return true;
         }
+
+        if (TrySize("size", v => config.FontSize = v)) return;
+        if (TrySize("fileListSize", v => config.FontFileListSize = v)) return;
+        if (TrySize("previewSize", v => config.FontPreviewSize = v)) return;
+        if (TrySize("terminalSize", v => config.FontTerminalSize = v)) return;
+        if (TrySize("folderTreeSize", v => config.FontFolderTreeSize = v)) return;
 
         if (!TryParseString(value, out var family))
         {
@@ -228,13 +251,17 @@ public sealed class AppConfig
             return;
         }
 
-        if (key.Equals("ui", StringComparison.OrdinalIgnoreCase))
+        // Family keys. The UI font is resolved for proportional aliases; the rest
+        // default to the monospace alias set.
+        switch (key.ToLowerInvariant())
         {
-            config.FontUi = ResolveFontAlias(family, ui: true);
-        }
-        else if (key.Equals("mono", StringComparison.OrdinalIgnoreCase))
-        {
-            config.FontMono = ResolveFontAlias(family, ui: false);
+            case "ui": config.FontUi = ResolveFontAlias(family, ui: true); break;
+            case "mono": config.FontMono = ResolveFontAlias(family, ui: false); break;
+            case "filelist": config.FontFileList = ResolveFontAlias(family, ui: false); break;
+            case "preview": config.FontPreview = ResolveFontAlias(family, ui: false); break;
+            case "terminal": config.FontTerminal = ResolveFontAlias(family, ui: false); break;
+            case "foldertree": config.FontFolderTree = ResolveFontAlias(family, ui: false); break;
+            default: config.Errors.Add($"Unknown font key: {key}"); break;
         }
     }
 
@@ -722,6 +749,15 @@ public sealed class AppConfig
         ui = "system"
         mono = "monospace"
         size = 13
+        # Optional per-pane overrides (family and/or size), overriding the global mono font:
+        # fileList = "monospace"
+        # fileListSize = 12
+        # preview = "monospace"
+        # previewSize = 12
+        # terminal = "monospace"
+        # terminalSize = 12
+        # folderTree = "monospace"
+        # folderTreeSize = 12
 
         # Windows-native shortcuts.
         [shortcuts]

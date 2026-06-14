@@ -392,6 +392,37 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Applies the per-pane font overrides ([font] fileList / preview / folderTree,
+    /// each falling back to the global mono font). The terminal pane is handled in
+    /// SendTerminalInit. When neither a pane override nor mono is set the pane keeps
+    /// inheriting the window (UI) font, so existing configs are unaffected.
+    /// </summary>
+    private void ApplyPaneFonts()
+    {
+        var fileList = _config.FontFileList ?? _config.FontMono;
+        ApplyPaneFont(LeftGrid, fileList, _config.FontFileListSize);
+        ApplyPaneFont(RightGrid, fileList, _config.FontFileListSize);
+
+        ApplyPaneFont(FolderTree, _config.FontFolderTree ?? _config.FontMono, _config.FontFolderTreeSize);
+
+        var preview = _config.FontPreview ?? _config.FontMono;
+        ApplyPaneFont(TextPreview, preview, _config.FontPreviewSize);
+        ApplyPaneFont(CsvPreview, preview, _config.FontPreviewSize);
+    }
+
+    private static void ApplyPaneFont(Control control, string? family, double? size)
+    {
+        if (!string.IsNullOrWhiteSpace(family))
+        {
+            control.FontFamily = new FontFamily(family);
+        }
+        if (size is { } s)
+        {
+            control.FontSize = s;
+        }
+    }
+
     private void ApplyConfigTheme()
     {
         if (!string.IsNullOrWhiteSpace(_config.FontUi))
@@ -403,6 +434,8 @@ public partial class MainWindow : Window
         {
             FontSize = fontSize;
         }
+
+        ApplyPaneFonts();
 
         var backgroundOpacity = OpacityToken("background", 1.0);
         var inactivePaneOpacity = OpacityToken("inactivePane", backgroundOpacity);

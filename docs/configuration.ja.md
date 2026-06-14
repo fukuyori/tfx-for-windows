@@ -115,13 +115,26 @@ version = 1
 ui = "system"
 mono = "monospace"
 size = 13
+# 任意のペイン別オーバーライド（ファミリーおよび/またはサイズ。グローバル mono を上書き）:
+# fileList = "monospace"
+# fileListSize = 12
+# preview = "monospace"
+# previewSize = 12
+# terminal = "monospace"
+# terminalSize = 12
+# folderTree = "monospace"
+# folderTreeSize = 12
 ```
 
 | キー | 型 | 既定値 | 説明 |
 | --- | --- | --- | --- |
-| `ui` | string | `"system"` | ツリー、ヘッダー、ダイアログ風 UI などの UI フォント。 |
-| `mono` | string | `"monospace"` | ファイル一覧、ステータス、Raw text、JSON、CSV preview などの等幅フォント。 |
+| `ui` | string | `"system"` | ツールバー、ヘッダー、ダイアログ風 UI などの UI フォント。 |
+| `mono` | string | `"monospace"` | ファイル一覧・フォルダーツリー・プレビューの等幅フォント。下のペイン別キーで上書き。 |
 | `size` | number | `13` | 基準フォントサイズ。範囲は `8` から `40` です。 |
+| `fileList` / `fileListSize` | string / number | (mono / `size`) | ファイル一覧ペインのフォント / サイズ。 |
+| `preview` / `previewSize` | string / number | (mono / `size`) | テキスト / CSV プレビューのフォント / サイズ。 |
+| `terminal` / `terminalSize` | string / number | (mono / ペインサイズ) | 内蔵ターミナルペインのフォント / サイズ。`[terminal] font` / `fontSize` が指定されていればそちらが優先。 |
+| `folderTree` / `folderTreeSize` | string / number | (mono / `size`) | フォルダーツリーのフォント / サイズ。 |
 
 Windows では `"system"` は `Segoe UI, Yu Gothic UI, Meiryo`、`"monospace"` は `Cascadia Mono, Consolas, Yu Gothic UI` に対応します。それ以外の文字列は WPF のフォントファミリー名として扱います。
 

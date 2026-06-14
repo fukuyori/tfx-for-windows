@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.8.5
+Version: 0.8.6
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -58,7 +58,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.5 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.6 |
 +---------------------------------------------------------------------+
 ```
 
@@ -260,7 +260,7 @@ See [docs/configuration.md](docs/configuration.md) for the full file format, sup
 
 Shortcut values use Windows-native modifier names such as `ctrl`, `shift`, and `alt`. Supported key names include single letters / digits, `.`, `[`, `]`, `backslash`, arrow keys, `enter`, `tab`, `space`, `delete`, `backspace`, and `f1` through `f24`.
 
-Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`. Color keys use the macOS tfx semantic names and are mapped onto WPF theme resources, including toolbar chrome, selection colors, inputs, scrollbars, and Markdown preview CSS. `[opacity].background` controls the transparent window surface. `[startup]` can force single/split layout and the visibility of the preview pane, terminal pane, and folder tree. `[terminal] app` maps to the Windows executable or app alias, and `[terminal] arguments` is optional because tfx supplies cwd arguments for Windows Terminal, WezTerm, PowerShell, and pwsh. `[openWith]` maps an extension without the leading dot to an executable or app alias used when opening files of that type.
+Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`. `[font]` sets the UI and monospace fonts and base size, with optional per-pane overrides (`fileList`, `preview`, `terminal`, `folderTree`, each with a `*Size`) that fall back to `mono`. Color keys use the macOS tfx semantic names and are mapped onto WPF theme resources, including toolbar chrome, selection colors, inputs, scrollbars, and Markdown preview CSS. `[opacity].background` controls the transparent window surface. `[startup]` can force single/split layout and the visibility of the preview pane, terminal pane, and folder tree. `[terminal] app` maps to the Windows executable or app alias, and `[terminal] arguments` is optional because tfx supplies cwd arguments for Windows Terminal, WezTerm, PowerShell, and pwsh. `[openWith]` maps an extension without the leading dot to an executable or app alias used when opening files of that type.
 
 `config.toml` is intended for user-editable preferences. Session state is still saved automatically to `%APPDATA%\tfx\settings.json` on every change and on close.
 

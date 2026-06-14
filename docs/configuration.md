@@ -115,13 +115,26 @@ Controls the app-wide font family and base size.
 ui = "system"
 mono = "monospace"
 size = 13
+# Optional per-pane overrides (family and/or size), overriding the global mono font:
+# fileList = "monospace"
+# fileListSize = 12
+# preview = "monospace"
+# previewSize = 12
+# terminal = "monospace"
+# terminalSize = 12
+# folderTree = "monospace"
+# folderTreeSize = 12
 ```
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `ui` | string | `"system"` | UI font for tree/header/dialog-like surfaces. |
-| `mono` | string | `"monospace"` | Monospaced font for file listings, status text, raw text, JSON, and CSV previews. |
+| `ui` | string | `"system"` | UI font for toolbar/header/dialog-like surfaces. |
+| `mono` | string | `"monospace"` | Monospaced font for the file list, folder tree, and previews. Per-pane keys below override it. |
 | `size` | number | `13` | Base font size. Valid range: `8` through `40`. |
+| `fileList` / `fileListSize` | string / number | (mono / `size`) | Font family / size for the file list panes. |
+| `preview` / `previewSize` | string / number | (mono / `size`) | Font family / size for the text / CSV preview. |
+| `terminal` / `terminalSize` | string / number | (mono / pane size) | Font family / size for the built-in terminal pane. `[terminal] font` / `fontSize` take precedence if set. |
+| `folderTree` / `folderTreeSize` | string / number | (mono / `size`) | Font family / size for the folder tree. |
 
 On Windows, `"system"` maps to `Segoe UI, Yu Gothic UI, Meiryo`. `"monospace"` maps to `Cascadia Mono, Consolas, Yu Gothic UI`. Other strings are passed to WPF as font-family names.
 

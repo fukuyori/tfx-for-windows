@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 読み方: **Tafix**
-Version: 0.8.5
+Version: 0.8.6
 
 [English](README.md) | 日本語
 
@@ -128,6 +128,7 @@ tfx -2 -P -t ~/Downloads
 
 主な設定:
 
+- `[font]`: UI / 等幅フォントとサイズ。ペイン別（`fileList` / `preview` / `terminal` / `folderTree`、各 `*Size`）に上書き可能で、未指定は `mono` にフォールバック。
 - `[colors]`: ダーク / ライトテーマ、選択色、入力欄、スクロールバー、Markdown preview CSS など。
 - `[opacity]`: 透過ウィンドウ面と非アクティブペインの透明度。
 - `[startup]`: 起動時の single / split、preview pane・ターミナルペイン・フォルダーツリーの表示 / 非表示 / 復元。
