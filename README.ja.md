@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 読み方: **Tafix**
-Version: 0.8.6
+Version: 0.8.7
 
 [English](README.md) | 日本語
 
@@ -112,6 +112,8 @@ tfx [options] [folder]
 
 末尾の `[folder]` は左ペインに開くフォルダ（`~` と `%VAR%` 展開対応）。短縮フラグは結合可（例 `-2Pt`）。コマンドラインオプションは `config.toml [startup]` や保存済みセッションより優先されます。ジオメトリ指定時は最大化を解除して配置します。
 
+タブ構成は既定ではセッション内だけの状態です。次回起動時は、復元されたペインパスから各ペイン 1 タブで始まります。`config.toml` の `[startup] leftFolders` / `rightFolders` を指定した場合だけ、その一覧を起動時タブとして反映します。
+
 例 — 分割・プレビュー非表示・ターミナル表示で `~/Downloads` を左ペインに:
 
 ```
@@ -131,7 +133,7 @@ tfx -2 -P -t ~/Downloads
 - `[font]`: UI / 等幅フォントとサイズ。ペイン別（`fileList` / `preview` / `terminal` / `folderTree`、各 `*Size`）に上書き可能で、未指定は `mono` にフォールバック。
 - `[colors]`: ダーク / ライトテーマ、選択色、入力欄、スクロールバー、Markdown preview CSS など。
 - `[opacity]`: 透過ウィンドウ面と非アクティブペインの透明度。
-- `[startup]`: 起動時の single / split、preview pane・ターミナルペイン・フォルダーツリーの表示 / 非表示 / 復元。
+- `[startup]`: 起動時の single / split、preview pane・ターミナルペイン・フォルダーツリーの表示 / 非表示 / 復元、`leftFolders` / `rightFolders` による明示的な起動時タブ。
 - `[terminal]`: 外部ターミナル。未設定でもアクティブペインのフォルダーで開きます。
 - `[openWith]`: 拡張子ごとの起動アプリ。
 

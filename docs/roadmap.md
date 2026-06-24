@@ -49,7 +49,7 @@ Upstream: §1.9 (Live Refresh and Reload) — `FileSystemWatcher` instead of `Di
 
 - **Auto-refresh**: each pane subscribes to a `FileSystemWatcher` on its current folder with debounce, plus a periodic fallback poll for missed events. Refresh skips while renaming, dragging, rubber-band selecting, the context menu is open, or the current path is inside a zip. Reloads use a diff (add / remove / move) against the existing list so scroll position and selection survive.
 - **Context menu**: "Open with..." invokes the standard Windows dialog via P/Invoked `SHOpenWithDialog`. Item order rearranged to follow Windows 11 conventions (open / locate / pin → clipboard + copy path → archive → current-folder actions → destructive operations at the bottom).
-- **Initial folder resolution**: command-line argument → meaningful current working directory (skipped when the CWD equals the executable's own directory, `System32`, or `Windows`) → saved path → user profile. Launching `Tfx.exe` from a terminal opens the terminal's current folder. When the left folder comes from an explicit source (command-line arg or meaningful CWD), it opens as a single fresh tab rather than restoring the saved tab set, so the requested startup folder wins (fixed in 0.6.7 — pane tabs in 0.6.4 had let the saved-tab restore override it); the right pane always restores its saved tabs.
+- **Initial folder resolution**: command-line argument → meaningful current working directory (skipped when the CWD equals the executable's own directory, `System32`, or `Windows`) → saved path → user profile. Launching `Tfx.exe` from a terminal opens the terminal's current folder. Tab layout is session-local: startup creates one tab per visible pane from the resolved / restored pane paths rather than restoring the previous tab list.
 - **Browse inside `.zip`**: virtual path scheme `<zip>::<inner>` makes zips navigable like folders. Subfolders inside the archive are navigable, files extract on demand to `%TEMP%\tfx\archive-<id>\…` when opened or dragged out, and the breadcrumb bar shows each zip level as a clickable segment. The temp folder is removed on close. Zip-internal editing (rename, delete, paste, new file/folder) is structurally disabled when inside an archive.
 
 ### 1.3 0.3.2 — Responsiveness Pass
@@ -87,7 +87,7 @@ Upstream: covers material from §2.6 (Built-in Color Themes), §2.8 (Configurati
 - Runtime theme resources now follow `[colors]`, including light-mode palettes, active/inactive pane colors, selection colors, scrollbars, Markdown preview CSS, and custom chrome colors.
 - `[opacity].background` applies to the WPF window surfaces instead of `Window.Opacity`, so text and icons remain readable while the background can be translucent or fully transparent.
 - Custom transparent chrome replaces the standard title bar: the top empty toolbar area is draggable, double-click toggles maximize/restore, and the right window edge remains resizable even when `background = 0.0`.
-- `[startup].layout`, `[startup].rightFolder` / `rightFolders`, and `[startup].preview` control initial split/single layout and preview-pane visibility.
+- `[startup].layout`, `leftFolder(s)` / `rightFolder(s)`, `[startup].preview`, terminal, and folder-tree settings control initial layout and startup surfaces.
 - `Open Terminal here` uses the active file pane folder by default. If `[terminal]` is omitted it starts Windows Terminal (`wt.exe -d {path}`) with a PowerShell fallback; configured apps such as WezTerm get sensible default arguments when only `app` is provided.
 - English and Japanese configuration guides are maintained (`docs/configuration.md`, `docs/configuration.ja.md`), including three distinctive color samples and one explicit light-mode sample.
 - Manual 0.6.3 checks are complete for transparent dragging / right-edge resizing at `background = 0.0`, light-mode color application, WezTerm `[terminal] app` handling, and `[startup] layout / preview` behavior.
@@ -225,7 +225,7 @@ Done when:
 
 #### 2.7 Pane Tabs
 
-Status: **Done in 0.6.4.** Per-pane tabs implemented in `src/Models/PaneTab.cs` + `src/Views/MainWindow/MainWindow.Tabs.cs`: each tab owns its path, back/forward history, and remembered selection (fixing the former global shared-history bug). Tab strip shows when a pane has 2+ tabs; `Ctrl+T` / `Ctrl+W` / `Ctrl+Shift+[` / `Ctrl+Shift+]` plus context-menu "New Tab" / "Open in New Tab". Tab lists persist per pane in `settings.json` (additive keys) and restore on startup, dropping tabs whose folders no longer exist. Closing the right pane's last tab collapses to single-pane; the left pane always keeps one tab. Move this section under §1 with a version tag at the next consolidation pass.
+Status: **Done in 0.6.4.** Per-pane tabs implemented in `src/Models/PaneTab.cs` + `src/Views/MainWindow/MainWindow.Tabs.cs`: each tab owns its path, back/forward history, and remembered selection (fixing the former global shared-history bug). Tab strip shows when a pane has 2+ tabs; `Ctrl+T` / `Ctrl+W` / `Ctrl+Shift+[` / `Ctrl+Shift+]` plus context-menu "New Tab" / "Open in New Tab". Tab layout is session-local and is not restored on the next launch; startup creates one tab per visible pane from the restored pane paths unless `[startup] leftFolders` / `rightFolders` explicitly define startup tabs. Closing the right pane's last tab collapses to single-pane; the left pane always keeps one tab. Move this section under §1 with a version tag at the next consolidation pass.
 
 Upstream: §2.3 (Pane Tabs).
 
@@ -235,12 +235,12 @@ Tasks:
 
 - Per-pane tab container owning multiple navigation states (path + history + selection memo) and tracking the active one.
 - `TabControl`-style header with click to switch, `Ctrl+W` close, `Ctrl+T` new tab at active folder, `Ctrl+Shift+[ / ]` cycle.
-- Persist tab list (paths + active index) under new `AppSettings` keys, additive only.
+- Keep tab layout session-local; do not restore tab lists on the next launch. Honor explicit startup tab lists from `config.toml`.
 - Folder tree, preview, and search controls follow the active tab.
 
 Done when:
 
-- Each pane can hold multiple tabs that survive relaunch.
+- Each pane can hold multiple tabs during the current session without changing the next launch's tab layout.
 - Closing the last tab in a pane is deterministic (decide between "hide pane" and "empty-tab placeholder" during design).
 - Keyboard shortcuts work for new / close / next / previous tab.
 

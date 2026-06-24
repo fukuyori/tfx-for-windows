@@ -167,8 +167,8 @@ public partial class MainWindow : Window
     /// is set when the folder came from an explicit source — a command-line path
     /// argument or a meaningful current working directory (e.g. launching
     /// <c>Tfx.exe</c> from a terminal) — as opposed to falling back to the saved
-    /// session path. Callers use it to decide whether to honour the startup
-    /// folder over restoring the previously saved tab set.
+    /// session path. Tab layout is session-local, so callers keep this mostly
+    /// for startup-path precedence and compatibility with older call sites.
     /// </summary>
     private string ResolveInitialPath(out bool explicitStart)
     {
@@ -634,10 +634,10 @@ public partial class MainWindow : Window
 
         _settings.LeftPath = _leftPath;
         _settings.RightPath = _rightPath;
-        _settings.LeftTabs = _leftTabs.Select(t => t.Path).ToList();
-        _settings.RightTabs = _rightTabs.Select(t => t.Path).ToList();
-        _settings.LeftActiveTab = _leftActiveTabIndex;
-        _settings.RightActiveTab = _rightActiveTabIndex;
+        _settings.LeftTabs = [];
+        _settings.RightTabs = [];
+        _settings.LeftActiveTab = 0;
+        _settings.RightActiveTab = 0;
         _settings.ActivePane = _activeGrid == RightGrid ? "Right" : "Left";
         var showPreview = PreviewColumn.Width.Value > 0;
         var showSplit = RightPaneColumn.Width.Value > 0;

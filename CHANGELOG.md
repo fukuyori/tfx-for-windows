@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.7
+
+### Startup tabs
+
+- Tab layout remains session-local by default, but `[startup] leftFolders` / `rightFolders` (or `leftTabs` / `rightTabs`) now create explicit startup tabs when configured. `leftActiveTab` / `rightActiveTab` choose the zero-based active tab. Without these keys, the next launch still starts from the restored pane paths with one tab per visible pane.
+
 ## 0.8.6
 
 ### Fonts
@@ -239,7 +245,7 @@
 
 ### Startup folder fix
 
-- **Command-line path / working directory now wins at startup again.** Launching `Tfx.exe <folder>` or starting it from a terminal (a "meaningful" current working directory) is supposed to open that folder in the left pane, but since pane tabs landed in 0.6.4 the saved-tab restore ran *after* `ResolveInitialPath` and overwrote `_leftPath` with the previously saved tab, so the requested folder was discarded. `ResolveInitialPath` now reports whether the folder came from an explicit source (command-line arg or meaningful CWD); when it did, the left pane opens it as a single fresh tab and skips the saved-tab restore. Normal launches (Explorer / Start menu — working directory not meaningful) still restore the saved tab set, and the right pane always restores its saved tabs.
+- **Command-line path / working directory now wins at startup again.** Launching `Tfx.exe <folder>` or starting it from a terminal (a "meaningful" current working directory) opens that folder in the left pane. Tab layout is now session-local, so startup creates one tab per visible pane from the resolved / restored pane paths instead of restoring the previous tab list.
 
 ## 0.6.6
 
@@ -269,7 +275,7 @@
 - Keyboard: `Ctrl+T` new tab (at the active pane's current folder), `Ctrl+W` close tab, `Ctrl+Shift+]` next tab, `Ctrl+Shift+[` previous tab. All four are remappable via `config.toml` `[shortcuts]` (`newTab` / `closeTab` / `nextTab` / `prevTab`); the shortcut parser now understands `[` and `]` key tokens.
 - Context menu: "New Tab" always available; "Open in New Tab" appears when a single folder is selected.
 - Closing the last tab of the right pane collapses it to single-pane view (split off); the left pane always keeps at least one tab.
-- Tab lists (paths + active index per pane) persist in `settings.json` (`LeftTabs` / `RightTabs` / `LeftActiveTab` / `RightActiveTab`, additive — older files keep working) and are restored on startup, dropping any tab whose folder no longer exists.
+- Tab layout is session-local: the app starts with one tab per visible pane on the next launch, using the restored pane paths. Legacy `LeftTabs` / `RightTabs` / `LeftActiveTab` / `RightActiveTab` fields remain JSON-compatible but are ignored and cleared on save.
 
 ## 0.6.3
 

@@ -54,60 +54,62 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Seed exactly one tab per pane from the current _leftPath / _rightPath.
-    /// Called once during construction after the initial Navigate calls have
-    /// set those paths. Optionally restores additional tabs from settings.
+    /// Seed startup tabs. Tab layout is not restored from the previous session,
+    /// but explicit [startup] folder lists in config.toml are honored.
     /// </summary>
     private void InitializeTabs(bool explicitLeftStart = false)
     {
-        // When the left pane's folder came from an explicit source (a command-
-        // line path or a meaningful working directory), open it as a single
-        // fresh tab instead of restoring the saved tab set — otherwise the
-        // restored active tab would override the requested startup folder. The
-        // right pane always restores its saved tabs. Normal launches (Explorer
-        // / Start menu), where the working directory is not meaningful, fall
-        // through to the usual saved-tab restore.
-        if (explicitLeftStart)
+        if (!explicitLeftStart && _config.Startup.LeftFolders.Count > 0)
         {
-            SeedPaneTabs(Pane.Left, [], 0, _leftPath);
+            SeedPaneTabs(Pane.Left, _config.Startup.LeftFolders, _config.Startup.LeftActiveTab ?? 0, _leftPath);
         }
         else
         {
-            SeedPaneTabs(Pane.Left, _settings.LeftTabs, _settings.LeftActiveTab, _leftPath);
+            SeedPaneTabs(Pane.Left, _leftPath);
         }
 
-        SeedPaneTabs(Pane.Right, _settings.RightTabs, _settings.RightActiveTab, _rightPath);
+        if (_config.Startup.RightFolders.Count > 0)
+        {
+            SeedPaneTabs(Pane.Right, _config.Startup.RightFolders, _config.Startup.RightActiveTab ?? 0, _rightPath);
+        }
+        else
+        {
+            SeedPaneTabs(Pane.Right, _rightPath);
+        }
     }
 
-    private void SeedPaneTabs(Pane pane, List<string> savedPaths, int savedActive, string fallbackPath)
+    private void SeedPaneTabs(Pane pane, string fallbackPath)
+    {
+        var tabs = TabsOf(pane);
+        tabs.Clear();
+        tabs.Add(new PaneTab(fallbackPath));
+        SetActiveTabIndex(pane, 0);
+        RebuildTabStrip(pane);
+    }
+
+    private void SeedPaneTabs(Pane pane, IReadOnlyCollection<string> configuredPaths, int activeIndex, string fallbackPath)
     {
         var tabs = TabsOf(pane);
         tabs.Clear();
 
-        // Restore only paths that still exist; always keep at least one tab.
-        foreach (var p in savedPaths)
+        foreach (var path in configuredPaths)
         {
-            if (IsPathRestorable(p))
+            if (IsPathRestorable(path))
             {
-                tabs.Add(new PaneTab(p));
+                tabs.Add(new PaneTab(path));
             }
         }
+
         if (tabs.Count == 0)
         {
             tabs.Add(new PaneTab(fallbackPath));
         }
 
-        SetActiveTabIndex(pane, Math.Clamp(savedActive, 0, tabs.Count - 1));
-
-        // Make the active tab's path the live pane path so the first listing
-        // matches the restored tab rather than whatever Navigate seeded.
+        SetActiveTabIndex(pane, Math.Clamp(activeIndex, 0, tabs.Count - 1));
         var active = tabs[ActiveTabIndexOf(pane)];
         var previousPath = PathOf(pane);
         SetPathOf(pane, active.Path);
 
-        // If the restored active tab points somewhere other than what the
-        // initial Navigate already loaded (e.g. the saved active folder was
-        // deleted and fell back), reload so the listing matches the tab.
         if (!string.Equals(previousPath, active.Path, StringComparison.OrdinalIgnoreCase))
         {
             Reload(GridOf(pane), active.SelectedName ?? "..");

@@ -30,7 +30,7 @@ TOML は小さなサブセットだけを受け付けます。
 - `[section]` 形式のテーブル
 - `key = value` 形式の代入
 - ダブルクォート文字列
-- `rightFolders` 用の文字列配列
+- `leftFolders` / `rightFolders` など起動時フォルダー / タブ一覧用の文字列配列
 - 数値のフォントサイズと透明度
 - `"#RRGGBB"` 形式のカラー
 - クォート外の `#` コメント
@@ -206,7 +206,10 @@ disabledItem = 0.45
 [startup]
 layout = "split"
 preview = "show"
-rightFolders = ["~/Downloads", "~/Documents"]
+leftFolders = ["~/source", "~/Downloads"]
+leftActiveTab = 0
+rightFolders = ["~/Documents", "~/Desktop"]
+rightActiveTab = 0
 ```
 
 | 値 | 動作 |
@@ -227,15 +230,29 @@ rightFolders = ["~/Downloads", "~/Documents"]
 
 `folderTree` は左サイドバー（ピン留め＋フォルダーツリー）の起動時状態を `"show"` / `"hide"` / `"restore"` で指定します。
 
-`rightFolder` は `layout = "split"` のときに右ペインの初期フォルダーを 1 つ指定します。
+タブ構成は既定ではセッション内だけの状態です。通常は、復元されたペインパスから各ペイン 1 タブで起動します。`config.toml` にフォルダー一覧を明示した場合だけ、その一覧を起動時タブとして使います。
+
+`leftFolder` / `rightFolder` は起動時タブを 1 つ指定します。
 
 ```toml
 [startup]
 layout = "split"
+leftFolder = "~/source"
 rightFolder = "~/Downloads"
 ```
 
-`rightFolders` は配列を受け付けます。現在の Windows 版では、最初の有効なフォルダーを右ペインの初期フォルダーとして使います。
+`leftFolders` / `rightFolders` は複数の起動時タブを指定します。存在しないフォルダーはスキップされます。`leftActiveTab` / `rightActiveTab` は 0 始まりのアクティブタブ番号です。省略時、または範囲外の場合は最初の有効なタブを使います。
+
+```toml
+[startup]
+layout = "split"
+leftFolders = ["~/source", "~/Downloads"]
+leftActiveTab = 1
+rightFolders = ["~/Documents", "~/Desktop"]
+rightActiveTab = 0
+```
+
+`leftTabs` / `rightTabs` は `leftFolders` / `rightFolders` の別名として受け付けます。
 
 パスには絶対パス、`%USERPROFILE%\Downloads` のような環境変数付きパス、`~` 付きユーザーパスを指定できます。
 

@@ -30,7 +30,7 @@ The loader intentionally accepts a small TOML subset:
 - Tables with `[section]` headers
 - Assignments with `key = value`
 - Double-quoted strings
-- Arrays of double-quoted strings for `rightFolders`
+- Arrays of double-quoted strings for startup folder/tab lists such as `leftFolders` and `rightFolders`
 - Numeric font sizes and opacity values
 - Quoted `#RRGGBB` colors
 - `#` comments outside quoted strings
@@ -206,7 +206,10 @@ Controls the pane layout used at startup.
 [startup]
 layout = "split"
 preview = "show"
-rightFolders = ["~/Downloads", "~/Documents"]
+leftFolders = ["~/source", "~/Downloads"]
+leftActiveTab = 0
+rightFolders = ["~/Documents", "~/Desktop"]
+rightActiveTab = 0
 ```
 
 | Value | Behavior |
@@ -227,21 +230,29 @@ rightFolders = ["~/Downloads", "~/Documents"]
 
 `folderTree` controls the left sidebar (pinned folders + folder tree) at startup with the same `"show"` / `"hide"` / `"restore"` values.
 
-`rightFolder` opens a single right-pane folder when `layout = "split"`:
+Tab layout is session-local by default: tfx normally starts with one tab per visible pane using the restored pane paths. If you specify folder lists in `config.toml`, those lists are used as startup tabs.
+
+`leftFolder` / `rightFolder` open a single startup tab:
 
 ```toml
 [startup]
 layout = "split"
+leftFolder = "~/source"
 rightFolder = "~/Downloads"
 ```
 
-`rightFolders` accepts a list. Windows currently uses the first valid folder as the right-pane startup folder.
+`leftFolders` / `rightFolders` open multiple startup tabs. Invalid or missing folders are skipped. `leftActiveTab` and `rightActiveTab` are zero-based indexes; omitted or out-of-range values fall back to the first valid tab.
 
 ```toml
 [startup]
 layout = "split"
-rightFolders = ["~/Downloads", "~/Documents", "~/Desktop"]
+leftFolders = ["~/source", "~/Downloads"]
+leftActiveTab = 1
+rightFolders = ["~/Documents", "~/Desktop"]
+rightActiveTab = 0
 ```
+
+`leftTabs` / `rightTabs` are accepted as aliases for `leftFolders` / `rightFolders`.
 
 Paths can be absolute paths, environment-variable paths such as `%USERPROFILE%\Downloads`, or `~`-expanded user paths.
 

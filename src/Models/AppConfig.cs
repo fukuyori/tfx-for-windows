@@ -480,14 +480,44 @@ public sealed class AppConfig
                 config.Errors.Add($"Invalid startup folderTree: {value}");
             }
         }
-        else if (key.Equals("rightFolder", StringComparison.OrdinalIgnoreCase))
+        else if (key.Equals("leftFolder", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("leftTab", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseString(value, out var folder))
+            {
+                config.Startup.LeftFolders = [ExpandUserPath(folder)];
+            }
+            else
+            {
+                config.Errors.Add($"Invalid startup {key}: {value}");
+            }
+        }
+        else if (key.Equals("leftFolders", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("leftTabs", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseStringArray(value, out var folders))
+            {
+                config.Startup.LeftFolders = folders.Select(ExpandUserPath).ToList();
+            }
+            else
+            {
+                config.Errors.Add($"Invalid startup {key}: {value}");
+            }
+        }
+        else if (key.Equals("rightFolder", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("rightTab", StringComparison.OrdinalIgnoreCase))
         {
             if (TryParseString(value, out var folder))
             {
                 config.Startup.RightFolders = [ExpandUserPath(folder)];
             }
+            else
+            {
+                config.Errors.Add($"Invalid startup {key}: {value}");
+            }
         }
-        else if (key.Equals("rightFolders", StringComparison.OrdinalIgnoreCase))
+        else if (key.Equals("rightFolders", StringComparison.OrdinalIgnoreCase)
+            || key.Equals("rightTabs", StringComparison.OrdinalIgnoreCase))
         {
             if (TryParseStringArray(value, out var folders))
             {
@@ -495,7 +525,29 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup rightFolders: {value}");
+                config.Errors.Add($"Invalid startup {key}: {value}");
+            }
+        }
+        else if (key.Equals("leftActiveTab", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseInt(value, out var active) && active >= 0)
+            {
+                config.Startup.LeftActiveTab = active;
+            }
+            else
+            {
+                config.Errors.Add($"Invalid startup leftActiveTab: {value}");
+            }
+        }
+        else if (key.Equals("rightActiveTab", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryParseInt(value, out var active) && active >= 0)
+            {
+                config.Startup.RightActiveTab = active;
+            }
+            else
+            {
+                config.Errors.Add($"Invalid startup rightActiveTab: {value}");
             }
         }
         else if (key.Equals("geometry", StringComparison.OrdinalIgnoreCase))
@@ -802,8 +854,11 @@ public sealed class AppConfig
         # preview = "restore"
         # terminal = "restore"   # show / hide / restore (built-in terminal pane)
         # folderTree = "restore" # show / hide / restore (left sidebar / folder tree)
+        # leftFolders = ["~/source", "~/Downloads"]  # startup tabs; session tabs are not restored
+        # leftActiveTab = 0
         # rightFolder = "~/Downloads"
         # rightFolders = ["~/Downloads", "~/Documents"]
+        # rightActiveTab = 0
         # geometry = "1200x800+100+50"   # [WxH][+X+Y]; -X/-Y = from right/bottom
         #
         # External terminal (toolbar / openTerminal) and built-in pane:
@@ -877,7 +932,10 @@ public sealed class StartupConfig
     public string? Preview { get; set; }
     public string? Terminal { get; set; }
     public string? FolderTree { get; set; }
+    public List<string> LeftFolders { get; set; } = [];
     public List<string> RightFolders { get; set; } = [];
+    public int? LeftActiveTab { get; set; }
+    public int? RightActiveTab { get; set; }
     public WindowGeometry? Geometry { get; set; }
 }
 

@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.8.6
+Version: 0.8.7
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -58,7 +58,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.6 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.7 |
 +---------------------------------------------------------------------+
 ```
 
@@ -260,7 +260,7 @@ See [docs/configuration.md](docs/configuration.md) for the full file format, sup
 
 Shortcut values use Windows-native modifier names such as `ctrl`, `shift`, and `alt`. Supported key names include single letters / digits, `.`, `[`, `]`, `backslash`, arrow keys, `enter`, `tab`, `space`, `delete`, `backspace`, and `f1` through `f24`.
 
-Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`. `[font]` sets the UI and monospace fonts and base size, with optional per-pane overrides (`fileList`, `preview`, `terminal`, `folderTree`, each with a `*Size`) that fall back to `mono`. Color keys use the macOS tfx semantic names and are mapped onto WPF theme resources, including toolbar chrome, selection colors, inputs, scrollbars, and Markdown preview CSS. `[opacity].background` controls the transparent window surface. `[startup]` can force single/split layout and the visibility of the preview pane, terminal pane, and folder tree. `[terminal] app` maps to the Windows executable or app alias, and `[terminal] arguments` is optional because tfx supplies cwd arguments for Windows Terminal, WezTerm, PowerShell, and pwsh. `[openWith]` maps an extension without the leading dot to an executable or app alias used when opening files of that type.
+Supported sections are `[font]`, `[colors]`, `[opacity]`, `[shortcuts]`, `[startup]`, `[terminal]`, and `[openWith]`. `[font]` sets the UI and monospace fonts and base size, with optional per-pane overrides (`fileList`, `preview`, `terminal`, `folderTree`, each with a `*Size`) that fall back to `mono`. Color keys use the macOS tfx semantic names and are mapped onto WPF theme resources, including toolbar chrome, selection colors, inputs, scrollbars, and Markdown preview CSS. `[opacity].background` controls the transparent window surface. `[startup]` can force single/split layout, the visibility of the preview pane / terminal pane / folder tree, and explicit startup tabs through `leftFolders` / `rightFolders`. `[terminal] app` maps to the Windows executable or app alias, and `[terminal] arguments` is optional because tfx supplies cwd arguments for Windows Terminal, WezTerm, PowerShell, and pwsh. `[openWith]` maps an extension without the leading dot to an executable or app alias used when opening files of that type.
 
 `config.toml` is intended for user-editable preferences. Session state is still saved automatically to `%APPDATA%\tfx\settings.json` on every change and on close.
 
@@ -312,7 +312,7 @@ dotnet run -- "C:\path\to\folder"
 
 The initial folder for the left pane is resolved in this order: (1) the first command-line argument if it is a valid directory, (2) the current working directory at startup when it is meaningful (not the executable's own folder, `System32`, or `Windows`), so launching `Tfx.exe` from a terminal opens the terminal's current folder, and (3) the previously saved path. If none apply, the user profile folder is used.
 
-When the left pane's folder comes from an explicit source — case (1) or (2) above — it opens as a single fresh tab and the previously saved tab set is *not* restored, so the requested startup folder always wins. Normal launches (Explorer / Start menu), where the working directory is not meaningful, fall through to case (3) and restore the saved tabs as before. The right pane always restores its saved tabs.
+Tab layout is session-local by default. On the next launch, tfx starts with one tab per visible pane using the restored pane paths; previously open tab lists are not restored. When `[startup] leftFolders` / `rightFolders` are set in `config.toml`, those configured lists are used as startup tabs instead.
 
 Publish a self-contained single-file Windows executable:
 
