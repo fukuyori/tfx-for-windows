@@ -44,15 +44,7 @@ public partial class MainWindow
 
         if (ArchivePath.TryParse(item.FullPath, out var archiveFile, out var entryPath))
         {
-            try
-            {
-                var realPath = ArchiveBrowser.ExtractEntryToTemp(archiveFile, entryPath, EnsureArchiveTempRoot(), CancellationToken.None);
-                Process.Start(new ProcessStartInfo(realPath) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                SetStatus(ex.Message);
-            }
+            OpenArchiveEntry(archiveFile, entryPath);
             return;
         }
 
@@ -70,6 +62,26 @@ public partial class MainWindow
         try
         {
             Process.Start(new ProcessStartInfo(item.FullPath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            SetStatus(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Extracts an archive entry to the session temp folder on the thread
+    /// pool, then opens it. Inline extraction froze the UI (with no cancel)
+    /// for the duration of a large entry.
+    /// </summary>
+    private async void OpenArchiveEntry(string archiveFile, string entryPath)
+    {
+        var tempRoot = EnsureArchiveTempRoot();
+        try
+        {
+            var realPath = await Task.Run(() =>
+                ArchiveBrowser.ExtractEntryToTemp(archiveFile, entryPath, tempRoot, CancellationToken.None));
+            Process.Start(new ProcessStartInfo(realPath) { UseShellExecute = true });
         }
         catch (Exception ex)
         {
@@ -149,11 +161,8 @@ public partial class MainWindow
                 SetStatus(Loc.T("Archive entries can't be cut"));
                 return;
             }
-            paths = ResolveDragPaths(paths);
-            if (paths.Length == 0)
-            {
-                return;
-            }
+            CopyArchiveEntriesToClipboard(paths);
+            return;
         }
 
         var collection = new StringCollection();
@@ -165,6 +174,76 @@ public partial class MainWindow
         }
         _cutBuffer = cut ? paths : [];
         SetStatus(cut ? Loc.F("Cut {0} item(s)", paths.Length) : Loc.F("Copied {0} item(s)", paths.Length));
+    }
+
+    /// <summary>
+    /// Extracts archive-entry selections to the temp folder on the thread
+    /// pool (inline extraction froze the UI on large entries), then puts the
+    /// real paths on the clipboard as a copy.
+    /// </summary>
+    private async void CopyArchiveEntriesToClipboard(string[] paths)
+    {
+        var tempRoot = EnsureArchiveTempRoot();
+        SetStatus(Loc.T("Extracting from archive..."));
+        var (extracted, errors) = await Task.Run(() => ExtractArchiveEntries(paths, tempRoot));
+        if (errors.Count > 0)
+        {
+            SetStatus(Loc.F("Extract failed: {0}", string.Join(", ", errors)));
+            return;
+        }
+        if (extracted.Count == 0)
+        {
+            return;
+        }
+
+        var collection = new StringCollection();
+        collection.AddRange(extracted.ToArray());
+        if (!SafeClipboard.SetFileDropList(collection, cut: false))
+        {
+            SetStatus(Loc.T("Clipboard is in use by another application"));
+            return;
+        }
+        _cutBuffer = [];
+        SetStatus(Loc.F("Copied {0} item(s)", extracted.Count));
+    }
+
+    /// <summary>
+    /// Resolves a mixed selection to real file-system paths: archive entries
+    /// are extracted (grouped per archive) into <paramref name="tempRoot"/>,
+    /// plain paths pass through. Runs on any thread; failures are collected
+    /// rather than thrown so one bad archive doesn't lose the rest.
+    /// </summary>
+    private static (List<string> Extracted, List<string> Errors) ExtractArchiveEntries(string[] paths, string tempRoot)
+    {
+        var result = new List<string>();
+        var errors = new List<string>();
+        var groups = paths
+            .Where(ArchivePath.Contains)
+            .Select(p =>
+            {
+                ArchivePath.TryParse(p, out var archive, out var inner);
+                return (Archive: archive, Inner: inner);
+            })
+            .GroupBy(t => t.Archive, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in groups)
+        {
+            try
+            {
+                result.AddRange(ArchiveBrowser.ExtractEntriesToTemp(
+                    group.Key,
+                    group.Select(t => t.Inner),
+                    tempRoot,
+                    CancellationToken.None));
+            }
+            catch (Exception ex)
+            {
+                errors.Add(ex.Message);
+            }
+        }
+
+        result.AddRange(paths.Where(p => !ArchivePath.Contains(p)));
+        return (result, errors);
     }
 
     private void PasteIntoActivePane()

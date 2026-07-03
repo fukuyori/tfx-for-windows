@@ -65,7 +65,7 @@ public partial class MainWindow
         QueueFolderTreeSyncToActivePane();
     }
 
-    private TreeViewItem CreateFolderNode(string path)
+    private static TreeViewItem CreateFolderNode(string path)
     {
         var item = new TreeViewItem
         {
@@ -73,10 +73,13 @@ public partial class MainWindow
             Tag = path
         };
 
-        if (HasVisibleSubdirectories(path))
-        {
-            item.Items.Add(null);
-        }
+        // Always add the expand placeholder instead of probing the folder for
+        // visible subdirectories up front: that probe was one extra enumeration
+        // PER NODE (N+1) on every tree level realized, and it ran on the UI
+        // thread during expansion / path reveal. Nodes that turn out to be
+        // empty lose their expander on the first expand attempt (Explorer
+        // behaves the same way).
+        item.Items.Add(null);
 
         return item;
     }
@@ -90,18 +93,6 @@ public partial class MainWindow
         }
 
         return Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-    }
-
-    private bool HasVisibleSubdirectories(string path)
-    {
-        try
-        {
-            return VisibleDirectories(path).Any();
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private void CollapseAllFolders_Click(object sender, RoutedEventArgs e) => CollapseAllFolders();
@@ -144,13 +135,77 @@ public partial class MainWindow
 
     private void FolderTree_Expanded(object sender, RoutedEventArgs e)
     {
-        if (e.OriginalSource is not TreeViewItem item || item.Tag is not string path)
+        if (e.OriginalSource is not TreeViewItem item || item.Tag is not string)
         {
             return;
         }
 
-        EnsureFolderNodeChildren(item);
+        PopulateFolderNodeAsync(item);
     }
+
+    // Nodes currently loading their children on the thread pool, so a rapid
+    // collapse/expand doesn't start a second enumeration for the same node.
+    private readonly HashSet<TreeViewItem> _treeNodesLoading = [];
+
+    /// <summary>
+    /// Fills a node's children on user expansion, enumerating on the thread
+    /// pool — a slow disk or network folder no longer stalls the UI while the
+    /// tree opens. The synchronous <see cref="EnsureFolderNodeChildren"/> is
+    /// still used by the path-reveal walk, which needs children immediately;
+    /// whichever populates first wins.
+    /// </summary>
+    private async void PopulateFolderNodeAsync(TreeViewItem item)
+    {
+        if (item.Tag is not string path || !HasExpandPlaceholder(item) || !_treeNodesLoading.Add(item))
+        {
+            return;
+        }
+
+        try
+        {
+            var showHidden = ShowHidden;
+            List<string> directories;
+            try
+            {
+                directories = await Task.Run(() =>
+                    FsHelpers.SafeEnumerateDirectories(path)
+                        .Where(d => showHidden || !FsHelpers.IsHidden(d))
+                        .OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase)
+                        .ToList());
+            }
+            catch
+            {
+                directories = [];
+            }
+
+            // The sync path-reveal walk may have populated (or a reload reset)
+            // this node while we enumerated — only fill it if the placeholder
+            // is still in place.
+            if (!HasExpandPlaceholder(item))
+            {
+                return;
+            }
+
+            item.Items.Clear();
+            foreach (var directory in directories)
+            {
+                item.Items.Add(CreateFolderNode(directory));
+            }
+            if (directories.Count == 0)
+            {
+                // Nothing inside: collapse so the (now removed) expander state
+                // doesn't leave an open empty node.
+                item.IsExpanded = false;
+            }
+        }
+        finally
+        {
+            _treeNodesLoading.Remove(item);
+        }
+    }
+
+    private static bool HasExpandPlaceholder(TreeViewItem item) =>
+        item.Items.Count == 1 && item.Items[0] is null;
 
     private void FolderTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {

@@ -443,6 +443,12 @@ public partial class MainWindow : Window
 
         SetResourceBrush("TfxBackground", ColorToken("fileListBackground", "headerBackground", fallback: Color.FromRgb(16, 19, 22)), backgroundOpacity);
         SetResourceBrush("TfxPanel", ColorToken("fileListBackground", fallback: Color.FromRgb(23, 27, 31)), backgroundOpacity);
+        // Floating surfaces (context menus, the columns popup) get much weaker
+        // translucency than the panes: at the pane opacity whatever is behind
+        // the window showed through the menu text. Overridable per theme via
+        // [opacity] floating.
+        var floatingOpacity = OpacityToken("floating", Math.Max(backgroundOpacity, 0.94));
+        SetResourceBrush("TfxFloatingPanel", ColorToken("fileListBackground", fallback: Color.FromRgb(23, 27, 31)), floatingOpacity);
         SetResourceBrush("TfxPanelActive", ColorToken("titleBarBackgroundActive", "fileListRowSelected", fallback: Color.FromRgb(30, 37, 43)), backgroundOpacity);
         SetResourceBrush("TfxBorder", ColorToken("paneBorderInactive", fallback: Color.FromRgb(45, 53, 60)));
         SetResourceBrush("TfxForeground", ColorToken("fileForeground", fallback: Color.FromRgb(214, 222, 230)));

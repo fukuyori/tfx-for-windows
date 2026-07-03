@@ -646,6 +646,11 @@ public partial class MainWindow
         return DragDropEffects.Copy;
     }
 
+    /// <remarks>
+    /// Stays synchronous: it runs inside the mouse-move handler that must call
+    /// DoDragDrop immediately, so a large archive entry blocks until extracted.
+    /// The Enter-to-open and Ctrl+C paths use the async wrappers instead.
+    /// </remarks>
     private string[] ResolveDragPaths(string[] paths)
     {
         if (!paths.Any(ArchivePath.Contains))
@@ -653,34 +658,11 @@ public partial class MainWindow
             return paths;
         }
 
-        var result = new List<string>();
-        var groups = paths
-            .Where(ArchivePath.Contains)
-            .Select(p =>
-            {
-                ArchivePath.TryParse(p, out var a, out var i);
-                return (Archive: a, Inner: i);
-            })
-            .GroupBy(t => t.Archive, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var group in groups)
+        var (extracted, errors) = ExtractArchiveEntries(paths, EnsureArchiveTempRoot());
+        foreach (var error in errors)
         {
-            try
-            {
-                var extracted = ArchiveBrowser.ExtractEntriesToTemp(
-                    group.Key,
-                    group.Select(t => t.Inner),
-                    EnsureArchiveTempRoot(),
-                    CancellationToken.None);
-                result.AddRange(extracted);
-            }
-            catch (Exception ex)
-            {
-                SetStatus(ex.Message);
-            }
+            SetStatus(error);
         }
-
-        result.AddRange(paths.Where(p => !ArchivePath.Contains(p)));
-        return result.ToArray();
+        return extracted.ToArray();
     }
 }

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.9.5
+
+### Performance
+
+- **Details view uses recycling virtualization** — scrolling large folders reuses row containers instead of rebuilding them, reducing stutter and GC pressure.
+- **Folder-tree expansion no longer probes every child folder up front.** The "has subfolders" check was one extra enumeration per node on the UI thread; every node now shows an expander and prunes it on first expand (Explorer behavior), and user-initiated expansion enumerates on the thread pool — a slow disk or network folder doesn't stall the UI while the tree opens.
+- **Column sorting is faster**: the sort comparer caches the culture's CompareInfo instead of resolving it on every comparison (O(n log n) per header click).
+
+### Stability
+
+- **Opening or copying a large file from inside a .zip no longer freezes the window** — the temp extraction for Enter-to-open and Ctrl+C now runs on the thread pool with a status message (dragging out of an archive still extracts inline, as OLE requires).
+
+### Appearance
+
+- **Context menus and the columns popup are nearly opaque under translucent themes.** They used the pane opacity, letting whatever was behind the window show through the menu text; they now default to `max(background, 0.94)` opacity, overridable with the new `[opacity] floating` config key.
+
 ## 0.9.4
 
 ### Fixes

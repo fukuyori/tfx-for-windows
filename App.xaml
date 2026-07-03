@@ -4,6 +4,10 @@
     <Application.Resources>
         <SolidColorBrush x:Key="TfxBackground" Color="#101316" />
         <SolidColorBrush x:Key="TfxPanel" Color="#171B1F" />
+        <!-- Floating surfaces (context menus, popups). Same color family as
+             TfxPanel but kept nearly opaque even under a translucent theme —
+             at the pane opacity the desktop showed through the menu text. -->
+        <SolidColorBrush x:Key="TfxFloatingPanel" Color="#171B1F" />
         <SolidColorBrush x:Key="TfxPanelActive" Color="#1E252B" />
         <SolidColorBrush x:Key="TfxBorder" Color="#2D353C" />
         <SolidColorBrush x:Key="TfxForeground" Color="#D6DEE6" />
@@ -144,7 +148,7 @@
         </Style>
 
         <Style TargetType="ContextMenu">
-            <Setter Property="Background" Value="{DynamicResource TfxPanel}" />
+            <Setter Property="Background" Value="{DynamicResource TfxFloatingPanel}" />
             <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
             <Setter Property="BorderBrush" Value="{DynamicResource TfxBorder}" />
             <Setter Property="BorderThickness" Value="1" />

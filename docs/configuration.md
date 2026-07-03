@@ -194,6 +194,7 @@ disabledItem = 0.45
 | --- | --- |
 | `background` | Applies to the transparent WPF window surface so the app background can show content behind the window. |
 | `inactivePane` | Applies to the inactive file-pane surface. If omitted, `background` is used. |
+| `floating` | Applies to floating surfaces (context menus, the columns popup). If omitted, `max(background, 0.94)` is used so menus stay readable under a translucent theme. |
 | `disabledItem` | Accepted for tfx compatibility. WPF disabled-control opacity is still defined by the application styles. |
 
 When `background = 0.0`, tfx keeps a nearly invisible hit-test surface for the custom title/drag area and right-edge resize handle, so the window can still be moved and resized.

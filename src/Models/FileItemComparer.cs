@@ -1,10 +1,18 @@
 using System.Collections;
 using System.ComponentModel;
+using System.Globalization;
 
 namespace Tfx;
 
 public sealed class FileItemComparer : IComparer
 {
+    // string.Compare(..., CurrentCultureIgnoreCase) resolves the thread's
+    // current culture and its CompareInfo on every call. This comparer runs
+    // O(n log n) times per header click / sorted reload, so cache the
+    // CompareInfo once — same ordering, less per-call overhead.
+    private static readonly CompareInfo Culture = CultureInfo.CurrentCulture.CompareInfo;
+    private const CompareOptions IgnoreCase = CompareOptions.IgnoreCase;
+
     private readonly string _path;
     private readonly ListSortDirection _direction;
 
@@ -33,15 +41,15 @@ public sealed class FileItemComparer : IComparer
             nameof(FileItem.Modified) => DateTime.Compare(a.Modified, b.Modified),
             nameof(FileItem.Created) => DateTime.Compare(a.Created, b.Created),
             nameof(FileItem.Size) => a.Size.CompareTo(b.Size),
-            nameof(FileItem.Kind) => string.Compare(a.Kind, b.Kind, StringComparison.CurrentCultureIgnoreCase),
-            nameof(FileItem.OwnerText) => string.Compare(a.OwnerText, b.OwnerText, StringComparison.CurrentCultureIgnoreCase),
-            nameof(FileItem.AttributeText) => string.Compare(a.AttributeText, b.AttributeText, StringComparison.CurrentCultureIgnoreCase),
-            _ => string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase)
+            nameof(FileItem.Kind) => Culture.Compare(a.Kind, b.Kind, IgnoreCase),
+            nameof(FileItem.OwnerText) => Culture.Compare(a.OwnerText, b.OwnerText, IgnoreCase),
+            nameof(FileItem.AttributeText) => Culture.Compare(a.AttributeText, b.AttributeText, IgnoreCase),
+            _ => Culture.Compare(a.Name, b.Name, IgnoreCase)
         };
 
         if (cmp == 0 && _path != nameof(FileItem.Name))
         {
-            cmp = string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase);
+            cmp = Culture.Compare(a.Name, b.Name, IgnoreCase);
         }
 
         return _direction == ListSortDirection.Ascending ? cmp : -cmp;

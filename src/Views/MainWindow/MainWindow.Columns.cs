@@ -174,7 +174,7 @@ public partial class MainWindow
 
         var border = new Border
         {
-            Background = (Brush)FindResource("TfxPanel"),
+            Background = (Brush)FindResource("TfxFloatingPanel"),
             BorderBrush = (Brush)FindResource("TfxBorder"),
             BorderThickness = new Thickness(1),
             Padding = new Thickness(6),
