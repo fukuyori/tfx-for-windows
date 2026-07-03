@@ -16,6 +16,13 @@ public partial class MainWindow
 
     private FileSystemWatcher? _leftWatcher;
     private FileSystemWatcher? _rightWatcher;
+    // Bumped (on the UI thread) every time UpdateWatcherForPane starts, so a
+    // call that resumes after its background hop can tell it has been
+    // superseded. Without this, navigating A→B→A quickly leaves two in-flight
+    // calls whose path checks both pass — the loser's watcher (with live event
+    // handlers) is overwritten and leaks.
+    private int _leftWatcherGeneration;
+    private int _rightWatcherGeneration;
     private DispatcherTimer? _leftDebounceTimer;
     private DispatcherTimer? _rightDebounceTimer;
     private DispatcherTimer? _periodicTimer;
@@ -86,6 +93,7 @@ public partial class MainWindow
 
     private async void UpdateWatcherForPane(Pane pane)
     {
+        var generation = pane == Pane.Left ? ++_leftWatcherGeneration : ++_rightWatcherGeneration;
         var existing = pane == Pane.Left ? _leftWatcher : _rightWatcher;
         existing?.Dispose();
         SetWatcher(pane, null);
@@ -144,8 +152,12 @@ public partial class MainWindow
         }
 
         // The pane may have navigated again while we were on the background
-        // thread; in that case throw away the watcher we just built.
-        if (!string.Equals(PathOf(pane), path, StringComparison.OrdinalIgnoreCase))
+        // thread; in that case throw away the watcher we just built. The
+        // generation check catches the A→B→A case where the path compares
+        // equal but a newer call owns the pane now.
+        var currentGeneration = pane == Pane.Left ? _leftWatcherGeneration : _rightWatcherGeneration;
+        if (generation != currentGeneration
+            || !string.Equals(PathOf(pane), path, StringComparison.OrdinalIgnoreCase))
         {
             watcher.Dispose();
             return;
@@ -174,8 +186,25 @@ public partial class MainWindow
         SetWatcher(pane, watcher);
     }
 
-    private static bool IsLikelyNetworkPath(string path) =>
-        path.StartsWith(@"\\", StringComparison.Ordinal);
+    private static bool IsLikelyNetworkPath(string path)
+    {
+        if (path.StartsWith(@"\\", StringComparison.Ordinal))
+        {
+            return true;
+        }
+        // Mapped drives (X: → \\server\share) behave like UNC paths for
+        // FileSystemWatcher reliability. DriveType is a local lookup — it
+        // doesn't touch the network.
+        try
+        {
+            var root = Path.GetPathRoot(path);
+            return !string.IsNullOrEmpty(root) && new DriveInfo(root).DriveType == DriveType.Network;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private void SetWatcher(Pane pane, FileSystemWatcher? watcher)
     {

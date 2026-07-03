@@ -59,6 +59,11 @@ public partial class MainWindow
     {
         CancelGitFetch(pane);
         var cts = new CancellationTokenSource();
+        // Capture the token before handing it to the lambda: the lambda runs on
+        // the thread pool after this method returns, and by then a rapid
+        // re-navigation may have disposed `cts` — reading cts.Token at that
+        // point throws ObjectDisposedException into an unobserved task.
+        var token = cts.Token;
         if (pane == Pane.Left) _leftGitCts = cts;
         else _rightGitCts = cts;
 
@@ -69,14 +74,14 @@ public partial class MainWindow
             // process spawn itself (before its first await) would otherwise run
             // synchronously on the caller. This handler is invoked on the UI
             // thread for every navigation, tab switch and external change.
-            status = await Task.Run(() => GitStatusReader.ReadAsync(root, cts.Token), cts.Token);
+            status = await Task.Run(() => GitStatusReader.ReadAsync(root, token), token);
         }
         catch (OperationCanceledException)
         {
             return;
         }
 
-        if (cts.IsCancellationRequested)
+        if (token.IsCancellationRequested)
         {
             return;
         }

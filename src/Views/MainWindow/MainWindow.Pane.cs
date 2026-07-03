@@ -20,7 +20,7 @@ public partial class MainWindow
 
     private ListBox IconViewOf(Pane pane) => pane == Pane.Left ? LeftIconView : RightIconView;
 
-    private ObservableCollection<FileItem> ItemsOf(Pane pane) => pane == Pane.Left ? LeftItems : RightItems;
+    private BulkObservableCollection<FileItem> ItemsOf(Pane pane) => pane == Pane.Left ? LeftItems : RightItems;
 
     private string PathOf(Pane pane) => pane == Pane.Left ? _leftPath : _rightPath;
 

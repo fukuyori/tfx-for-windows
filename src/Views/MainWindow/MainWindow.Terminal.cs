@@ -800,13 +800,24 @@ public partial class MainWindow
             {
                 return null;
             }
-            var output = proc.StandardOutput.ReadToEnd();
+            // Drain both pipes asynchronously BEFORE waiting: a synchronous
+            // ReadToEnd() first meant the 1500ms timeout never ran (the read
+            // blocks forever if wtmux hangs without closing stdout), and an
+            // unread stderr can fill its pipe and deadlock the child.
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
+            _ = proc.StandardError.ReadToEndAsync();
             if (!proc.WaitForExit(1500))
             {
                 try { proc.Kill(entireProcessTree: true); } catch { }
                 return null;
             }
-            return proc.ExitCode == 0 ? output : null;
+            if (proc.ExitCode != 0)
+            {
+                return null;
+            }
+            // Normally the pipe closes with the process; the extra timeout
+            // covers a grandchild inheriting (and holding open) the handle.
+            return stdoutTask.Wait(500) ? stdoutTask.Result : null;
         }
         catch
         {

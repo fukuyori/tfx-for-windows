@@ -59,7 +59,10 @@ public partial class MainWindow
 
     private async void UpdatePreview(IReadOnlyList<FileItem> selection)
     {
+        // Capture the token immediately: lambdas and later awaits read it after
+        // a newer preview may have disposed `cts` (cts.Token would then throw).
         var cts = ReplacePreviewToken();
+        var token = cts.Token;
         // The external-image permission is per-render and never remembered.
         // Reset it here and hide the button; ShowRenderedAsync re-shows the
         // button when it renders HTML-like content. The only way it's on for
@@ -109,8 +112,8 @@ public partial class MainWindow
         {
             var path = item.FullPath;
             var security = BuildPreviewSecurityOptions();
-            var preview = await Task.Run(() => PreviewLoader.Load(path, security, cts.Token), cts.Token);
-            if (cts.IsCancellationRequested)
+            var preview = await Task.Run(() => PreviewLoader.Load(path, security, token), token);
+            if (token.IsCancellationRequested)
             {
                 return;
             }
@@ -130,7 +133,7 @@ public partial class MainWindow
                 var extension = Path.GetExtension(path).ToLowerInvariant();
                 if (_settings.RenderMarkdownHtml && IsRenderable(extension))
                 {
-                    await ShowRenderedAsync(path, extension, preview.Text ?? "", cts);
+                    await ShowRenderedAsync(path, extension, preview.Text ?? "", token);
                 }
                 else
                 {
@@ -208,11 +211,11 @@ public partial class MainWindow
         RenderedToggle.IsChecked = _settings.RenderMarkdownHtml;
     }
 
-    private async Task ShowRenderedAsync(string path, string extension, string text, CancellationTokenSource cts)
+    private async Task ShowRenderedAsync(string path, string extension, string text, CancellationToken token)
     {
         if (IsCsvLike(extension))
         {
-            await ShowCsvPreviewAsync(text, extension, cts);
+            await ShowCsvPreviewAsync(text, extension, token);
             return;
         }
 
@@ -221,13 +224,13 @@ public partial class MainWindow
             string? pretty;
             try
             {
-                pretty = await Task.Run(() => JsonPrettyPrinter.TryPrettyPrint(text), cts.Token);
+                pretty = await Task.Run(() => JsonPrettyPrinter.TryPrettyPrint(text), token);
             }
             catch (OperationCanceledException)
             {
                 return;
             }
-            if (cts.IsCancellationRequested)
+            if (token.IsCancellationRequested)
             {
                 return;
             }
@@ -238,7 +241,7 @@ public partial class MainWindow
 
         if (!await EnsureWebViewAsync())
         {
-            if (cts.IsCancellationRequested)
+            if (token.IsCancellationRequested)
             {
                 return;
             }
@@ -248,7 +251,7 @@ public partial class MainWindow
             return;
         }
 
-        if (cts.IsCancellationRequested)
+        if (token.IsCancellationRequested)
         {
             return;
         }
@@ -263,13 +266,13 @@ public partial class MainWindow
                 {
                     fullHtml = await Task.Run(
                         () => BuildMarkdownDocument(Markdown.ToHtml(text, MarkdownPipeline), css),
-                        cts.Token);
+                        token);
                 }
                 catch (OperationCanceledException)
                 {
                     return;
                 }
-                if (cts.IsCancellationRequested)
+                if (token.IsCancellationRequested)
                 {
                     return;
                 }
@@ -303,7 +306,7 @@ public partial class MainWindow
     private const int CsvPreviewRowCap = 2000;
     private const int CsvPreviewColumnCap = 64;
 
-    private async Task ShowCsvPreviewAsync(string text, string extension, CancellationTokenSource cts)
+    private async Task ShowCsvPreviewAsync(string text, string extension, CancellationToken token)
     {
         try
         {
@@ -327,9 +330,9 @@ public partial class MainWindow
                 return (Header: (IReadOnlyList<string>)headerRow,
                         Rows: (IReadOnlyList<string[]>)sampled,
                         Total: rows.Count - 1);
-            }, cts.Token);
+            }, token);
 
-            if (cts.IsCancellationRequested)
+            if (token.IsCancellationRequested)
             {
                 return;
             }

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.9.1
+
+### Performance
+
+- **Loading a large folder is now flat even with a column sort active.** Rows are swapped into the view in a single reset instead of one insert per row — with a header sort applied, each insert used to cost a sorted placement (O(n²) for the whole folder) and a view refresh.
+- **Settings saves are debounced.** Navigation no longer pays a synchronous JSON write to disk on every folder change; a pending save is flushed on exit.
+
+### File operations
+
+- **Cut vs. copy now interoperates correctly with Explorer.** Cut/Copy writes the standard `Preferred DropEffect` clipboard marker and Paste reads it, so files cut in Explorer paste as a move, and a copy made in Explorer of files previously cut in tfx no longer turns the paste into an accidental move.
+
+### Stability
+
+- **"Sync file list to terminal folder" can no longer hang the app** when the wtmux CLI misbehaves — its output is drained asynchronously so the 1.5s timeout always applies (previously a blocking read ran first and could wait forever).
+- **Git badges no longer break on noisy repositories.** `git status`'s stderr is drained; once its 4KB pipe buffer filled, every status call used to ride the 8-second timeout and badges never loaded.
+- **Fixed a race in rapid navigation** where the cancellation source for an in-flight `git status`, folder reload, or preview could be disposed while its token was still being read, faulting a background task (`ObjectDisposedException`).
+- **Fixed a `FileSystemWatcher` leak**: navigating A→B→A quickly could leave a superseded watcher alive with active event handlers (duplicate refreshes, leaked handles). Watcher updates are now generation-checked.
+- **Mapped network drives (X: → \\server\share) are treated like UNC paths** for auto-refresh: they rely on periodic polling instead of a `FileSystemWatcher`, avoiding stalls on unreliable shares.
+
 ## 0.9.0
 
 ### Stability

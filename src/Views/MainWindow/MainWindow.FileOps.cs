@@ -139,7 +139,7 @@ public partial class MainWindow
 
         var collection = new StringCollection();
         collection.AddRange(paths);
-        if (!SafeClipboard.SetFileDropList(collection))
+        if (!SafeClipboard.SetFileDropList(collection, cut))
         {
             SetStatus(Loc.T("Clipboard is in use by another application"));
             return;
@@ -171,9 +171,14 @@ public partial class MainWindow
             return;
         }
 
-        // Cut + paste = move; plain copy = copy. The clipboard set is uniformly one
-        // or the other (set by Cut/Copy), so decide once for the whole batch.
-        var move = files.All(f => _cutBuffer.Contains(f, StringComparer.OrdinalIgnoreCase));
+        // Cut + paste = move; plain copy = copy. CFSTR_PREFERREDDROPEFFECT is the
+        // authoritative signal (Explorer and other file managers set it, and so
+        // does our own Cut/Copy) — without it, a Ctrl+C done in Explorer on files
+        // we had previously cut would still match the stale cut buffer and turn
+        // the paste into a move. The internal buffer remains only as a fallback
+        // for sources that don't write the marker.
+        var move = SafeClipboard.GetPreferredDropEffectIsMove()
+            ?? files.All(f => _cutBuffer.Contains(f, StringComparer.OrdinalIgnoreCase));
 
         // Skip items already in the destination folder for a move (self-move).
         var sources = files

@@ -131,6 +131,10 @@ internal static class GitStatusReader
             }
 
             var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            // Drain stderr too: git writes warnings there, and once the ~4KB
+            // pipe buffer fills an unread stderr blocks git itself — every
+            // status call then rides the 8s timeout and the badges never load.
+            var stderrDrainTask = process.StandardError.ReadToEndAsync(cancellationToken);
             var waitTask = process.WaitForExitAsync(cancellationToken);
 
             try

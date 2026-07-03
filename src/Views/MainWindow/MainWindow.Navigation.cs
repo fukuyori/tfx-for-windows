@@ -73,30 +73,24 @@ public partial class MainWindow
             LoadLargeIcons: false,
             IsFileColumnVisible("Owner"));
         SetPendingSelectionName(pane, selectName);
+        // Capture the token here: the lambda below reads it on the thread pool,
+        // by which time a rapid re-navigation may have disposed the source
+        // (cts.Token would then throw ObjectDisposedException).
         var cts = ReplaceReloadToken(pane);
+        var token = cts.Token;
 
         try
         {
-            var items = await Task.Run(() => DirectoryLoader.Load(path, options, cts.Token), cts.Token);
-            if (cts.IsCancellationRequested || !string.Equals(GetCurrentPath(grid), path, StringComparison.OrdinalIgnoreCase))
+            var items = await Task.Run(() => DirectoryLoader.Load(path, options, token), token);
+            if (token.IsCancellationRequested || !string.Equals(GetCurrentPath(grid), path, StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
 
-            target.Clear();
-            const int batchSize = 200;
-            for (var i = 0; i < items.Count; i++)
-            {
-                target.Add(items[i]);
-                if ((i + 1) % batchSize == 0 && i + 1 < items.Count)
-                {
-                    await Dispatcher.Yield(DispatcherPriority.Background);
-                    if (cts.IsCancellationRequested || !string.Equals(GetCurrentPath(grid), path, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return;
-                    }
-                }
-            }
+            // Single Reset swap: with a column sort active, per-item Add would
+            // sorted-insert into the ListCollectionView (O(n²) for the folder)
+            // and invalidate the view once per row.
+            target.ReplaceAll(items);
 
             ApplyPendingSelection(grid, pane);
             ApplyGitBadges(pane);

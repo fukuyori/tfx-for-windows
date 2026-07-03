@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
@@ -19,8 +20,60 @@ internal static class SafeClipboard
     private const int RetryCount = 3;
     private const int RetryDelayMs = 50;
 
-    public static bool SetFileDropList(StringCollection paths) =>
-        TrySet(() => Clipboard.SetFileDropList(paths));
+    // CFSTR_PREFERREDDROPEFFECT — the standard cut-vs-copy marker Explorer and
+    // other file managers put next to a CF_HDROP. DWORD: DROPEFFECT_COPY = 1,
+    // DROPEFFECT_MOVE = 2.
+    private const string PreferredDropEffectFormat = "Preferred DropEffect";
+    private const int DropEffectCopy = 1;
+    private const int DropEffectMove = 2;
+
+    /// <summary>
+    /// Puts the paths on the clipboard together with the standard
+    /// CFSTR_PREFERREDDROPEFFECT marker, so other applications (and this one)
+    /// can tell a cut from a copy the same way Explorer does.
+    /// </summary>
+    public static bool SetFileDropList(StringCollection paths, bool cut)
+    {
+        var data = new DataObject();
+        data.SetFileDropList(paths);
+        data.SetData(PreferredDropEffectFormat,
+            new MemoryStream(BitConverter.GetBytes(cut ? DropEffectMove : DropEffectCopy)));
+        return TrySet(() => Clipboard.SetDataObject(data, copy: true));
+    }
+
+    /// <summary>
+    /// Reads CFSTR_PREFERREDDROPEFFECT: true = the source cut (paste should
+    /// move), false = copied, null = the source app didn't say.
+    /// </summary>
+    public static bool? GetPreferredDropEffectIsMove()
+    {
+        if (Get(() => Clipboard.GetData(PreferredDropEffectFormat), null) is not MemoryStream stream)
+        {
+            return null;
+        }
+
+        try
+        {
+            var bytes = new byte[4];
+            stream.Position = 0;
+            if (stream.Read(bytes, 0, 4) == 4)
+            {
+                var effect = BitConverter.ToInt32(bytes, 0);
+                if ((effect & DropEffectMove) != 0)
+                {
+                    return true;
+                }
+                if ((effect & DropEffectCopy) != 0)
+                {
+                    return false;
+                }
+            }
+        }
+        catch
+        {
+        }
+        return null;
+    }
 
     public static bool SetText(string text) =>
         TrySet(() => Clipboard.SetText(text));

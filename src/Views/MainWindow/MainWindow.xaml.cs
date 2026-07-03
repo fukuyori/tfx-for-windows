@@ -28,8 +28,8 @@ public partial class MainWindow : Window
     private const int WmszBottomLeft = 7;
     private const int WmszBottomRight = 8;
 
-    public ObservableCollection<FileItem> LeftItems { get; } = [];
-    public ObservableCollection<FileItem> RightItems { get; } = [];
+    public BulkObservableCollection<FileItem> LeftItems { get; } = [];
+    public BulkObservableCollection<FileItem> RightItems { get; } = [];
 
     private readonly ObservableCollection<string> _pinned = [];
     private readonly List<FileColumnDefinition> _fileColumns = [];
@@ -625,8 +625,39 @@ public partial class MainWindow : Window
         return Directory.Exists(path);
     }
 
+    private DispatcherTimer? _saveSettingsTimer;
+    private static readonly TimeSpan SaveSettingsDebounce = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>
+    /// Schedules a debounced settings save. Navigation, pane switches and
+    /// resizes call this constantly; serializing + writing settings.json to
+    /// disk on every call added disk latency (HDD, antivirus scans) to each
+    /// folder change. The state is captured at write time, so coalescing calls
+    /// loses nothing. <see cref="Window_Closing"/> flushes synchronously.
+    /// </summary>
     private void SaveSettings()
     {
+        if (_suspendSettingsSave)
+        {
+            return;
+        }
+
+        if (_saveSettingsTimer is null)
+        {
+            _saveSettingsTimer = new DispatcherTimer { Interval = SaveSettingsDebounce };
+            _saveSettingsTimer.Tick += (_, _) =>
+            {
+                _saveSettingsTimer!.Stop();
+                SaveSettingsNow();
+            };
+        }
+        _saveSettingsTimer.Stop();
+        _saveSettingsTimer.Start();
+    }
+
+    private void SaveSettingsNow()
+    {
+        _saveSettingsTimer?.Stop();
         if (_suspendSettingsSave)
         {
             return;
@@ -1068,7 +1099,8 @@ public partial class MainWindow : Window
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
-        SaveSettings();
+        // Flush synchronously — a debounced save pending at exit would be lost.
+        SaveSettingsNow();
 
         _previewCts?.Cancel();
         _previewCts?.Dispose();
