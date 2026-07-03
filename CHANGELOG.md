@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.2
+
+### Performance
+
+- **Arrow-key navigation in large folders is lighter.** The folder tree used to re-walk and re-enumerate directories on the UI thread for every selection change; it now syncs only when the pane's path actually changes.
+- **Git badges are O(1) per row.** Directory badges are looked up in a dictionary built once per `git status` snapshot instead of scanning every changed file for every directory row — large repositories no longer stutter after navigation or auto-refresh.
+- **Auto-refresh diffing no longer degrades to O(n²)** when a burst of new files lands at the top of the list (downloads folder, log rotation).
+
+### Freshness & stability
+
+- **Panes now update during sustained file activity.** The auto-refresh debounce fires after at most 2 seconds of continuous postponement, so a long copy or a build writing output no longer keeps the pane stale until the burst ends.
+- **Recursive search memory is bounded.** Matches stream through a bounded channel with backpressure (the walker waits for the UI instead of buffering hundreds of thousands of results — or dropping them).
+- **The built-in terminal recovers from a failed WebView2 initialization.** A transient init error (e.g. the runtime updating itself) was cached for the whole session, leaving the terminal dead; it now retries on the next open, and the background warm-up no longer surfaces unobserved task exceptions.
+
+### File operations
+
+- **Extracted files inherit the archive's Mark of the Web.** Extracting a downloaded zip (or opening a file straight from inside one) propagates its `Zone.Identifier` like Explorer does, so SmartScreen and "file from the internet" checks still apply to executables. Locally-created archives are unaffected.
+
 ## 0.9.1
 
 ### Performance

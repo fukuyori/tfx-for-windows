@@ -59,6 +59,9 @@ public partial class MainWindow
             FolderTree.Items.Add(item);
         }
 
+        // The tree was rebuilt from scratch — force the next sync to re-run
+        // even if the pane path is unchanged.
+        _lastFolderTreeSyncPath = null;
         QueueFolderTreeSyncToActivePane();
     }
 
@@ -208,9 +211,22 @@ public partial class MainWindow
         }
     }
 
+    // Last path the tree was synced to. Selection changes call
+    // UpdateActivePane → QueueFolderTreeSyncToActivePane on every arrow-key
+    // press; the sync itself walks and enumerates folders on the UI thread, so
+    // skip it entirely while the pane's path hasn't changed. Reset to null
+    // whenever the tree is rebuilt (LoadDrives) so the next sync re-runs.
+    private string? _lastFolderTreeSyncPath;
+
     private void SyncFolderTreeToActivePane()
     {
-        SyncFolderTreeToPath(GetCurrentPath(_activeGrid));
+        var path = GetCurrentPath(_activeGrid);
+        if (string.Equals(path, _lastFolderTreeSyncPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        SyncFolderTreeToPath(path);
+        _lastFolderTreeSyncPath = path;
     }
 
     private void QueueFolderTreeSyncToActivePane()

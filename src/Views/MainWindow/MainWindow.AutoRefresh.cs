@@ -9,6 +9,13 @@ public partial class MainWindow
 {
     private static readonly TimeSpan AutoRefreshDebounce = TimeSpan.FromMilliseconds(150);
     private static readonly TimeSpan AutoRefreshPeriodic = TimeSpan.FromSeconds(30);
+    private const long AutoRefreshMaxWaitMs = 2000;
+
+    // First KickDebounce timestamp of the current postponement run (0 = none
+    // pending). Lets the debounce fire after AutoRefreshMaxWaitMs even while
+    // events keep arriving.
+    private long _leftDebounceFirstKick;
+    private long _rightDebounceFirstKick;
 
     private bool _windowActive = true;
     private bool _leftRefreshInFlight;
@@ -33,6 +40,7 @@ public partial class MainWindow
         _leftDebounceTimer.Tick += (_, _) =>
         {
             _leftDebounceTimer!.Stop();
+            _leftDebounceFirstKick = 0;
             _ = ReloadDiffAsync(LeftGrid);
         };
 
@@ -40,6 +48,7 @@ public partial class MainWindow
         _rightDebounceTimer.Tick += (_, _) =>
         {
             _rightDebounceTimer!.Stop();
+            _rightDebounceFirstKick = 0;
             _ = ReloadDiffAsync(RightGrid);
         };
 
@@ -225,8 +234,40 @@ public partial class MainWindow
         {
             return;
         }
+
+        // Trailing debounce with a max wait: events arriving faster than the
+        // debounce interval (a long copy, a build writing output) would
+        // otherwise keep pushing the reload out forever, so the pane never
+        // updates until the burst ends. After 2s of continuous postponement,
+        // fire anyway.
+        var now = Environment.TickCount64;
+        var first = pane == Pane.Left ? _leftDebounceFirstKick : _rightDebounceFirstKick;
+        if (first == 0)
+        {
+            SetDebounceFirstKick(pane, now);
+        }
+        else if (now - first > AutoRefreshMaxWaitMs)
+        {
+            timer.Stop();
+            SetDebounceFirstKick(pane, 0);
+            _ = ReloadDiffAsync(GridOf(pane));
+            return;
+        }
+
         timer.Stop();
         timer.Start();
+    }
+
+    private void SetDebounceFirstKick(Pane pane, long value)
+    {
+        if (pane == Pane.Left)
+        {
+            _leftDebounceFirstKick = value;
+        }
+        else
+        {
+            _rightDebounceFirstKick = value;
+        }
     }
 
     private async Task ReloadDiffAsync(DataGrid grid)
@@ -364,12 +405,29 @@ public partial class MainWindow
             }
         }
 
+        // Names still present after the removal pass. Lets an insertion skip
+        // the linear FindIndexFrom scan — without it, a burst of new files
+        // landing at the top of the list (downloads, log rotation) cost a full
+        // scan per row, O(n²) across the refresh.
+        var existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in existing)
+        {
+            existingNames.Add(item.Name);
+        }
+
         for (var i = 0; i < newItems.Count; i++)
         {
             var n = newItems[i];
             if (i < existing.Count && NameEquals(existing[i].Name, n.Name))
             {
                 MergeMutable(existing[i], n);
+                continue;
+            }
+
+            if (!existingNames.Contains(n.Name))
+            {
+                existing.Insert(i, n);
+                existingNames.Add(n.Name);
                 continue;
             }
 

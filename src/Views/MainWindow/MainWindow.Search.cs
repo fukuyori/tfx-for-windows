@@ -185,8 +185,16 @@ public partial class MainWindow
         bool showHidden,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token)
     {
-        var channel = System.Threading.Channels.Channel.CreateUnbounded<FileItem>(
-            new System.Threading.Channels.UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
+        // Bounded with backpressure: an unbounded channel let a search that
+        // matches hundreds of thousands of entries grow memory without limit
+        // while the UI consumed slower than the walker produced.
+        var channel = System.Threading.Channels.Channel.CreateBounded<FileItem>(
+            new System.Threading.Channels.BoundedChannelOptions(4096)
+            {
+                SingleReader = true,
+                SingleWriter = true,
+                FullMode = System.Threading.Channels.BoundedChannelFullMode.Wait,
+            });
 
         _ = Task.Run(() =>
         {
@@ -291,7 +299,14 @@ public partial class MainWindow
 
                 if (compareInfo.IndexOf(name, query, matchOpts) < 0) continue;
 
-                writer.TryWrite(BuildSearchResult(info, root));
+                // Blocking write (the walker runs on its own Task.Run thread):
+                // when the channel is full this waits for the UI to drain it
+                // instead of dropping the match like TryWrite would.
+                var write = writer.WriteAsync(BuildSearchResult(info, root), token);
+                if (!write.IsCompletedSuccessfully)
+                {
+                    write.AsTask().GetAwaiter().GetResult();
+                }
             }
         }
         finally

@@ -1031,6 +1031,17 @@ public partial class MainWindow
                 {
                     Directory.CreateDirectory(destination);
                     ZipFile.ExtractToDirectory(fullPath, destination);
+
+                    // Explorer-style MOTW propagation: files from a downloaded
+                    // archive inherit its Zone.Identifier so SmartScreen still
+                    // applies when they are run.
+                    if (FsHelpers.ReadZoneIdentifier(fullPath) is { } zone)
+                    {
+                        foreach (var extracted in Directory.EnumerateFiles(destination, "*", System.IO.SearchOption.AllDirectories))
+                        {
+                            FsHelpers.WriteZoneIdentifier(extracted, zone);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {

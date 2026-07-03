@@ -100,7 +100,7 @@ public partial class MainWindow
             // the shell. The _terminalPaneOpen guard keeps the warm-up resize from
             // starting a shell before the user actually opens the pane.
             Dispatcher.BeginInvoke(
-                () => _ = EnsureTerminalWebViewAsync(),
+                () => _ = WarmUpTerminalWebViewAsync(),
                 DispatcherPriority.ApplicationIdle);
         }
     }
@@ -212,8 +212,33 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>
+    /// Background warm-up wrapper: observes (and swallows) init failures so
+    /// they don't land as unobserved task exceptions. A real open goes through
+    /// <see cref="EnsureTerminalStartedAsync"/>, which retries and reports.
+    /// </summary>
+    private async Task WarmUpTerminalWebViewAsync()
+    {
+        try
+        {
+            await EnsureTerminalWebViewAsync();
+        }
+        catch
+        {
+        }
+    }
+
     private Task<bool> EnsureTerminalWebViewAsync()
     {
+        // A failed init must not be cached forever: a transient WebView2 error
+        // (runtime updating itself, disk pressure) would otherwise leave the
+        // terminal dead for the rest of the session. Drop the faulted task so
+        // the next open retries from scratch.
+        if (_terminalWebInit is { IsCompleted: true } completed
+            && (completed.IsFaulted || completed.IsCanceled))
+        {
+            _terminalWebInit = null;
+        }
         _terminalWebInit ??= InitTerminalWebViewAsync();
         return _terminalWebInit;
     }

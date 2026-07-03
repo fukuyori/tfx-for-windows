@@ -144,8 +144,12 @@ public partial class MainWindow
             if (item.IsDirectory)
             {
                 // Aggregate: directory is "M" if any tracked descendant has a
-                // worktree change, "?" if it contains untracked entries.
-                item.GitStatusText = AggregateDirectory(status, rel);
+                // worktree change, "?" if it contains untracked entries. The
+                // per-status dictionary makes this an O(1) lookup per row.
+                item.GitStatusText = rel.Length != 0
+                    && status.DirectoryBadges.TryGetValue(rel.TrimEnd('/'), out var badge)
+                        ? badge
+                        : "";
             }
             else
             {
@@ -177,40 +181,6 @@ public partial class MainWindow
         var rest = fullPath[normalizedRoot.Length..]
             .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         return rest.Replace('\\', '/');
-    }
-
-    private static string AggregateDirectory(GitWorkingCopyStatus status, string dirRel)
-    {
-        // Empty rel means the repo root directory itself — we never tag the
-        // current folder, only entries within it.
-        if (string.IsNullOrEmpty(dirRel))
-        {
-            return "";
-        }
-
-        var prefix = dirRel.EndsWith('/') ? dirRel : dirRel + "/";
-        var sawUntracked = false;
-        var sawTracked = false;
-        foreach (var pair in status.Files)
-        {
-            if (!pair.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-            if (pair.Value == GitFileStatus.Untracked)
-            {
-                sawUntracked = true;
-            }
-            else if (pair.Value != GitFileStatus.Ignored)
-            {
-                sawTracked = true;
-            }
-            if (sawTracked) break;
-        }
-
-        if (sawTracked) return "M";
-        if (sawUntracked) return "?";
-        return "";
     }
 
     private void UpdateGitBranchText()

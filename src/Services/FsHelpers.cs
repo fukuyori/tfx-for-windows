@@ -168,6 +168,40 @@ internal static class FsHelpers
         }
     }
 
+    /// <summary>
+    /// Reads the file's Zone.Identifier alternate data stream (Mark of the
+    /// Web), or null when absent / unreadable (e.g. non-NTFS volume).
+    /// </summary>
+    public static string? ReadZoneIdentifier(string path)
+    {
+        try
+        {
+            var text = File.ReadAllText(path + ":Zone.Identifier");
+            return string.IsNullOrWhiteSpace(text) ? null : text;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Explorer-style Mark-of-the-Web propagation: a file extracted from a
+    /// downloaded archive inherits the archive's zone, so SmartScreen and the
+    /// "file from the internet" checks still apply when it is run. Best
+    /// effort — ADS requires NTFS.
+    /// </summary>
+    public static void WriteZoneIdentifier(string path, string zoneContent)
+    {
+        try
+        {
+            File.WriteAllText(path + ":Zone.Identifier", zoneContent);
+        }
+        catch
+        {
+        }
+    }
+
     public static bool SamePath(string left, string right)
     {
         try

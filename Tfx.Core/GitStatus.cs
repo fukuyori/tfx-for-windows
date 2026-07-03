@@ -21,7 +21,48 @@ public enum GitFileStatus
 public sealed record GitWorkingCopyStatus(
     string Root,
     string? Branch,
-    IReadOnlyDictionary<string, GitFileStatus> Files);
+    IReadOnlyDictionary<string, GitFileStatus> Files)
+{
+    private Dictionary<string, string>? _directoryBadges;
+
+    /// <summary>
+    /// Badge per directory rel path (every ancestor of a changed file, no
+    /// trailing slash): "M" when the directory contains any tracked change,
+    /// "?" when it only contains untracked entries. Built lazily once per
+    /// status snapshot (O(changed files × depth)) so per-row lookups are O(1)
+    /// — scanning all of <see cref="Files"/> for each directory row was
+    /// O(rows × changed files) and noticeably janky on large repositories.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> DirectoryBadges => _directoryBadges ??= BuildDirectoryBadges();
+
+    private Dictionary<string, string> BuildDirectoryBadges()
+    {
+        var badges = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in Files)
+        {
+            if (pair.Value == GitFileStatus.Ignored)
+            {
+                continue;
+            }
+            var badge = pair.Value == GitFileStatus.Untracked ? "?" : "M";
+            var slash = pair.Key.LastIndexOf('/');
+            while (slash > 0)
+            {
+                var dir = pair.Key[..slash];
+                if (badges.TryGetValue(dir, out var existing) && (existing == "M" || existing == badge))
+                {
+                    // This ancestor chain is already stamped at least this
+                    // strongly ("M" wins over "?") — the walk that set it also
+                    // covered everything above it.
+                    break;
+                }
+                badges[dir] = badge;
+                slash = pair.Key.LastIndexOf('/', slash - 1);
+            }
+        }
+        return badges;
+    }
+}
 
 /// <summary>
 /// Line-oriented parser for <c>git status --porcelain=v2 --untracked-files=normal</c>.

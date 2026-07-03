@@ -107,6 +107,54 @@ public class GitStatusParserTests
         Assert.True(r.Files.ContainsKey("src/file with spaces.cs"));
     }
 
+    [Fact]
+    public void DirectoryBadges_TrackedChangeMarksAncestors()
+    {
+        var output = "1 .M N... 100644 100644 100644 a b src/deep/inner/file.cs\n";
+        var r = GitStatusParser.Parse("/r", output);
+        Assert.Equal("M", r.DirectoryBadges["src"]);
+        Assert.Equal("M", r.DirectoryBadges["src/deep"]);
+        Assert.Equal("M", r.DirectoryBadges["src/deep/inner"]);
+        Assert.False(r.DirectoryBadges.ContainsKey("src/deep/inner/file.cs"));
+    }
+
+    [Fact]
+    public void DirectoryBadges_UntrackedOnlyIsQuestionMark_TrackedWins()
+    {
+        var output =
+            "? docs/new.txt\n" +
+            "1 .M N... 100644 100644 100644 a b docs/api/changed.md\n";
+        var r = GitStatusParser.Parse("/r", output);
+        // docs contains both an untracked file and (via docs/api) a tracked
+        // change — the tracked change wins.
+        Assert.Equal("M", r.DirectoryBadges["docs"]);
+        Assert.Equal("M", r.DirectoryBadges["docs/api"]);
+    }
+
+    [Fact]
+    public void DirectoryBadges_UntrackedOnly()
+    {
+        var output = "? docs/new.txt\n";
+        var r = GitStatusParser.Parse("/r", output);
+        Assert.Equal("?", r.DirectoryBadges["docs"]);
+    }
+
+    [Fact]
+    public void DirectoryBadges_IgnoredFilesExcluded()
+    {
+        var output = "! bin/out.dll\n";
+        var r = GitStatusParser.Parse("/r", output);
+        Assert.False(r.DirectoryBadges.ContainsKey("bin"));
+    }
+
+    [Fact]
+    public void DirectoryBadges_RootLevelFileAddsNoDirectories()
+    {
+        var output = "1 .M N... 100644 100644 100644 a b rootfile.cs\n";
+        var r = GitStatusParser.Parse("/r", output);
+        Assert.Empty(r.DirectoryBadges);
+    }
+
     [Theory]
     [InlineData(GitFileStatus.Modified, "M")]
     [InlineData(GitFileStatus.Added, "A")]

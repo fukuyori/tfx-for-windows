@@ -106,6 +106,10 @@ internal static class ArchiveBrowser
         Directory.CreateDirectory(destFolder);
 
         var result = new List<string>();
+        // Propagate the archive's Mark of the Web (if any) onto every file we
+        // extract — entries opened straight from a downloaded zip keep the
+        // SmartScreen / attachment checks Explorer extraction would give them.
+        var zone = FsHelpers.ReadZoneIdentifier(archiveFile);
         using var archive = ZipFile.OpenRead(archiveFile);
 
         foreach (var raw in entryPaths)
@@ -156,6 +160,10 @@ internal static class ArchiveBrowser
                     {
                         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                         entry.ExtractToFile(target, overwrite: true);
+                        if (zone is not null)
+                        {
+                            FsHelpers.WriteZoneIdentifier(target, zone);
+                        }
                     }
                 }
 
@@ -184,6 +192,10 @@ internal static class ArchiveBrowser
                     continue;
                 }
                 entry.ExtractToFile(target, overwrite: true);
+                if (zone is not null)
+                {
+                    FsHelpers.WriteZoneIdentifier(target, zone);
+                }
                 result.Add(target);
             }
         }
