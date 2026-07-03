@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.4
+
+### Fixes
+
+- **Clicking a pinned folder now reliably navigates the file pane.** Two causes fixed: the pin reorder drag started on 1–2 px of mouse jitter (swallowing the click before it could navigate — reordering now requires the standard drag distance), and clicking the already-highlighted pin did nothing because navigation only ran on a selection *change* (it now also runs on the completed click).
+
+### Archive browsing
+
+- **Files inside a .zip can now be copied with Ctrl+C.** Selected entries (files or whole folders) are extracted to the session temp folder — the same mechanism as dragging them out, including the Zip-Slip guard and Mark-of-the-Web propagation — and the real paths go on the clipboard, so pasting works in tfx, Explorer, and other apps. Note the temp files live for the tfx session: paste before closing tfx. Cut remains unavailable (archives are browsed read-only) and now says so in the status bar.
+
 ## 0.9.3
 
 ### Icon view

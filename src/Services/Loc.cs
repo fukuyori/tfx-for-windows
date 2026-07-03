@@ -193,6 +193,7 @@ internal static class Loc
         ["Config warning: {0}"] = "設定の警告: {0}",
         ["Command failed: {0}"] = "コマンドの実行に失敗しました: {0}",
         ["Clipboard is in use by another application"] = "クリップボードが他のアプリケーションで使用中です",
+        ["Archive entries can't be cut"] = "アーカイブ内の項目は切り取りできません",
         ["Delete failed: {0}"] = "削除に失敗しました: {0}",
         ["Operation failed: {0}"] = "操作に失敗しました: {0}",
         ["Compressing to {0}..."] = "{0} に圧縮しています...",

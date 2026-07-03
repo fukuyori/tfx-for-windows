@@ -105,12 +105,54 @@ public partial class MainWindow
         }
     }
 
+    private Point _pinnedMouseDownPoint;
+    private bool _pinnedMouseDownOnItem;
+
+    private void PinnedList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _pinnedMouseDownPoint = e.GetPosition(PinnedList);
+        _pinnedMouseDownOnItem =
+            FindVisualAncestor<ListBoxItem>(e.OriginalSource as DependencyObject) is not null;
+    }
+
+    private void PinnedList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        _pinnedMouseDownOnItem = false;
+        // SelectionChanged doesn't fire when the clicked pin is already the
+        // selected (highlighted) one, so navigation from that event alone made
+        // some clicks do nothing. Navigate from the completed click itself;
+        // when SelectionChanged already handled it, the pane is at that path
+        // by now and this is a no-op.
+        if (FindVisualAncestor<ListBoxItem>(e.OriginalSource as DependencyObject) is { Content: string path }
+            && !FsHelpers.SamePath(GetCurrentPath(_activeGrid), path)
+            && Directory.Exists(path))
+        {
+            Navigate(_activeGrid, path, true);
+        }
+    }
+
     private void PinnedList_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton == MouseButtonState.Pressed && PinnedList.SelectedItem is string path)
+        if (e.LeftButton != MouseButtonState.Pressed
+            || !_pinnedMouseDownOnItem
+            || PinnedList.SelectedItem is not string path)
         {
-            DragDrop.DoDragDrop(PinnedList, path, DragDropEffects.Move);
+            return;
         }
+
+        // Standard drag threshold. Without it, the 1–2 px of jitter in a
+        // normal click immediately started an in-place reorder drag, which
+        // swallowed the mouse-up — the click then neither changed the
+        // selection nor navigated ("clicking a pin sometimes does nothing").
+        var position = e.GetPosition(PinnedList);
+        if (Math.Abs(position.X - _pinnedMouseDownPoint.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(position.Y - _pinnedMouseDownPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        _pinnedMouseDownOnItem = false; // one drag per press
+        DragDrop.DoDragDrop(PinnedList, path, DragDropEffects.Move);
     }
 
     private void PinnedList_DragOver(object sender, DragEventArgs e)

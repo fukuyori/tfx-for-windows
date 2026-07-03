@@ -137,6 +137,25 @@ public partial class MainWindow
             return;
         }
 
+        // Entries inside a .zip: their virtual "archive|inner" paths mean
+        // nothing to the clipboard or other apps. Extract them to the session
+        // temp folder (the same mechanism dragging them out uses) and copy
+        // those real paths instead. Cut stays unavailable — archives are
+        // browsed read-only.
+        if (paths.Any(ArchivePath.Contains))
+        {
+            if (cut)
+            {
+                SetStatus(Loc.T("Archive entries can't be cut"));
+                return;
+            }
+            paths = ResolveDragPaths(paths);
+            if (paths.Length == 0)
+            {
+                return;
+            }
+        }
+
         var collection = new StringCollection();
         collection.AddRange(paths);
         if (!SafeClipboard.SetFileDropList(collection, cut))
