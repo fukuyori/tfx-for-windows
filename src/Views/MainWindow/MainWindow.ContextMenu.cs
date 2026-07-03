@@ -94,10 +94,10 @@ public partial class MainWindow
         var hasZipSelection = selection.Any(i => !i.IsDirectory && System.IO.Path.GetExtension(i.FullPath).Equals(".zip", StringComparison.OrdinalIgnoreCase) && !ArchivePath.Contains(i.FullPath));
         // Paste handles files, or — when the clipboard holds no files — creates a
         // file from its content (CSV / image / text).
-        var hasClipboard = Clipboard.ContainsFileDropList()
-            || Clipboard.ContainsData(DataFormats.CommaSeparatedValue)
-            || Clipboard.ContainsImage()
-            || Clipboard.ContainsText();
+        var hasClipboard = SafeClipboard.ContainsFileDropList()
+            || SafeClipboard.ContainsData(DataFormats.CommaSeparatedValue)
+            || SafeClipboard.ContainsImage()
+            || SafeClipboard.ContainsText();
         var inArchive = ArchivePath.Contains(GetCurrentPath(grid));
         var selectionHasArchive = selection.Any(s => ArchivePath.Contains(s.FullPath));
         var writableContext = !inArchive && !selectionHasArchive;
@@ -267,15 +267,15 @@ public partial class MainWindow
         {
             root.Items.Add(MakePasteItem(Loc.T("As image (.png)"), PasteAsImage));
         }
-        if (Clipboard.ContainsData(DataFormats.Html))
+        if (SafeClipboard.ContainsData(DataFormats.Html))
         {
             root.Items.Add(MakePasteItem(Loc.T("As HTML (.html)"), PasteAsHtml));
         }
-        if (Clipboard.ContainsData(DataFormats.Rtf))
+        if (SafeClipboard.ContainsData(DataFormats.Rtf))
         {
             root.Items.Add(MakePasteItem(Loc.T("As rich text (.rtf)"), PasteAsRichText));
         }
-        if (Clipboard.ContainsText())
+        if (SafeClipboard.ContainsText())
         {
             root.Items.Add(MakePasteItem(Loc.T("As text (.txt)"), PasteAsPlainText));
         }

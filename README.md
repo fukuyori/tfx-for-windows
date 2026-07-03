@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.8.7
+Version: 0.9.0
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -58,7 +58,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.8.7 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.0 |
 +---------------------------------------------------------------------+
 ```
 

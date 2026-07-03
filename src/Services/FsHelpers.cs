@@ -81,10 +81,70 @@ internal static class FsHelpers
         }
     }
 
+    /// <summary>
+    /// Hidden check for an entry produced by directory enumeration, whose
+    /// attributes are already populated — no file-system round trip.
+    /// </summary>
+    public static bool IsHidden(FileSystemInfo info)
+    {
+        try
+        {
+            if ((info.Attributes & FileAttributes.Hidden) != 0)
+            {
+                return true;
+            }
+        }
+        catch
+        {
+        }
+        return info.Name.Length > 1 && info.Name.StartsWith('.');
+    }
+
     private static bool IsDotHidden(string path)
     {
         var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         return name.Length > 1 && name.StartsWith('.');
+    }
+
+    private static readonly string[] ReservedDeviceNames =
+    [
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    ];
+
+    /// <summary>
+    /// Validates a user-entered file name as a single path component. Rejects
+    /// names Windows can't create (invalid characters, reserved device names,
+    /// trailing period/space) and — because separators are invalid characters —
+    /// anything like <c>..\x</c> or <c>sub\x</c> that would silently escape the
+    /// folder once handed to <see cref="Path.Combine(string, string)"/>.
+    /// </summary>
+    public static bool IsValidFileName(string name, out string error)
+    {
+        error = "";
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            error = Loc.T("Name is empty");
+            return false;
+        }
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            error = Loc.T("Names can't contain any of \\ / : * ? \" < > |");
+            return false;
+        }
+        if (name[^1] is '.' or ' ')
+        {
+            error = Loc.T("Names can't end with a period or space");
+            return false;
+        }
+        var stem = name.Split('.', 2)[0].TrimEnd(' ');
+        if (ReservedDeviceNames.Contains(stem, StringComparer.OrdinalIgnoreCase))
+        {
+            error = Loc.F("\"{0}\" is a reserved device name", stem);
+            return false;
+        }
+        return true;
     }
 
     public static string NextAvailablePath(string path)

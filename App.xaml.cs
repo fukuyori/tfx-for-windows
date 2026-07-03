@@ -9,6 +9,9 @@ namespace Tfx;
 /// </summary>
 public partial class App : Application
 {
+    private long _dispatcherExceptionWindowStart;
+    private int _dispatcherExceptionCount;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -35,7 +38,33 @@ public partial class App : Application
     private void InstallCrashLogging()
     {
         DispatcherUnhandledException += (_, args) =>
+        {
             LogCrash("DispatcherUnhandledException", args.Exception);
+
+            // Keep the app alive: most UI-thread exceptions here (clipboard
+            // contention, transient I/O) are recoverable, and a file manager
+            // dying mid-session is worse than a stale pane. An exception storm
+            // (e.g. thrown on every render tick) is not recoverable — after a
+            // burst of failures fall through to the normal crash so the user
+            // isn't stuck clicking dialogs.
+            var now = Environment.TickCount64;
+            if (now - _dispatcherExceptionWindowStart > 30_000)
+            {
+                _dispatcherExceptionWindowStart = now;
+                _dispatcherExceptionCount = 0;
+            }
+            if (++_dispatcherExceptionCount > 5)
+            {
+                return;
+            }
+
+            args.Handled = true;
+            MessageBox.Show(
+                args.Exception.Message,
+                "tfx - unexpected error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        };
 
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
             LogCrash("AppDomain.UnhandledException (terminating=" + args.IsTerminating + ")",

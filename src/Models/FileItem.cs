@@ -183,9 +183,16 @@ public sealed class FileItem : INotifyPropertyChanged
         LargeIcon = loadLargeIcon ? IconCache.GetFolderIconLarge() : null
     };
 
-    public static FileItem FromDirectory(string path, bool loadSmallIcon, bool loadLargeIcon, bool includeOwner)
+    public static FileItem FromDirectory(string path, bool loadSmallIcon, bool loadLargeIcon, bool includeOwner) =>
+        FromDirectory(new DirectoryInfo(path), loadSmallIcon, loadLargeIcon, includeOwner);
+
+    /// <summary>
+    /// Builds a row from a <see cref="DirectoryInfo"/> that already carries its
+    /// metadata (attributes, timestamps) — e.g. one produced by directory
+    /// enumeration — so no extra file-system round trip happens per entry.
+    /// </summary>
+    public static FileItem FromDirectory(DirectoryInfo info, bool loadSmallIcon, bool loadLargeIcon, bool includeOwner)
     {
-        var info = new DirectoryInfo(path);
         var modified = SafeWriteTime(info);
         var created = SafeCreationTime(info);
         return new FileItem
@@ -247,9 +254,16 @@ public sealed class FileItem : INotifyPropertyChanged
         };
     }
 
-    public static FileItem FromFile(string path, bool loadSmallIcon, bool loadLargeIcon, bool includeOwner)
+    public static FileItem FromFile(string path, bool loadSmallIcon, bool loadLargeIcon, bool includeOwner) =>
+        FromFile(new FileInfo(path), loadSmallIcon, loadLargeIcon, includeOwner);
+
+    /// <summary>
+    /// Builds a row from a <see cref="FileInfo"/> that already carries its
+    /// metadata (size, attributes, timestamps) — e.g. one produced by directory
+    /// enumeration — so no extra file-system round trip happens per entry.
+    /// </summary>
+    public static FileItem FromFile(FileInfo info, bool loadSmallIcon, bool loadLargeIcon, bool includeOwner)
     {
-        var info = new FileInfo(path);
         var modified = SafeWriteTime(info);
         var created = SafeCreationTime(info);
         return new FileItem

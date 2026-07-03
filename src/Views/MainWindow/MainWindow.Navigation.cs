@@ -61,14 +61,16 @@ public partial class MainWindow
     {
         var pane = PaneOf(grid);
         var path = GetCurrentPath(grid);
+        // Keep the current rows visible while the new folder loads (Explorer
+        // behavior) — the swap happens in one step below. Clearing here blanked
+        // the pane for the duration of the load.
         var target = ItemsOf(pane);
-        target.Clear();
-        var loadLargeIcons = _settings.ViewMode == ViewMode.Icons;
-        var loadSmallIcons = !loadLargeIcons;
+        // Shell icons are never rendered (both views bind the IconGlyph font
+        // glyph), so skip SHGetFileInfo per row entirely.
         var options = new DirectoryLoadOptions(
             ShowHidden,
-            loadSmallIcons,
-            loadLargeIcons,
+            LoadSmallIcons: false,
+            LoadLargeIcons: false,
             IsFileColumnVisible("Owner"));
         SetPendingSelectionName(pane, selectName);
         var cts = ReplaceReloadToken(pane);

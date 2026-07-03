@@ -28,25 +28,58 @@ internal static class DirectoryLoader
             items.Add(FileItem.Parent(parent.FullName, options.LoadSmallIcons, options.LoadLargeIcons));
         }
 
-        foreach (var directory in FsHelpers.SafeEnumerateDirectories(path).OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase))
+        // One FindFirstFile-backed pass that surfaces every entry with its
+        // attributes, size and timestamps already populated. Building rows from
+        // these infos avoids the per-entry stat calls (hidden check + FileInfo
+        // metadata) that dominate load time on large folders and SMB shares.
+        var directories = new List<DirectoryInfo>();
+        var files = new List<FileInfo>();
+        try
+        {
+            var enumerationOptions = new EnumerationOptions
+            {
+                IgnoreInaccessible = true,
+                AttributesToSkip = FileAttributes.None,
+            };
+            foreach (var entry in new DirectoryInfo(path).EnumerateFileSystemInfos("*", enumerationOptions))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!options.ShowHidden && FsHelpers.IsHidden(entry))
+                {
+                    continue;
+                }
+
+                if (entry is DirectoryInfo directory)
+                {
+                    directories.Add(directory);
+                }
+                else if (entry is FileInfo file)
+                {
+                    files.Add(file);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // Unreadable / vanished folder: show what we have (usually just "..").
+        }
+
+        directories.Sort(static (a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Name, b.Name));
+        files.Sort(static (a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Name, b.Name));
+
+        foreach (var directory in directories)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!options.ShowHidden && FsHelpers.IsHidden(directory))
-            {
-                continue;
-            }
-
             items.Add(FileItem.FromDirectory(directory, options.LoadSmallIcons, options.LoadLargeIcons, options.IncludeOwner));
         }
 
-        foreach (var file in FsHelpers.SafeEnumerateFiles(path).OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase))
+        foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!options.ShowHidden && FsHelpers.IsHidden(file))
-            {
-                continue;
-            }
-
             items.Add(FileItem.FromFile(file, options.LoadSmallIcons, options.LoadLargeIcons, options.IncludeOwner));
         }
 

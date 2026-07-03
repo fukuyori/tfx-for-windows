@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.9.0
+
+### Stability
+
+- **Clipboard contention no longer crashes the app.** All clipboard access goes through a retrying wrapper, so `CLIPBRD_E_CANT_OPEN` (clipboard-history tools, RDP, Office holding the clipboard) is absorbed; a failed Copy/Cut now reports "Clipboard is in use by another application" instead of taking the process down.
+- **Settings saves can't crash or corrupt.** `settings.json` is written atomically (temp file + swap) and a locked file / full disk surfaces as a status message instead of an unhandled exception.
+- **Unhandled UI-thread exceptions now recover.** They are logged to `crash.log` as before, then handled with a warning dialog so the session survives; a rapid exception storm still terminates as a genuine crash.
+
+### File operations
+
+- **Delete runs through the Windows shell in the background.** Recycle-Bin and permanent deletes use `IFileOperation` on a dedicated thread: the standard shell progress dialog (with cancel) appears for long deletes, read-only items get the native prompts, deleting to a volume without a Recycle Bin asks before permanently deleting, and the UI no longer freezes on multi-gigabyte trees. Recycle-Bin deletes record an undo entry.
+- **Rename validates the new name.** Path separators, reserved device names (`CON`, `NUL`, `COM1`…), and trailing periods/spaces are rejected with a clear message — a name like `..\x` can no longer silently move the item out of the folder. Renaming to a name that already exists is refused (previously it silently became `name (2)`), and a case-only rename (`readme.txt` → `README.txt`) now works instead of producing a `(2)` copy.
+- **Zip compression and extraction run in the background** with status messages, so the window stays responsive. Compression no longer follows junctions/symlinks (a self-referencing link used to recurse forever). A failed extraction removes its half-extracted folder, reports the failure, and no longer stops the remaining archives.
+- Copy/move operations that fail to start (e.g. the destination vanished) now report the error in the status bar instead of failing silently.
+
+### Performance
+
+- **Folder listing is much faster on large folders and network shares.** Enumeration now uses a single metadata-carrying pass (no extra per-file stat calls for hidden checks, size, or timestamps — previously up to three per entry), and search results reuse the enumerated metadata the same way.
+- Unused shell-icon loading (one `SHGetFileInfo` per row) was removed; the views render the theme font glyphs only.
+- Navigating no longer blanks the pane while the new folder loads — the current rows stay visible until the new listing is ready.
+
 ## 0.8.7
 
 ### Startup tabs

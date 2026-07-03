@@ -249,11 +249,12 @@ public partial class MainWindow
         }
 
         var target = ItemsOf(pane);
-        var loadLarge = _settings.ViewMode == ViewMode.Icons;
+        // Shell icons are never rendered (both views bind the IconGlyph font
+        // glyph), so skip SHGetFileInfo per row entirely.
         var options = new DirectoryLoadOptions(
             ShowHidden,
-            LoadSmallIcons: !loadLarge,
-            LoadLargeIcons: loadLarge,
+            LoadSmallIcons: false,
+            LoadLargeIcons: false,
             IncludeOwner: IsFileColumnVisible("Owner"));
 
         List<FileItem>? newItems;

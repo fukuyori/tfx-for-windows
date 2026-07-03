@@ -362,13 +362,17 @@ public partial class MainWindow
         var thread = new System.Threading.Thread(() =>
         {
             var aborted = false;
+            string? error = null;
             try
             {
                 ShellFileOperation.CopyOrMove(hwnd, sourcesCopy, destination, move, renameOnCollision, out aborted);
             }
-            catch
+            catch (Exception ex)
             {
-                // Best effort; failures surface via the shell's own error UI.
+                // E.g. the destination folder vanished between the paste and the
+                // shell resolving it — without a status the paste fails silently
+                // and the user believes the copy happened.
+                error = ex.Message;
             }
 
             Dispatcher.BeginInvoke(() =>
@@ -379,7 +383,11 @@ public partial class MainWindow
                 // clear-and-repopulate.
                 _ = ReloadDiffAsync(LeftGrid);
                 _ = ReloadDiffAsync(RightGrid);
-                if (aborted)
+                if (error is not null)
+                {
+                    SetStatus(Loc.F("Operation failed: {0}", error));
+                }
+                else if (aborted)
                 {
                     SetStatus(Loc.T("Operation cancelled or incomplete"));
                 }

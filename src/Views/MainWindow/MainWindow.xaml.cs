@@ -677,9 +677,24 @@ public partial class MainWindow : Window
         // when it's open so a drag-resize survives close/reopen and app restarts).
         CaptureTerminalSettings();
 
-        var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(_settingsPath, json);
+        // Settings are saved on nearly every UI action, so a locked file (virus
+        // scanner, backup/sync tool) or full disk must never take the app down.
+        // Write to a sibling temp file and swap it in so a failure mid-write
+        // can't leave a truncated settings.json behind.
+        try
+        {
+            var json = JsonSerializer.Serialize(_settings, SettingsJsonOptions);
+            var tempPath = _settingsPath + ".tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, _settingsPath, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            SetStatus(Loc.F("Failed to save settings: {0}", ex.Message));
+        }
     }
+
+    private static readonly JsonSerializerOptions SettingsJsonOptions = new() { WriteIndented = true };
 
     private bool ShowHidden
     {

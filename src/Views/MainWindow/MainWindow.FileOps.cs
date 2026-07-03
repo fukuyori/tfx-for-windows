@@ -10,8 +10,6 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Microsoft.VisualBasic.FileIO;
-using VbFileSystem = Microsoft.VisualBasic.FileIO.FileSystem;
 using Path = System.IO.Path;
 
 namespace Tfx;
@@ -141,7 +139,11 @@ public partial class MainWindow
 
         var collection = new StringCollection();
         collection.AddRange(paths);
-        Clipboard.SetFileDropList(collection);
+        if (!SafeClipboard.SetFileDropList(collection))
+        {
+            SetStatus(Loc.T("Clipboard is in use by another application"));
+            return;
+        }
         _cutBuffer = cut ? paths : [];
         SetStatus(cut ? Loc.F("Cut {0} item(s)", paths.Length) : Loc.F("Copied {0} item(s)", paths.Length));
     }
@@ -150,7 +152,7 @@ public partial class MainWindow
     {
         // Files on the clipboard → copy/move them (the usual case). Otherwise fall
         // back to creating a file from the clipboard content (image / CSV / text).
-        if (Clipboard.ContainsFileDropList())
+        if (SafeClipboard.ContainsFileDropList())
         {
             PasteFilesFromClipboard();
         }
@@ -163,7 +165,7 @@ public partial class MainWindow
     private void PasteFilesFromClipboard()
     {
         var destination = GetCurrentPath(_activeGrid);
-        var files = Clipboard.GetFileDropList().Cast<string>().ToArray();
+        var files = SafeClipboard.GetFileDropList().Cast<string>().ToArray();
         if (files.Length == 0)
         {
             return;
@@ -225,8 +227,8 @@ public partial class MainWindow
             }
             else
             {
-                var hasText = Clipboard.ContainsText();
-                var text = hasText ? Clipboard.GetText() : string.Empty;
+                var hasText = SafeClipboard.ContainsText();
+                var text = hasText ? SafeClipboard.GetText() : string.Empty;
 
                 if (hasText && TryGetUrl(text, out var url))
                 {
@@ -293,12 +295,12 @@ public partial class MainWindow
     /// <summary>Pastes the clipboard's text as a plain-text (.txt) file.</summary>
     private void PasteAsPlainText()
     {
-        if (!Clipboard.ContainsText())
+        if (!SafeClipboard.ContainsText())
         {
             SetStatus(Loc.T("Clipboard has no text"));
             return;
         }
-        var text = Clipboard.GetText();
+        var text = SafeClipboard.GetText();
         CreateClipboardFile(new UTF8Encoding(false).GetBytes(text), Loc.T("Pasted text") + ".txt");
     }
 
@@ -316,11 +318,11 @@ public partial class MainWindow
     private static bool TryGetClipboardRtf(out byte[] bytes)
     {
         bytes = [];
-        if (!Clipboard.ContainsData(DataFormats.Rtf))
+        if (!SafeClipboard.ContainsData(DataFormats.Rtf))
         {
             return false;
         }
-        var data = Clipboard.GetData(DataFormats.Rtf);
+        var data = SafeClipboard.GetData(DataFormats.Rtf);
         bytes = data switch
         {
             MemoryStream ms => ms.ToArray(),
@@ -355,7 +357,7 @@ public partial class MainWindow
 
     private void PasteAsUrl()
     {
-        if (!Clipboard.ContainsText() || !TryGetUrl(Clipboard.GetText(), out var url))
+        if (!SafeClipboard.ContainsText() || !TryGetUrl(SafeClipboard.GetText(), out var url))
         {
             SetStatus(Loc.T("Clipboard has no URL"));
             return;
@@ -378,12 +380,12 @@ public partial class MainWindow
     private static bool TryGetClipboardHtml(out string html)
     {
         html = "";
-        if (!Clipboard.ContainsData(DataFormats.Html))
+        if (!SafeClipboard.ContainsData(DataFormats.Html))
         {
             return false;
         }
 
-        var data = Clipboard.GetData(DataFormats.Html);
+        var data = SafeClipboard.GetData(DataFormats.Html);
         var cf = data switch
         {
             string s => s,
@@ -436,7 +438,7 @@ public partial class MainWindow
     {
         try
         {
-            return Clipboard.GetDataObject()?.GetFormats(false)
+            return SafeClipboard.GetDataObject()?.GetFormats(false)
                 .Any(f => f.Equals(name, StringComparison.OrdinalIgnoreCase)) ?? false;
         }
         catch
@@ -448,13 +450,13 @@ public partial class MainWindow
     private static bool ClipboardHasCsv() => ClipboardHasFormat("CSV");
 
     private static bool ClipboardHasImage() =>
-        Clipboard.ContainsImage()
+        SafeClipboard.ContainsImage()
         || ClipboardHasFormat("PNG")
         || ClipboardHasFormat("DeviceIndependentBitmap")
         || ClipboardHasFormat("Format17");
 
     private static bool ClipboardHasUrl() =>
-        Clipboard.ContainsText() && TryGetUrl(Clipboard.GetText(), out _);
+        SafeClipboard.ContainsText() && TryGetUrl(SafeClipboard.GetText(), out _);
 
     /// <summary>
     /// Spreadsheet apps (Excel, LibreOffice) put a CSV rendering on the clipboard.
@@ -468,7 +470,7 @@ public partial class MainWindow
         bytes = [];
 
         IDataObject? data;
-        try { data = Clipboard.GetDataObject(); }
+        try { data = SafeClipboard.GetDataObject(); }
         catch { return false; }
         if (data is null)
         {
@@ -500,9 +502,9 @@ public partial class MainWindow
             f.Contains("Biff", StringComparison.OrdinalIgnoreCase) ||
             f.Contains("XML Spreadsheet", StringComparison.OrdinalIgnoreCase) ||
             f.Contains("SYLK", StringComparison.OrdinalIgnoreCase));
-        if (looksLikeSpreadsheet && Clipboard.ContainsText())
+        if (looksLikeSpreadsheet && SafeClipboard.ContainsText())
         {
-            var tsv = Clipboard.GetText();
+            var tsv = SafeClipboard.GetText();
             if (!string.IsNullOrEmpty(tsv) && tsv.Contains('\t'))
             {
                 var csv = TsvToCsv(tsv);
@@ -590,7 +592,7 @@ public partial class MainWindow
         bytes = [];
 
         // 1) Raw PNG payload (best — preserves transparency).
-        if (Clipboard.ContainsData("PNG") && Clipboard.GetData("PNG") is MemoryStream pngStream)
+        if (SafeClipboard.ContainsData("PNG") && SafeClipboard.GetData("PNG") is MemoryStream pngStream)
         {
             bytes = pngStream.ToArray();
             if (bytes.Length > 0)
@@ -601,7 +603,7 @@ public partial class MainWindow
 
         // 2) Standard CF_BITMAP / CF_DIB via WPF.
         BitmapSource? image = null;
-        try { image = Clipboard.GetImage(); }
+        try { image = SafeClipboard.GetImage(); }
         catch { }
         if (image is not null && EncodePng(image, out bytes))
         {
@@ -614,7 +616,7 @@ public partial class MainWindow
         foreach (var format in new[] { "Format17" /* CF_DIBV5 */, DataFormats.Dib })
         {
             object? data = null;
-            try { data = Clipboard.GetData(format); }
+            try { data = SafeClipboard.GetData(format); }
             catch { }
             if (data is MemoryStream dib && DibToBitmap(dib.ToArray()) is { } src && EncodePng(src, out bytes))
             {
@@ -646,7 +648,7 @@ public partial class MainWindow
     /// <summary>
     /// Decodes a packed DIB (BITMAPINFOHEADER / V4 / V5 + pixels, no file header)
     /// by prepending a BMP file header. Handles the formats PDF viewers / scanners
-    /// place on the clipboard that <see cref="Clipboard.GetImage"/> can't read.
+    /// place on the clipboard that <see cref="SafeClipboard.GetImage"/> can't read.
     /// </summary>
     private static BitmapSource? DibToBitmap(byte[] dib)
     {
@@ -698,28 +700,54 @@ public partial class MainWindow
             return;
         }
 
-        var focusIndex = FirstSelectedListingIndex(items);
+        DeleteWithProgress(items, toRecycleBin: true);
+    }
 
-        foreach (var item in items)
+    /// <summary>
+    /// Deletes the items through the shell <c>IFileOperation</c> on a dedicated
+    /// STA thread (same pattern as <see cref="CopyOrMoveWithProgress"/>): the
+    /// shell shows progress + cancel for long deletes and its native prompts for
+    /// read-only items and Recycle-Bin-less volumes, and the UI thread never
+    /// blocks on a multi-gigabyte tree.
+    /// </summary>
+    private void DeleteWithProgress(FileItem[] items, bool toRecycleBin)
+    {
+        var paths = items.Select(i => i.FullPath).ToArray();
+        var focusIndex = FirstSelectedListingIndex(items);
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+
+        var thread = new System.Threading.Thread(() =>
         {
+            var aborted = false;
+            string? error = null;
             try
             {
-                if (item.IsDirectory)
-                {
-                    VbFileSystem.DeleteDirectory(item.FullPath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
-                }
-                else
-                {
-                    VbFileSystem.DeleteFile(item.FullPath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
-                }
+                ShellFileOperation.Delete(hwnd, paths, toRecycleBin, out aborted);
             }
             catch (Exception ex)
             {
-                SetStatus(ex.Message);
+                error = ex.Message;
             }
-        }
 
-        RefreshActivePaneAfterMutation(focusIndex);
+            Dispatcher.BeginInvoke(() =>
+            {
+                RefreshActivePaneAfterMutation(focusIndex);
+                if (error is not null)
+                {
+                    SetStatus(Loc.F("Delete failed: {0}", error));
+                }
+                else if (aborted)
+                {
+                    SetStatus(Loc.T("Operation cancelled or incomplete"));
+                }
+            });
+        })
+        {
+            IsBackground = true,
+            Name = "tfx-file-op"
+        };
+        thread.SetApartmentState(System.Threading.ApartmentState.STA);
+        thread.Start();
     }
 
     private void NewFolder()
@@ -815,8 +843,24 @@ public partial class MainWindow
             return;
         }
 
+        if (!FsHelpers.IsValidFileName(newName, out var nameError))
+        {
+            SetStatus(Loc.F("Invalid name: {0}", nameError));
+            return;
+        }
+
         var directory = Path.GetDirectoryName(item.FullPath) ?? GetCurrentPath(grid);
-        var target = FsHelpers.NextAvailablePath(Path.Combine(directory, newName));
+        var target = Path.Combine(directory, newName);
+
+        // A case-only change ("readme.txt" → "README.txt") targets the same file
+        // on a case-insensitive volume, so the existence probe would see the
+        // source itself; File/Directory.Move applies the in-place case change.
+        var caseOnly = string.Equals(newName, item.Name, StringComparison.OrdinalIgnoreCase);
+        if (!caseOnly && (File.Exists(target) || Directory.Exists(target)))
+        {
+            SetStatus(Loc.F("Rename failed: \"{0}\" already exists", newName));
+            return;
+        }
 
         try
         {
@@ -889,31 +933,10 @@ public partial class MainWindow
             return;
         }
 
-        var focusIndex = FirstSelectedListingIndex(items);
-
-        foreach (var item in items)
-        {
-            try
-            {
-                if (item.IsDirectory)
-                {
-                    Directory.Delete(item.FullPath, recursive: true);
-                }
-                else
-                {
-                    File.Delete(item.FullPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                SetStatus(ex.Message);
-            }
-        }
-
-        RefreshActivePaneAfterMutation(focusIndex);
+        DeleteWithProgress(items, toRecycleBin: false);
     }
 
-    private void CompressSelection()
+    private async void CompressSelection()
     {
         var items = ActiveSelectedItems().Where(i => !i.IsParent).ToArray();
         if (items.Length == 0)
@@ -926,45 +949,55 @@ public partial class MainWindow
             ? Path.GetFileNameWithoutExtension(items[0].Name)
             : Loc.T("Archive");
         var zipPath = FsHelpers.NextAvailablePath(Path.Combine(directory, $"{baseName}.zip"));
+        var sources = items.Select(i => (i.FullPath, i.Name, i.IsDirectory)).ToArray();
 
-        try
-        {
-            using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create);
-            foreach (var item in items)
-            {
-                if (item.IsDirectory)
-                {
-                    AddDirectoryToArchive(archive, item.FullPath, item.Name);
-                }
-                else
-                {
-                    archive.CreateEntryFromFile(item.FullPath, item.Name, CompressionLevel.Optimal);
-                }
-            }
+        SetStatus(Loc.F("Compressing to {0}...", Path.GetFileName(zipPath)));
 
-            Reload(_activeGrid);
-            SetStatus(Loc.F("Created {0}", zipPath));
-        }
-        catch (Exception ex)
+        // The whole zip is built on the thread pool — compressing gigabytes on
+        // the UI thread froze the window with no way to see progress.
+        var error = await Task.Run(() =>
         {
-            SetStatus(Loc.F("Compress failed: {0}", ex.Message));
             try
             {
-                if (File.Exists(zipPath))
+                using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create);
+                foreach (var (fullPath, name, isDirectory) in sources)
                 {
-                    File.Delete(zipPath);
+                    if (isDirectory)
+                    {
+                        AddDirectoryToArchive(archive, fullPath, name);
+                    }
+                    else
+                    {
+                        archive.CreateEntryFromFile(fullPath, name, CompressionLevel.Optimal);
+                    }
                 }
+                return null;
             }
-            catch
+            catch (Exception ex)
             {
+                try
+                {
+                    if (File.Exists(zipPath))
+                    {
+                        File.Delete(zipPath);
+                    }
+                }
+                catch
+                {
+                }
+                return ex.Message;
             }
-        }
+        });
+
+        Reload(_activeGrid);
+        SetStatus(error is null ? Loc.F("Created {0}", zipPath) : Loc.F("Compress failed: {0}", error));
     }
 
-    private void ExtractSelectedArchives()
+    private async void ExtractSelectedArchives()
     {
         var archives = ActiveSelectedItems()
             .Where(i => !i.IsParent && !i.IsDirectory && Path.GetExtension(i.FullPath).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+            .Select(i => (i.FullPath, i.Name))
             .ToArray();
 
         if (archives.Length == 0)
@@ -973,31 +1006,55 @@ public partial class MainWindow
             return;
         }
 
-        foreach (var archiveItem in archives)
-        {
-            var destination = FsHelpers.NextAvailablePath(Path.Combine(
-                GetCurrentPath(_activeGrid),
-                Path.GetFileNameWithoutExtension(archiveItem.Name)));
+        var directory = GetCurrentPath(_activeGrid);
+        SetStatus(Loc.F("Extracting {0} archive(s)...", archives.Length));
 
-            try
+        // Extraction runs on the thread pool (a large zip froze the UI thread).
+        // One failed archive no longer stops the rest: its half-extracted
+        // destination folder is removed so no silent debris is left behind, and
+        // the failure is reported alongside the successes.
+        var failed = await Task.Run(() =>
+        {
+            var failures = new List<string>();
+            foreach (var (fullPath, name) in archives)
             {
-                Directory.CreateDirectory(destination);
-                ZipFile.ExtractToDirectory(archiveItem.FullPath, destination);
+                var destination = FsHelpers.NextAvailablePath(Path.Combine(
+                    directory,
+                    Path.GetFileNameWithoutExtension(name)));
+
+                try
+                {
+                    Directory.CreateDirectory(destination);
+                    ZipFile.ExtractToDirectory(fullPath, destination);
+                }
+                catch (Exception ex)
+                {
+                    failures.Add($"{name} ({ex.Message})");
+                    // The destination was freshly created by us above, so a
+                    // partial extraction can be discarded wholesale.
+                    try { Directory.Delete(destination, recursive: true); } catch { }
+                }
             }
-            catch (Exception ex)
-            {
-                SetStatus(Loc.F("Extract failed: {0}", ex.Message));
-                return;
-            }
-        }
+            return failures;
+        });
 
         Reload(_activeGrid);
-        SetStatus(Loc.F("Extracted {0} archive(s)", archives.Length));
+        SetStatus(failed.Count == 0
+            ? Loc.F("Extracted {0} archive(s)", archives.Length)
+            : Loc.F("Extract failed: {0}", string.Join(", ", failed)));
     }
 
     private static void AddDirectoryToArchive(ZipArchive archive, string sourceDirectory, string entryRoot)
     {
-        var files = Directory.EnumerateFiles(sourceDirectory, "*", System.IO.SearchOption.AllDirectories);
+        // Skip reparse points: following junctions/symlinks here could recurse
+        // forever on a self-referencing link or silently pull the link target's
+        // entire tree into the archive.
+        var files = Directory.EnumerateFiles(sourceDirectory, "*", new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+        });
         var wroteAnyFile = false;
 
         foreach (var file in files)

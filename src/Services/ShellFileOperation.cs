@@ -14,7 +14,9 @@ internal static class ShellFileOperation
 {
     // FOF_* / FOFX_* operation flags.
     private const uint FOF_RENAMEONCOLLISION = 0x0008;
+    private const uint FOF_NOCONFIRMATION = 0x0010;
     private const uint FOF_NOCONFIRMMKDIR = 0x0200;
+    private const uint FOFX_RECYCLEONDELETE = 0x00080000;
     private const uint FOFX_ADDUNDORECORD = 0x20000000;
     private const uint FOFX_SHOWELEVATIONPROMPT = 0x00040000;
 
@@ -106,6 +108,77 @@ internal static class ShellFileOperation
         }
     }
 
+    /// <summary>
+    /// Deletes every path, to the Recycle Bin when <paramref name="toRecycleBin"/>
+    /// is true, otherwise permanently. The shell shows progress + cancel for long
+    /// deletes and handles read-only/locked items with its native prompts. For a
+    /// recycle delete on a volume with no Recycle Bin the shell asks the user
+    /// before falling back to a permanent delete (no confirmation is suppressed);
+    /// a permanent delete suppresses the shell confirmation because the app has
+    /// already asked. Returns false if the operation could not be started;
+    /// <paramref name="aborted"/> is true if the user cancelled or any item was
+    /// skipped/failed.
+    /// </summary>
+    public static bool Delete(
+        IntPtr ownerHwnd,
+        IReadOnlyList<string> paths,
+        bool toRecycleBin,
+        out bool aborted)
+    {
+        aborted = false;
+        if (paths.Count == 0)
+        {
+            return true;
+        }
+
+        IFileOperation? op = null;
+        var iidShellItem = typeof(IShellItem).GUID;
+        try
+        {
+            op = (IFileOperation)new FileOperation();
+            var flags = toRecycleBin
+                ? FOFX_RECYCLEONDELETE | FOFX_ADDUNDORECORD | FOFX_SHOWELEVATIONPROMPT
+                : FOF_NOCONFIRMATION | FOFX_SHOWELEVATIONPROMPT;
+            op.SetOperationFlags(flags);
+            if (ownerHwnd != IntPtr.Zero)
+            {
+                op.SetOwnerWindow(ownerHwnd);
+            }
+
+            var items = new List<object>();
+            try
+            {
+                foreach (var path in paths)
+                {
+                    SHCreateItemFromParsingName(path, IntPtr.Zero, ref iidShellItem, out var srcObj);
+                    items.Add(srcObj);
+                    op.DeleteItem((IShellItem)srcObj, IntPtr.Zero);
+                }
+
+                op.PerformOperations();
+                op.GetAnyOperationsAborted(out aborted);
+                return true;
+            }
+            finally
+            {
+                foreach (var item in items)
+                {
+                    if (item is not null && Marshal.IsComObject(item))
+                    {
+                        Marshal.ReleaseComObject(item);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (op is not null && Marshal.IsComObject(op))
+            {
+                Marshal.FinalReleaseComObject(op);
+            }
+        }
+    }
+
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
     private static extern void SHCreateItemFromParsingName(
         [MarshalAs(UnmanagedType.LPWStr)] string pszPath,
@@ -146,7 +219,9 @@ internal static class ShellFileOperation
         [PreserveSig] int MoveItems(object punkItems, IShellItem psiDestinationFolder);
         void CopyItem(IShellItem psiItem, IShellItem psiDestinationFolder, [MarshalAs(UnmanagedType.LPWStr)] string? pszCopyName, IntPtr pfopsItem);
         [PreserveSig] int CopyItems(object punkItems, IShellItem psiDestinationFolder);
-        [PreserveSig] int DeleteItem(IShellItem psiItem, object pfopsItem);
+        // Same marshaling note as MoveItem/CopyItem: pfopsItem is an
+        // IFileOperationProgressSink* and must be a raw pointer, never `object`.
+        void DeleteItem(IShellItem psiItem, IntPtr pfopsItem);
         [PreserveSig] int DeleteItems(object punkItems);
         [PreserveSig] int NewItem(IShellItem psiDestinationFolder, uint dwFileAttributes, [MarshalAs(UnmanagedType.LPWStr)] string pszName, [MarshalAs(UnmanagedType.LPWStr)] string pszTemplateName, object pfopsItem);
         void PerformOperations();

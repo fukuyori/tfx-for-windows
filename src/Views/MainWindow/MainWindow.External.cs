@@ -80,7 +80,11 @@ public partial class MainWindow
             return;
         }
 
-        Clipboard.SetText(selection[0].FullPath);
+        if (!SafeClipboard.SetText(selection[0].FullPath))
+        {
+            SetStatus(Loc.T("Clipboard is in use by another application"));
+            return;
+        }
         SetStatus(Loc.F("Copied path: {0}", selection[0].FullPath));
     }
 }

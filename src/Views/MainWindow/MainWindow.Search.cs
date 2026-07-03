@@ -291,8 +291,7 @@ public partial class MainWindow
 
                 if (compareInfo.IndexOf(name, query, matchOpts) < 0) continue;
 
-                var isDir = (info.Attributes & FileAttributes.Directory) != 0;
-                writer.TryWrite(BuildSearchResult(info.FullName, root, isDir));
+                writer.TryWrite(BuildSearchResult(info, root));
             }
         }
         finally
@@ -301,12 +300,15 @@ public partial class MainWindow
         }
     }
 
-    private static FileItem BuildSearchResult(string fullPath, string root, bool isDirectory)
+    private static FileItem BuildSearchResult(FileSystemInfo info, string root)
     {
-        var rel = MakeRelative(root, fullPath);
-        var item = isDirectory
-            ? FileItem.FromDirectory(fullPath, loadSmallIcon: true, loadLargeIcon: false, includeOwner: false)
-            : FileItem.FromFile(fullPath, loadSmallIcon: true, loadLargeIcon: false, includeOwner: false);
+        // The enumerated info already carries size/attributes/timestamps, so the
+        // row is built without a second stat per match. Shell icons are never
+        // shown (the list binds IconGlyph), so skip loading them.
+        var rel = MakeRelative(root, info.FullName);
+        var item = info is DirectoryInfo directory
+            ? FileItem.FromDirectory(directory, loadSmallIcon: false, loadLargeIcon: false, includeOwner: false)
+            : FileItem.FromFile((FileInfo)info, loadSmallIcon: false, loadLargeIcon: false, includeOwner: false);
 
         // Use the relative path as the visible name so the user can see where
         // each match lives. FullPath is preserved so Open / Reveal continue
