@@ -496,12 +496,27 @@ public partial class MainWindow
         }
         else
         {
+            // Icon mode lays items out in a grid: Up/Down move a whole row
+            // (± the current column count), Left/Right move within the row.
+            // Details mode is a single column, so the same math degrades to
+            // ±1 per Up/Down.
+            var columns = 1;
+            var rowsPerPage = 10;
+            if (_settings.ViewMode == ViewMode.Icons
+                && FindVisualChild<VirtualizingIconWrapPanel>(iconView) is { } panel)
+            {
+                columns = Math.Max(1, panel.ColumnCount);
+                rowsPerPage = Math.Max(1, panel.RowsPerViewport);
+            }
+
             var step = key switch
             {
-                Key.Up => -1,
-                Key.PageUp => -10,
-                Key.PageDown => 10,
-                _ => 1, // Down
+                Key.Left => -1,
+                Key.Right => 1,
+                Key.Up => -columns,
+                Key.PageUp => columns == 1 ? -10 : -columns * rowsPerPage,
+                Key.PageDown => columns == 1 ? 10 : columns * rowsPerPage,
+                _ => columns, // Down
             };
             nextIndex = Math.Clamp(leadIndex + step, 0, lastIndex);
         }

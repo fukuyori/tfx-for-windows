@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.3
+
+### Icon view
+
+- **UI virtualization.** The icon view now realizes only the visible rows (plus a one-row buffer) instead of building a tile for every entry — opening a folder with tens of thousands of items in icon mode no longer freezes the window. Tile size adapts to the configured font; rows are laid out on a uniform grid.
+- **Thumbnails.** Tiles show the Windows shell thumbnail for images (PNG/JPEG/GIF/BMP/WebP/TIFF/ICO, plus HEIC/SVG when the codec / shell extension is installed), videos (first frame, standard codecs), Office documents saved with a preview picture, and PDFs (honoring the existing `AllowShellPdfThumbnail` safety setting). Thumbnails load lazily for visible tiles only (two extractions at a time, capped at 512 in memory); anything without a thumbnail keeps its font glyph.
+- **Direction-aware arrow keys.** Up/Down move a full row (they used to move to the adjacent item, which looked like a sideways move), Left/Right move within the row, and PageUp/PageDown move a viewport's worth of rows. In icon mode, switching panes is done with Tab (details mode keeps Left/Right for pane switching).
+
+### Stability & safety
+
+- **Terminal input can no longer freeze the UI.** Keystrokes, pastes and file drops into the built-in terminal are queued and written to the shell by a background task; a foreground child that stops reading stdin used to block the window on a large paste.
+- **The permanent-delete confirmation now defaults to Cancel**, so Shift+Del followed by a reflexive Enter doesn't destroy anything; confirming takes an explicit Tab or click. Recycle-Bin deletes keep Enter-to-confirm.
+- Fixed a job-object handle leak when PDF preview sandbox setup failed partway through.
+
 ## 0.9.2
 
 ### Performance

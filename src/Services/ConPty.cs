@@ -27,6 +27,7 @@ internal sealed class ConPty : IDisposable
     private Process? _process;
     private FileStream? _writer;
     private Thread? _readThread;
+    private System.Threading.Channels.Channel<byte[]>? _writeQueue;
     private volatile bool _disposed;
 
     /// <summary>Raised on a background thread with raw bytes read from the child.</summary>
@@ -77,6 +78,14 @@ internal sealed class ConPty : IDisposable
         StartChild(commandLine, workingDirectory);
 
         _writer = new FileStream(_inputWrite, FileAccess.Write);
+        // Input is queued and written by a background task. Callers (key
+        // presses, paste, file drops — all on the UI thread) must never block:
+        // the anonymous pipe's buffer is only a few KB, and a foreground child
+        // that isn't reading stdin would otherwise freeze the whole window on
+        // a large paste.
+        _writeQueue = System.Threading.Channels.Channel.CreateUnbounded<byte[]>(
+            new System.Threading.Channels.UnboundedChannelOptions { SingleReader = true });
+        _ = Task.Run(WriteLoopAsync);
         _readThread = new Thread(ReadLoop) { IsBackground = true, Name = "ConPty-read" };
         _readThread.Start();
     }
@@ -250,21 +259,38 @@ internal sealed class ConPty : IDisposable
     /// <summary>Writes UTF-8 text to the child's stdin.</summary>
     public void Write(string text) => WriteBytes(System.Text.Encoding.UTF8.GetBytes(text));
 
-    /// <summary>Writes raw bytes to the child's stdin (input from the terminal UI).</summary>
+    /// <summary>
+    /// Queues raw bytes for the child's stdin (input from the terminal UI).
+    /// Never blocks — a dedicated background task drains the queue into the
+    /// pipe, so a stalled child can't freeze the UI thread.
+    /// </summary>
     public void WriteBytes(byte[] bytes)
     {
-        if (_writer is null || _disposed || bytes.Length == 0)
+        if (_writeQueue is null || _disposed || bytes.Length == 0)
         {
             return;
         }
+        _writeQueue.Writer.TryWrite(bytes);
+    }
+
+    private async Task WriteLoopAsync()
+    {
+        var reader = _writeQueue!.Reader;
         try
         {
-            _writer.Write(bytes, 0, bytes.Length);
-            _writer.Flush();
+            while (await reader.WaitToReadAsync().ConfigureAwait(false))
+            {
+                while (reader.TryRead(out var bytes))
+                {
+                    _writer!.Write(bytes, 0, bytes.Length);
+                }
+                _writer!.Flush();
+            }
         }
         catch
         {
-            // Child likely exited; ignore.
+            // Child likely exited / pipe closed; remaining queued input is
+            // dropped along with the session.
         }
     }
 
@@ -299,6 +325,7 @@ internal sealed class ConPty : IDisposable
             _hpc = IntPtr.Zero;
         }
 
+        _writeQueue?.Writer.TryComplete();
         try { _writer?.Dispose(); } catch { }
         try { _outputRead?.Dispose(); } catch { }
         try { _inputWrite?.Dispose(); } catch { }

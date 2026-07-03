@@ -7,7 +7,12 @@ namespace Tfx;
 
 public sealed class ConfirmDialog : Window
 {
-    public ConfirmDialog(string title, string message, string confirmText)
+    /// <param name="defaultToCancel">
+    /// For irreversible actions (permanent delete): Cancel becomes the default
+    /// and focused button, so a reflexive Enter right after the shortcut
+    /// doesn't confirm the destruction. Confirming takes an explicit Tab/click.
+    /// </param>
+    public ConfirmDialog(string title, string message, string confirmText, bool defaultToCancel = false)
     {
         Title = title;
         Owner = Application.Current.MainWindow;
@@ -64,7 +69,7 @@ public sealed class ConfirmDialog : Window
         var ok = new Button
         {
             Content = confirmText,
-            IsDefault = true,
+            IsDefault = !defaultToCancel,
             MinWidth = 92,
             Margin = new Thickness(0, 0, 8, 0)
         };
@@ -75,9 +80,12 @@ public sealed class ConfirmDialog : Window
         {
             Content = Loc.T("Cancel"),
             IsCancel = true,
+            IsDefault = defaultToCancel,
             MinWidth = 92
         };
         buttons.Children.Add(cancel);
+
+        Loaded += (_, _) => (defaultToCancel ? cancel : ok).Focus();
 
         Grid.SetRow(buttons, 1);
         root.Children.Add(buttons);

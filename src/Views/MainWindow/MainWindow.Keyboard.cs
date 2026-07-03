@@ -434,7 +434,11 @@ public partial class MainWindow
         // built-in handler does nothing. Intercepting here makes navigation
         // deterministic regardless of where focus landed inside the pane.
         // Shift extends the selection (range); otherwise it is a single move.
-        if (!inTextBox && e.Key is Key.Up or Key.Down or Key.PageUp or Key.PageDown
+        // Icon mode also owns Left / Right (they move within the row there;
+        // in details mode they keep switching panes via Window_KeyDown).
+        var listingNavKey = e.Key is Key.Up or Key.Down or Key.PageUp or Key.PageDown
+            || (_settings.ViewMode == ViewMode.Icons && e.Key is Key.Left or Key.Right);
+        if (!inTextBox && listingNavKey
             && (IsFocusInActiveListing() || ShouldStartListingNavigation()))
         {
             var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);

@@ -797,9 +797,9 @@ public partial class MainWindow
         Reload(_activeGrid, createdName);
     }
 
-    private static bool Confirm(string message, string confirmText)
+    private static bool Confirm(string message, string confirmText, bool defaultToCancel = false)
     {
-        var dialog = new ConfirmDialog("tfx", message, confirmText);
+        var dialog = new ConfirmDialog("tfx", message, confirmText, defaultToCancel);
         return dialog.ShowDialog() == true;
     }
 
@@ -933,7 +933,9 @@ public partial class MainWindow
             ? Loc.F("Permanently delete \"{0}\"? This cannot be undone.", items[0].Name)
             : Loc.F("Permanently delete {0} item(s)? This cannot be undone.", items.Length);
 
-        if (!Confirm(msg, Loc.T("Delete permanently")))
+        // Permanent delete can't be undone — default the dialog to Cancel so
+        // Shift+Del followed by a reflexive Enter doesn't destroy anything.
+        if (!Confirm(msg, Loc.T("Delete permanently"), defaultToCancel: true))
         {
             return;
         }

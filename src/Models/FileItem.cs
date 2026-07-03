@@ -101,6 +101,30 @@ public sealed class FileItem : INotifyPropertyChanged
         || !string.Equals(OwnerText, other.OwnerText, StringComparison.Ordinal)
         || !string.Equals(AttributeText, other.AttributeText, StringComparison.Ordinal);
 
+    private ImageSource? _thumbnail;
+
+    /// <summary>
+    /// Shell thumbnail shown by the icon view for image files. Loaded lazily
+    /// (and evicted under memory pressure) by the thumbnail loader when the
+    /// tile is realized; null shows the font glyph instead.
+    /// </summary>
+    public ImageSource? Thumbnail
+    {
+        get => _thumbnail;
+        set
+        {
+            if (!ReferenceEquals(_thumbnail, value))
+            {
+                _thumbnail = value;
+                Raise(nameof(Thumbnail));
+            }
+        }
+    }
+
+    /// <summary>Set once a thumbnail load has been queued, so re-realizing the
+    /// tile (scrolling back and forth) doesn't queue duplicates.</summary>
+    internal bool ThumbnailRequested;
+
     private bool _isDropTarget;
 
     /// <summary>

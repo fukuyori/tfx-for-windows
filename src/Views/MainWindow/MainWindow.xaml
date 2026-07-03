@@ -329,7 +329,7 @@
                                  AllowDrop="True" DragOver="Grid_DragOver" Drop="Grid_Drop" DragLeave="Grid_DragLeave">
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <WrapPanel />
+                                    <local:VirtualizingIconWrapPanel />
                                 </ItemsPanelTemplate>
                             </ListBox.ItemsPanel>
                             <ListBox.ItemContainerStyle>
@@ -348,10 +348,19 @@
                             </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Width="108" Margin="6,7">
-                                        <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="30" HorizontalAlignment="Center" Foreground="{DynamicResource TfxForeground}" />
+                                    <StackPanel Width="108" Margin="6,7" Loaded="IconTile_Loaded">
+                                        <Grid Height="52">
+                                            <TextBlock x:Name="TileGlyph" Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TfxForeground}" Visibility="Collapsed" />
+                                            <Image x:Name="TileThumb" Source="{Binding Thumbnail}" MaxWidth="100" MaxHeight="52" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                                        </Grid>
                                         <TextBlock Text="{Binding Name}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
                                     </StackPanel>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}">
+                                            <Setter TargetName="TileThumb" Property="Visibility" Value="Collapsed" />
+                                            <Setter TargetName="TileGlyph" Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
@@ -412,7 +421,7 @@
                                  AllowDrop="True" DragOver="Grid_DragOver" Drop="Grid_Drop" DragLeave="Grid_DragLeave">
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <WrapPanel />
+                                    <local:VirtualizingIconWrapPanel />
                                 </ItemsPanelTemplate>
                             </ListBox.ItemsPanel>
                             <ListBox.ItemContainerStyle>
@@ -431,10 +440,19 @@
                             </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Width="108" Margin="6,7">
-                                        <TextBlock Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="30" HorizontalAlignment="Center" Foreground="{DynamicResource TfxForeground}" />
+                                    <StackPanel Width="108" Margin="6,7" Loaded="IconTile_Loaded">
+                                        <Grid Height="52">
+                                            <TextBlock x:Name="TileGlyph" Text="{Binding IconGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TfxForeground}" Visibility="Collapsed" />
+                                            <Image x:Name="TileThumb" Source="{Binding Thumbnail}" MaxWidth="100" MaxHeight="52" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                                        </Grid>
                                         <TextBlock Text="{Binding Name}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
                                     </StackPanel>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}">
+                                            <Setter TargetName="TileThumb" Property="Visibility" Value="Collapsed" />
+                                            <Setter TargetName="TileGlyph" Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>

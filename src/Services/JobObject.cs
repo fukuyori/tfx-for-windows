@@ -53,6 +53,14 @@ internal sealed class JobObject : IDisposable
                 throw new InvalidOperationException("SetInformationJobObject failed.");
             }
         }
+        catch
+        {
+            // A constructor that throws never gets Dispose'd — close the job
+            // handle here or it leaks (one per PDF preview render).
+            CloseHandle(_handle);
+            _handle = IntPtr.Zero;
+            throw;
+        }
         finally
         {
             Marshal.FreeHGlobal(ptr);
