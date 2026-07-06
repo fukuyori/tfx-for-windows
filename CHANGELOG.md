@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.6
+
+### Fixes
+
+- **Git badges now update when the repository changes outside the displayed folder.** Badges were only re-fetched on navigation, tab switch, or a change inside the displayed folder itself, so edits in subfolders (an IDE saving while a parent was displayed) and `git add` / `git commit` from a terminal (which only touch `.git`) left them stale. Each pane now keeps a recursive watcher on its Git root that debounces (500 ms, 2 s max wait) into a badge-only `git status` refresh. `.git` noise (`objects/`, `logs/`, `*.lock`) is filtered out on the watcher thread; only `index`, `HEAD` / `*_HEAD` and `refs/` qualify. While the window is inactive, events collapse into a single deferred refresh on the next activation, so background builds don't keep `git status` running.
+
 ## 0.9.5
 
 ### Performance

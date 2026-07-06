@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 読み方: **Tafix**
-Version: 0.9.5
+Version: 0.9.6
 
 [English](README.md) | 日本語
 

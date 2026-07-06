@@ -115,6 +115,7 @@ public partial class MainWindow : Window
         _suspendSettingsSave = false;
 
         InitializeAutoRefresh();
+        InitializeGitWatch();
         InitializeTerminalPane();
 
         // Reload from Navigate(LeftGrid, ...) is async; the ApplyPendingSelection
@@ -1119,6 +1120,7 @@ public partial class MainWindow : Window
         _rightReloadCts = null;
 
         DisposeAutoRefresh();
+        DisposeGitWatch();
 
         // Best-effort: cancel any in-flight navigation but do NOT call WebView2.Dispose()
         // synchronously here — the WPF wrapper sometimes blocks waiting for the underlying

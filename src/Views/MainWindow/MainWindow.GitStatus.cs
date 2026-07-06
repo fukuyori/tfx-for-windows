@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Windows.Threading;
 using Path = System.IO.Path;
 
 namespace Tfx;
@@ -48,10 +49,12 @@ public partial class MainWindow
             SetGitState(pane, null, null);
             ClearGitBadges(pane);
             UpdateGitBranchText();
+            DisposeGitWatcher(pane);
             return;
         }
 
         SetGitState(pane, root, GetGitStatus(pane));
+        EnsureGitRootWatcher(pane, root);
         _ = FetchGitStatusAsync(pane, root);
     }
 
@@ -194,5 +197,311 @@ public partial class MainWindow
         {
             GitBranchText.Text = "";
         }
+    }
+
+    // ---- Git-root watcher: refresh badges on repo-wide changes ----
+    //
+    // The pane's auto-refresh FileSystemWatcher (MainWindow.AutoRefresh) is
+    // non-recursive and only covers the displayed folder, so edits in
+    // subfolders (an IDE saving while a parent is displayed) and `git add` /
+    // `git commit` from a terminal (which only touch `.git`) never re-fetched
+    // `git status` — badges went stale until the next navigation. Each pane
+    // gets a recursive watcher on its Git root that debounces into a
+    // badge-only refresh (no folder reload).
+
+    private static readonly TimeSpan GitWatchDebounce = TimeSpan.FromMilliseconds(500);
+    private const long GitWatchMaxWaitMs = 2000;
+
+    private FileSystemWatcher? _leftGitWatcher;
+    private FileSystemWatcher? _rightGitWatcher;
+    // Bumped every time EnsureGitRootWatcher/DisposeGitWatcher runs so a call
+    // that resumes after its background hop can tell it has been superseded
+    // (same pattern as UpdateWatcherForPane).
+    private int _leftGitWatcherGeneration;
+    private int _rightGitWatcherGeneration;
+    private DispatcherTimer? _leftGitDebounceTimer;
+    private DispatcherTimer? _rightGitDebounceTimer;
+    private long _leftGitDebounceFirstKick;
+    private long _rightGitDebounceFirstKick;
+    // Set when watcher events arrive while the window is inactive: the refresh
+    // is deferred to the next Activated so background builds and commits don't
+    // keep running `git status` for a window nobody is looking at.
+    private bool _leftGitRefreshPending;
+    private bool _rightGitRefreshPending;
+
+    private void InitializeGitWatch()
+    {
+        _leftGitDebounceTimer = new DispatcherTimer { Interval = GitWatchDebounce };
+        _leftGitDebounceTimer.Tick += (_, _) =>
+        {
+            _leftGitDebounceTimer!.Stop();
+            _leftGitDebounceFirstKick = 0;
+            FireGitRefresh(Pane.Left);
+        };
+
+        _rightGitDebounceTimer = new DispatcherTimer { Interval = GitWatchDebounce };
+        _rightGitDebounceTimer.Tick += (_, _) =>
+        {
+            _rightGitDebounceTimer!.Stop();
+            _rightGitDebounceFirstKick = 0;
+            FireGitRefresh(Pane.Right);
+        };
+
+        Activated += (_, _) =>
+        {
+            if (_leftGitRefreshPending)
+            {
+                _leftGitRefreshPending = false;
+                RefreshGitStatusForPane(Pane.Left);
+            }
+            if (_rightGitRefreshPending)
+            {
+                _rightGitRefreshPending = false;
+                RefreshGitStatusForPane(Pane.Right);
+            }
+        };
+    }
+
+    private void FireGitRefresh(Pane pane)
+    {
+        var root = GetGitRoot(pane);
+        if (root is not null)
+        {
+            _ = FetchGitStatusAsync(pane, root);
+        }
+    }
+
+    private async void EnsureGitRootWatcher(Pane pane, string root)
+    {
+        var existing = pane == Pane.Left ? _leftGitWatcher : _rightGitWatcher;
+        if (existing is not null && string.Equals(existing.Path, root, StringComparison.OrdinalIgnoreCase))
+        {
+            return; // still watching the same repo
+        }
+
+        var generation = pane == Pane.Left ? ++_leftGitWatcherGeneration : ++_rightGitWatcherGeneration;
+        existing?.Dispose();
+        SetGitWatcher(pane, null);
+
+        // UNC / network shares: FSW is unreliable there (see UpdateWatcherForPane).
+        // Badges then refresh on navigation/tab switch only, as before.
+        if (IsLikelyNetworkPath(root))
+        {
+            return;
+        }
+
+        // Create on a background thread — recursive watcher setup on a large
+        // tree or slow drive must not stall the UI during navigation.
+        FileSystemWatcher? watcher;
+        try
+        {
+            watcher = await Task.Run(() =>
+            {
+                try
+                {
+                    if (!Directory.Exists(root))
+                    {
+                        return null;
+                    }
+                    return new FileSystemWatcher(root)
+                    {
+                        NotifyFilter = NotifyFilters.FileName
+                            | NotifyFilters.DirectoryName
+                            | NotifyFilters.LastWrite
+                            | NotifyFilters.Size,
+                        IncludeSubdirectories = true,
+                        // Largest allowed buffer: a build touching thousands of
+                        // files overflows the default 8KB immediately.
+                        InternalBufferSize = 64 * 1024,
+                    };
+                }
+                catch
+                {
+                    return null;
+                }
+            });
+        }
+        catch
+        {
+            return;
+        }
+
+        if (watcher is null)
+        {
+            return;
+        }
+
+        var currentGeneration = pane == Pane.Left ? _leftGitWatcherGeneration : _rightGitWatcherGeneration;
+        if (generation != currentGeneration
+            || !string.Equals(GetGitRoot(pane), root, StringComparison.OrdinalIgnoreCase))
+        {
+            watcher.Dispose();
+            return;
+        }
+
+        FileSystemEventHandler change = (_, e) => OnGitWatchEvent(pane, root, e.FullPath);
+        watcher.Changed += change;
+        watcher.Created += change;
+        watcher.Deleted += change;
+        watcher.Renamed += (_, e) =>
+        {
+            OnGitWatchEvent(pane, root, e.OldFullPath);
+            OnGitWatchEvent(pane, root, e.FullPath);
+        };
+        // Buffer overflow means "an unknown number of things changed" — treat
+        // it as a change rather than tearing the watcher down.
+        watcher.Error += (_, _) => Dispatcher.BeginInvoke(() => KickGitDebounce(pane));
+
+        try
+        {
+            watcher.EnableRaisingEvents = true;
+        }
+        catch
+        {
+            watcher.Dispose();
+            return;
+        }
+
+        SetGitWatcher(pane, watcher);
+    }
+
+    /// <summary>Runs on the FSW callback thread — keep it allocation-light.</summary>
+    private void OnGitWatchEvent(Pane pane, string root, string fullPath)
+    {
+        if (!IsGitBadgeRelevantChange(root, fullPath))
+        {
+            return;
+        }
+        Dispatcher.BeginInvoke(() => KickGitDebounce(pane));
+    }
+
+    /// <summary>
+    /// Filters watcher events down to those that can change a badge or the
+    /// branch label. Worktree paths always qualify; inside <c>.git</c> only
+    /// <c>index</c> (stage/unstage), <c>HEAD</c> / <c>*_HEAD</c> and
+    /// <c>refs/</c> (commit, branch switch, merge) matter. Object/pack writes,
+    /// reflog appends and <c>*.lock</c> churn are noise. Note `git status`
+    /// itself may rewrite <c>index</c> (stat-cache refresh) — that costs one
+    /// extra fetch which converges immediately.
+    /// </summary>
+    private static bool IsGitBadgeRelevantChange(string root, string fullPath)
+    {
+        if (string.IsNullOrEmpty(fullPath))
+        {
+            return false;
+        }
+
+        var dotGit = Path.Combine(root, ".git");
+        if (!fullPath.StartsWith(dotGit, StringComparison.OrdinalIgnoreCase))
+        {
+            return true; // ordinary worktree change
+        }
+        var rest = fullPath[dotGit.Length..];
+        if (rest.Length > 0 && rest[0] != Path.DirectorySeparatorChar && rest[0] != Path.AltDirectorySeparatorChar)
+        {
+            return true; // ".github", ".gitignore", … — merely shares the prefix
+        }
+
+        var rel = rest.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Replace('\\', '/');
+        if (rel.Length == 0)
+        {
+            return false; // the .git directory entry itself
+        }
+        if (rel.EndsWith(".lock", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        if (rel.StartsWith("objects/", StringComparison.OrdinalIgnoreCase)
+            || rel.StartsWith("logs/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        return rel.Equals("index", StringComparison.OrdinalIgnoreCase)
+            || rel.Equals("HEAD", StringComparison.OrdinalIgnoreCase)
+            || rel.EndsWith("_HEAD", StringComparison.OrdinalIgnoreCase)
+            || rel.StartsWith("refs/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void KickGitDebounce(Pane pane)
+    {
+        if (!_windowActive)
+        {
+            if (pane == Pane.Left) _leftGitRefreshPending = true;
+            else _rightGitRefreshPending = true;
+            return;
+        }
+
+        var timer = pane == Pane.Left ? _leftGitDebounceTimer : _rightGitDebounceTimer;
+        if (timer is null)
+        {
+            return;
+        }
+
+        // Trailing debounce with a max wait, same rationale as KickDebounce:
+        // a burst (build output, large checkout) must not postpone the refresh
+        // forever.
+        var now = Environment.TickCount64;
+        var first = pane == Pane.Left ? _leftGitDebounceFirstKick : _rightGitDebounceFirstKick;
+        if (first == 0)
+        {
+            if (pane == Pane.Left) _leftGitDebounceFirstKick = now;
+            else _rightGitDebounceFirstKick = now;
+        }
+        else if (now - first > GitWatchMaxWaitMs)
+        {
+            timer.Stop();
+            if (pane == Pane.Left) _leftGitDebounceFirstKick = 0;
+            else _rightGitDebounceFirstKick = 0;
+            FireGitRefresh(pane);
+            return;
+        }
+
+        timer.Stop();
+        timer.Start();
+    }
+
+    private void SetGitWatcher(Pane pane, FileSystemWatcher? watcher)
+    {
+        if (pane == Pane.Left)
+        {
+            _leftGitWatcher = watcher;
+        }
+        else
+        {
+            _rightGitWatcher = watcher;
+        }
+    }
+
+    private void DisposeGitWatcher(Pane pane)
+    {
+        var existing = pane == Pane.Left ? _leftGitWatcher : _rightGitWatcher;
+        if (existing is not null)
+        {
+            existing.EnableRaisingEvents = false;
+            existing.Dispose();
+        }
+        SetGitWatcher(pane, null);
+        // Supersede any EnsureGitRootWatcher still on its background hop.
+        if (pane == Pane.Left) _leftGitWatcherGeneration++;
+        else _rightGitWatcherGeneration++;
+
+        var timer = pane == Pane.Left ? _leftGitDebounceTimer : _rightGitDebounceTimer;
+        timer?.Stop();
+        if (pane == Pane.Left)
+        {
+            _leftGitDebounceFirstKick = 0;
+            _leftGitRefreshPending = false;
+        }
+        else
+        {
+            _rightGitDebounceFirstKick = 0;
+            _rightGitRefreshPending = false;
+        }
+    }
+
+    private void DisposeGitWatch()
+    {
+        DisposeGitWatcher(Pane.Left);
+        DisposeGitWatcher(Pane.Right);
     }
 }
