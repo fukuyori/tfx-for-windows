@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.7
+
+### Fixes
+
+- **Pasting a copied image (e.g. a JPG) no longer produces an invisible or unreadable .png.** Two clipboard quirks are now handled: apps that put 32-bit bitmaps with an all-zero alpha channel on the clipboard (Office and various viewers) used to yield a fully transparent PNG — the image is now forced opaque when every pixel's alpha is zero, while real transparency is preserved; and a "PNG" clipboard entry whose payload is actually another codec's bytes (such as the original JPEG) is now detected by signature and re-encoded, so the saved .png always matches its extension.
+
 ## 0.9.6
 
 ### Fixes

@@ -694,11 +694,19 @@ public partial class MainWindow
     {
         bytes = [];
 
-        // 1) Raw PNG payload (best — preserves transparency).
+        // 1) Raw PNG payload (best — preserves transparency). Some apps put
+        //    another codec's bytes (e.g. the original JPEG) under the "PNG"
+        //    format, so verify the signature; a mismatched payload is decoded
+        //    and re-encoded so the .png file always matches its extension.
         if (SafeClipboard.ContainsData("PNG") && SafeClipboard.GetData("PNG") is MemoryStream pngStream)
         {
-            bytes = pngStream.ToArray();
-            if (bytes.Length > 0)
+            var raw = pngStream.ToArray();
+            if (HasPngSignature(raw))
+            {
+                bytes = raw;
+                return true;
+            }
+            if (raw.Length > 0 && DecodeImageBytes(raw) is { } decoded && EncodePng(decoded, out bytes))
             {
                 return true;
             }
@@ -708,7 +716,7 @@ public partial class MainWindow
         BitmapSource? image = null;
         try { image = SafeClipboard.GetImage(); }
         catch { }
-        if (image is not null && EncodePng(image, out bytes))
+        if (image is not null && EncodePng(OpaqueIfBlankAlpha(image), out bytes))
         {
             return true;
         }
@@ -721,13 +729,70 @@ public partial class MainWindow
             object? data = null;
             try { data = SafeClipboard.GetData(format); }
             catch { }
-            if (data is MemoryStream dib && DibToBitmap(dib.ToArray()) is { } src && EncodePng(src, out bytes))
+            if (data is MemoryStream dib && DibToBitmap(dib.ToArray()) is { } src
+                && EncodePng(OpaqueIfBlankAlpha(src), out bytes))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static bool HasPngSignature(byte[] bytes) =>
+        bytes.Length >= 8
+        && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47
+        && bytes[4] == 0x0D && bytes[5] == 0x0A && bytes[6] == 0x1A && bytes[7] == 0x0A;
+
+    /// <summary>Decodes image bytes with WIC's container sniffing (any codec).</summary>
+    private static BitmapSource? DecodeImageBytes(byte[] raw)
+    {
+        try
+        {
+            using var ms = new MemoryStream(raw);
+            var decoder = BitmapDecoder.Create(ms, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            return decoder.Frames.Count > 0 ? decoder.Frames[0] : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Some apps put 32-bit bitmaps on the clipboard with the alpha channel all
+    /// zero — intended as opaque, but a faithful PNG encode yields a fully
+    /// transparent (invisible) image. Force those opaque; real alpha (any
+    /// non-zero value anywhere) is left untouched.
+    /// </summary>
+    private static BitmapSource OpaqueIfBlankAlpha(BitmapSource source)
+    {
+        if (source.Format != PixelFormats.Bgra32)
+        {
+            return source;
+        }
+
+        var stride = source.PixelWidth * 4;
+        var pixels = new byte[stride * source.PixelHeight];
+        if (pixels.Length == 0)
+        {
+            return source;
+        }
+        source.CopyPixels(pixels, stride, 0);
+        for (var i = 3; i < pixels.Length; i += 4)
+        {
+            if (pixels[i] != 0)
+            {
+                return source;
+            }
+        }
+
+        for (var i = 3; i < pixels.Length; i += 4)
+        {
+            pixels[i] = 255;
+        }
+        return BitmapSource.Create(source.PixelWidth, source.PixelHeight,
+            source.DpiX, source.DpiY, PixelFormats.Bgra32, null, pixels, stride);
     }
 
     private static bool EncodePng(BitmapSource source, out byte[] bytes)
