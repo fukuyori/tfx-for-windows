@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.8
+
+### Preview: load local images on demand
+
+- The **Load images** button (and `Ctrl+Shift+I`) in the Markdown / HTML preview now also inlines **local image files** referenced by relative or absolute paths (previously only external `https:` images were unblocked). Local `<img>` sources are resolved against the previewed file's folder, read by tfx itself, and embedded as `data:` URIs — the WebView2 is never given `file://` access, so the existing sandboxing (scripts disabled, external network requests blocked) is unchanged. Supported extensions: `.png .jpg .jpeg .gif .bmp .webp .ico .svg`, capped at 10 MB per image. As before, the permission is per-render and never remembered.
+
 ## 0.9.7
 
 ### Fixes

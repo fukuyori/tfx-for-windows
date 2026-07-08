@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -258,15 +259,22 @@ public partial class MainWindow
 
         try
         {
+            var baseDir = Path.GetDirectoryName(path) ?? "";
             if (extension == ".md")
             {
                 string fullHtml;
                 var css = BuildMarkdownCss();
                 try
                 {
-                    fullHtml = await Task.Run(
-                        () => BuildMarkdownDocument(Markdown.ToHtml(text, MarkdownPipeline), css),
-                        token);
+                    fullHtml = await Task.Run(() =>
+                    {
+                        var bodyHtml = Markdown.ToHtml(text, MarkdownPipeline);
+                        if (_allowExternalImagesOnce)
+                        {
+                            bodyHtml = EmbedLocalImages(bodyHtml, baseDir);
+                        }
+                        return BuildMarkdownDocument(bodyHtml, css);
+                    }, token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -285,7 +293,26 @@ public partial class MainWindow
                 // (script-disabled WebView2 settings, see InitWebViewAsync)
                 // instead, with a strict CSP wrapper so external requests and
                 // inline scripts can't execute even if WebView2 settings drift.
-                HtmlPreview.NavigateToString(BuildHtmlPreviewDocument(text));
+                // Local <img> sources are resolved and inlined as data: URIs by
+                // us (trusted C# code) rather than by relaxing the CSP to allow
+                // file: — the WebView itself never gets file:// access.
+                var htmlSource = text;
+                if (_allowExternalImagesOnce)
+                {
+                    try
+                    {
+                        htmlSource = await Task.Run(() => EmbedLocalImages(htmlSource, baseDir), token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                }
+                HtmlPreview.NavigateToString(BuildHtmlPreviewDocument(htmlSource));
             }
             PreviewScroll.Visibility = Visibility.Collapsed;
             HtmlPreview.Visibility = Visibility.Visible;
@@ -485,11 +512,107 @@ img { max-width:100%; }
 
     /// <summary>
     /// The CSP <c>img-src</c> directive for the preview. Data URIs are always
-    /// allowed; external <c>https:</c> images are added only when the user pressed
-    /// "Load images" for the current render (never remembered).
+    /// allowed — this is also what lets local images through, since
+    /// <see cref="EmbedLocalImages"/> inlines them as data: URIs before the HTML
+    /// ever reaches the WebView; <c>https:</c> is added on top only when the user
+    /// pressed "Load images" for the current render (never remembered).
     /// </summary>
     private string ImgSrcDirective() =>
         _allowExternalImagesOnce ? "img-src data: https:;" : "img-src data:;";
+
+    private static readonly Regex ImgSrcRegex =
+        new("""(<img\b[^>]*?\bsrc\s*=\s*)("([^"]*)"|'([^']*)')""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    // Cap avoids stalling the preview / ballooning memory on an oversized local
+    // file; only recognised image extensions are read at all.
+    private const long LocalImageMaxBytes = 10 * 1024 * 1024;
+
+    private static readonly HashSet<string> LocalImageExtensions =
+        new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".ico", ".svg" };
+
+    /// <summary>
+    /// Inlines local (non-http/https/data) &lt;img&gt; sources as data: URIs,
+    /// resolved relative to <paramref name="baseDir"/>. Only called for the
+    /// current render when the user pressed "Load images" — the WebView itself
+    /// never gets file:// access; we read the bytes ourselves in trusted code
+    /// and hand the page an already-embedded data: URI.
+    /// </summary>
+    private static string EmbedLocalImages(string html, string baseDir) =>
+        ImgSrcRegex.Replace(html, match =>
+        {
+            var prefix = match.Groups[1].Value;
+            var src = match.Groups[3].Success ? match.Groups[3].Value : match.Groups[4].Value;
+            var dataUri = TryLoadLocalImageAsDataUri(src, baseDir);
+            if (dataUri is null)
+            {
+                return match.Value;
+            }
+            var quote = match.Groups[3].Success ? '"' : '\'';
+            return $"{prefix}{quote}{dataUri}{quote}";
+        });
+
+    private static string? TryLoadLocalImageAsDataUri(string src, string baseDir)
+    {
+        if (string.IsNullOrWhiteSpace(src) ||
+            src.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            src.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        try
+        {
+            var decoded = Uri.UnescapeDataString(src);
+            string fullPath;
+            if (decoded.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+            {
+                fullPath = new Uri(decoded).LocalPath;
+            }
+            else if (Path.IsPathRooted(decoded))
+            {
+                fullPath = decoded;
+            }
+            else if (!string.IsNullOrEmpty(baseDir))
+            {
+                fullPath = Path.GetFullPath(Path.Combine(baseDir, decoded));
+            }
+            else
+            {
+                return null;
+            }
+
+            var extension = Path.GetExtension(fullPath).ToLowerInvariant();
+            if (!LocalImageExtensions.Contains(extension) || !File.Exists(fullPath))
+            {
+                return null;
+            }
+
+            var info = new FileInfo(fullPath);
+            if (info.Length > LocalImageMaxBytes)
+            {
+                return null;
+            }
+
+            var mime = extension switch
+            {
+                ".png" => "image/png",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".gif" => "image/gif",
+                ".bmp" => "image/bmp",
+                ".webp" => "image/webp",
+                ".ico" => "image/x-icon",
+                ".svg" => "image/svg+xml",
+                _ => "application/octet-stream",
+            };
+            var bytes = File.ReadAllBytes(fullPath);
+            return $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     private string ColorSchemeForCss()
     {

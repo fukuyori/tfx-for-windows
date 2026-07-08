@@ -309,7 +309,7 @@ Supported action keys:
 | `toggleFolderTree` | `ctrl+b` | Show or hide the folder tree (left sidebar). |
 | `collapseFolders` | `ctrl+shift+b` | Collapse every node in the folder tree back to the roots. |
 | `toggleRendered` | `ctrl+shift+r` | Toggle rendered vs. source view (Markdown / HTML / CSV / JSON preview). Active only while that toggle is visible. |
-| `loadExternalImages` | `ctrl+shift+i` | Load external (https) images for the current preview, once. Active only while the button is visible. |
+| `loadExternalImages` | `ctrl+shift+i` | Load images (local files and external `https:`) for the current preview, once. Active only while the button is visible. |
 | `toggleSplit` | `ctrl+backslash` | Show or hide split view. |
 | `swapPanes` | `ctrl+shift+x` | Swap left and right panes. |
 | `focusSearch` | `ctrl+f` | Focus the search field. |

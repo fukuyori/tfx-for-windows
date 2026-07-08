@@ -309,7 +309,7 @@ openTerminal = "ctrl+shift+t"
 | `toggleFolderTree` | `ctrl+b` | フォルダーツリー（左サイドバー）表示切替。 |
 | `collapseFolders` | `ctrl+shift+b` | フォルダーツリーをすべてルートまで折りたたむ。 |
 | `toggleRendered` | `ctrl+shift+r` | レンダリング表示／ソース表示の切替（Markdown / HTML / CSV / JSON プレビュー）。トグルが表示されているときのみ有効。 |
-| `loadExternalImages` | `ctrl+shift+i` | 現在のプレビューで外部 (https) 画像を一度だけ読み込む。ボタンが表示されているときのみ有効。 |
+| `loadExternalImages` | `ctrl+shift+i` | 現在のプレビューで画像（ローカルファイル / 外部 `https:`）を一度だけ読み込む。ボタンが表示されているときのみ有効。 |
 | `toggleSplit` | `ctrl+backslash` | split view 表示切替。 |
 | `swapPanes` | `ctrl+shift+x` | 左右ペイン入れ替え。 |
 | `focusSearch` | `ctrl+f` | 検索欄へフォーカス。 |

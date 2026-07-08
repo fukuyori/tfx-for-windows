@@ -304,7 +304,7 @@ public partial class MainWindow : Window
         FolderTreeButton.ToolTip = Loc.F("Toggle folder tree ({0})", ShortcutText("toggleFolderTree"));
         PreviewButton.ToolTip = Loc.F("Toggle preview ({0})", ShortcutText("togglePreview"));
         RenderedToggle.ToolTip = Loc.F("Show rendered preview ({0})", ShortcutText("toggleRendered"));
-        LoadImagesButton.ToolTip = Loc.F("Load external images for this preview ({0})", ShortcutText("loadExternalImages"));
+        LoadImagesButton.ToolTip = Loc.F("Load images for this preview ({0})", ShortcutText("loadExternalImages"));
         SplitButton.ToolTip = Loc.F("Toggle split pane ({0})", ShortcutText("toggleSplit"));
         SwapPanesButton.ToolTip = Loc.F("Swap left and right panes ({0})", ShortcutText("swapPanes"));
         ColumnsButton.ToolTip = Loc.T("Columns");

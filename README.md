@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.9.7
+Version: 0.9.8
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -58,7 +58,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.7 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.8 |
 +---------------------------------------------------------------------+
 ```
 
@@ -119,7 +119,7 @@ The native title bar is replaced by custom chrome when transparency is enabled. 
 | `Ctrl + Shift + B` | Collapse all folders in the tree |
 | `Ctrl + Shift + P` | Toggle preview pane |
 | `Ctrl + Shift + R` | Toggle rendered / source view (while a Markdown / HTML / CSV / JSON preview is shown) |
-| `Ctrl + Shift + I` | Load external images for the current preview (when offered) |
+| `Ctrl + Shift + I` | Load images (local and external) for the current preview (when offered) |
 | `Ctrl + Shift + X` | Swap left and right panes (split view only) |
 | `Esc` | Cancel rename / clear search / exit address-bar edit |
 
