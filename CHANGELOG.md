@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.9
+
+### Fixes
+
+- **Ctrl+A (and Ctrl+C / Ctrl+X / Ctrl+V) now work inside text boxes.** With focus in the text preview, the search box, or an inline rename, these keys were intercepted by the window-level file-pane shortcuts — WPF only translates a TextBox's own select-all / clipboard gestures after the window's bubbling KeyDown runs unhandled — so Ctrl+A selected all *files* instead of the preview text, and Ctrl+C copied the file rather than the selected text. The file-pane select-all / copy / cut / paste shortcuts now defer to a focused TextBox; behavior with focus in the file list is unchanged.
+
 ## 0.9.8
 
 ### Preview: load local images on demand

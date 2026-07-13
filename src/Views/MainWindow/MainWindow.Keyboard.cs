@@ -121,6 +121,11 @@ public partial class MainWindow
         }
 
         var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+        // Clipboard / select-all must stay with a focused TextBox (preview,
+        // search box, inline rename). WPF translates the TextBox's own
+        // Ctrl+A/C/X/V command gestures only AFTER this bubbling handler runs
+        // unhandled, so stealing them here would break text editing.
+        var inTextBox = Keyboard.FocusedElement is TextBox;
 
         if (IsShortcut("focusSearch", e))
         {
@@ -168,22 +173,22 @@ public partial class MainWindow
             Reload(_activeGrid);
             e.Handled = true;
         }
-        else if (IsShortcut("copyItems", e))
+        else if (IsShortcut("copyItems", e) && !inTextBox)
         {
             CopySelection(false);
             e.Handled = true;
         }
-        else if (IsShortcut("cutItems", e))
+        else if (IsShortcut("cutItems", e) && !inTextBox)
         {
             if (!InArchiveContext) CopySelection(true);
             e.Handled = true;
         }
-        else if (IsShortcut("pasteItems", e))
+        else if (IsShortcut("pasteItems", e) && !inTextBox)
         {
             if (!InArchiveContext) PasteIntoActivePane();
             e.Handled = true;
         }
-        else if (IsShortcut("selectAll", e))
+        else if (IsShortcut("selectAll", e) && !inTextBox)
         {
             if (_settings.ViewMode == ViewMode.Icons)
             {
