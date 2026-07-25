@@ -37,6 +37,12 @@ public sealed class AppSettings
     public string TerminalCommand { get; set; } = "";
     public string TerminalArguments { get; set; } = "";
 
+    // Editor used to open config.toml (Editor Settings... dialog). Blank =
+    // OS .toml association, falling back to Notepad. {path} in the arguments
+    // expands to the config file path.
+    public string EditorCommand { get; set; } = "";
+    public string EditorArguments { get; set; } = "";
+
     // Built-in terminal pane (§2.9). Visibility + layout persist across runs.
     public bool ShowTerminalPane { get; set; }
     public double TerminalPaneHeight { get; set; } = 220;

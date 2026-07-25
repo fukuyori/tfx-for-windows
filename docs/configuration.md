@@ -12,6 +12,21 @@ The main user-editable configuration file is `config.toml`. tfx creates it on st
 
 Session state such as window placement, the last-opened paths, pinned folders, column layout, and view mode is still saved automatically to `settings.json`. Use `config.toml` for hand-written preferences; use `settings.json` as app-owned state.
 
+## Editing and Live Reload
+
+The title-bar gear button opens the settings menu (**Edit config file...** / **Editor Settings...** / **Terminal Settings...**); the same entries are on the file-pane context menu. **Edit config file...** — or the `editConfig` shortcut (default `Ctrl+,`) — opens `config.toml` in an editor, chosen in this order:
+
+1. The command configured via **Editor Settings...** (stored in `settings.json`; `{path}` in its arguments expands to the config file path, environment variables are expanded)
+2. The OS association for `.toml` files
+3. Notepad
+
+tfx watches `config.toml` and re-applies it as soon as the file is saved — no restart needed. Shortcuts (including toolbar tooltips), `[colors]` / `[opacity]`, `[font]`, `[openWith]`, `[[commands]]`, and the built-in terminal's colors / font restyle immediately. Configuration errors (at startup or after a reload) are listed in a dialog and in the status bar, each prefixed with its `config.toml` line number (e.g. `line 12: Invalid color for ...`); the app keeps running, with invalid values falling back to their previous / default settings.
+
+Not applied live:
+
+- `[startup]` — read only at launch; takes effect the next time tfx starts.
+- `[terminal] shell` and background transparency (adding/removing `[terminal] background`) — applied when the terminal pane is reopened.
+
 ## Current Scope
 
 `config.toml` supports these sections:
@@ -337,6 +352,7 @@ Supported action keys:
 | `prevTab` | `ctrl+shift+[` | Switch to the previous tab. |
 | `toggleTerminal` | `ctrl+j` | Show or hide the built-in terminal pane. (Default avoids `` ctrl+` `` because the `` ` `` key is hard to reach / IME-bound on Japanese keyboards; you can set it to `` ctrl+` `` here if your layout allows.) |
 | `quit` | `ctrl+q` | Quit the application (saves the session and tears down the terminal). Ignored while the terminal pane is focused so the shell keeps `Ctrl+Q`; `Alt+F4` always closes the window. |
+| `editConfig` | `ctrl+,` | Open `config.toml` in an editor (Editor Settings... command → OS `.toml` association → Notepad). |
 
 The `` ` `` (backtick / grave) key token is accepted for `toggleTerminal`; `[` and `]` are accepted for the tab-cycle shortcuts.
 

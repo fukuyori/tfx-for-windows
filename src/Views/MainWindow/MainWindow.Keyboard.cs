@@ -43,6 +43,7 @@ public partial class MainWindow
         ["prevTab"] = "ctrl+shift+[",
         ["toggleTerminal"] = "ctrl+j",
         ["quit"] = "ctrl+q",
+        ["editConfig"] = "ctrl+,",
     };
 
     private bool InArchiveContext => ArchivePath.Contains(GetCurrentPath(_activeGrid));
@@ -293,6 +294,11 @@ public partial class MainWindow
             // the terminal). Skipped while the terminal is focused so the shell
             // keeps Ctrl+Q (XON/XOFF flow control).
             Close();
+            e.Handled = true;
+        }
+        else if (IsShortcut("editConfig", e))
+        {
+            OpenConfigInEditor();
             e.Handled = true;
         }
         else if (IsShortcut("moveToTrash", e))

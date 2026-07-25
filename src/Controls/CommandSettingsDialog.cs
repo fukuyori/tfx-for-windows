@@ -5,14 +5,25 @@ using System.Windows.Media;
 
 namespace Tfx;
 
-public sealed class TerminalSettingsDialog : Window
+/// <summary>
+/// Generic "command + arguments" settings dialog. Used for the external
+/// terminal (Terminal Settings...) and the config editor (Editor Settings...);
+/// the caller supplies the title, field labels, and hint lines.
+/// </summary>
+public sealed class CommandSettingsDialog : Window
 {
     private readonly TextBox _commandBox;
     private readonly TextBox _argsBox;
 
-    public TerminalSettingsDialog(string initialCommand, string initialArguments)
+    public CommandSettingsDialog(
+        string title,
+        string commandLabel,
+        string argumentsLabel,
+        IReadOnlyList<string> hints,
+        string initialCommand,
+        string initialArguments)
     {
-        Title = Loc.T("Terminal Settings");
+        Title = title;
         Owner = Application.Current.MainWindow;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ResizeMode = ResizeMode.NoResize;
@@ -23,49 +34,45 @@ public sealed class TerminalSettingsDialog : Window
         FontFamily = new FontFamily("Consolas, Yu Gothic UI");
 
         var root = new Grid { Margin = new Thickness(16) };
-        for (var i = 0; i < 7; i++)
+        for (var i = 0; i < 5 + hints.Count; i++)
         {
             root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         }
 
-        var commandLabel = MakeLabel(Loc.T("Command (leave blank to auto-detect)"));
-        Grid.SetRow(commandLabel, 0);
-        root.Children.Add(commandLabel);
+        var row = 0;
+
+        var commandLabelBlock = MakeLabel(commandLabel);
+        Grid.SetRow(commandLabelBlock, row++);
+        root.Children.Add(commandLabelBlock);
 
         _commandBox = MakeTextBox(initialCommand);
-        Grid.SetRow(_commandBox, 1);
+        Grid.SetRow(_commandBox, row++);
         root.Children.Add(_commandBox);
 
-        var argsLabel = MakeLabel(Loc.T("Arguments ({path} expands to the current folder)"));
+        var argsLabel = MakeLabel(argumentsLabel);
         argsLabel.Margin = new Thickness(0, 14, 0, 6);
-        Grid.SetRow(argsLabel, 2);
+        Grid.SetRow(argsLabel, row++);
         root.Children.Add(argsLabel);
 
         _argsBox = MakeTextBox(initialArguments);
-        Grid.SetRow(_argsBox, 3);
+        Grid.SetRow(_argsBox, row++);
         root.Children.Add(_argsBox);
 
-        var hint = new TextBlock
+        var firstHint = true;
+        foreach (var hint in hints)
         {
-            Text = Loc.T("Examples: wt.exe / pwsh.exe -NoLogo / \"C:\\Program Files\\Git\\bin\\bash.exe\" --login -i"),
-            Foreground = new SolidColorBrush(Color.FromRgb(143, 155, 168)),
-            Margin = new Thickness(0, 10, 0, 0),
-            TextWrapping = TextWrapping.Wrap,
-            MaxWidth = 480
-        };
-        Grid.SetRow(hint, 4);
-        root.Children.Add(hint);
-
-        var envHint = new TextBlock
-        {
-            Text = Loc.T("Environment variables (e.g. %ProgramFiles%) are expanded."),
-            Foreground = new SolidColorBrush(Color.FromRgb(143, 155, 168)),
-            Margin = new Thickness(0, 4, 0, 0),
-            TextWrapping = TextWrapping.Wrap,
-            MaxWidth = 480
-        };
-        Grid.SetRow(envHint, 5);
-        root.Children.Add(envHint);
+            var hintBlock = new TextBlock
+            {
+                Text = hint,
+                Foreground = new SolidColorBrush(Color.FromRgb(143, 155, 168)),
+                Margin = new Thickness(0, firstHint ? 10 : 4, 0, 0),
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 480
+            };
+            firstHint = false;
+            Grid.SetRow(hintBlock, row++);
+            root.Children.Add(hintBlock);
+        }
 
         var buttons = new StackPanel
         {
@@ -105,7 +112,7 @@ public sealed class TerminalSettingsDialog : Window
         };
         buttons.Children.Add(cancel);
 
-        Grid.SetRow(buttons, 6);
+        Grid.SetRow(buttons, row);
         root.Children.Add(buttons);
 
         Content = root;

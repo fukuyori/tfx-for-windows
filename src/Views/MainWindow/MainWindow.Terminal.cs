@@ -452,12 +452,33 @@ public partial class MainWindow
         }
         _terminalInitSent = true;
 
+        PostToTerminal(new { type = "init", options = BuildTerminalOptions() });
+    }
+
+    /// <summary>
+    /// Pushes the current config-derived options (theme, font) to the already-
+    /// running xterm page, so a config.toml auto-reload restyles the terminal
+    /// without recreating it. Never resend "init" — the page would build a
+    /// second pair of terminals. allowTransparency is init-only in xterm.js, so
+    /// adding/removing an explicit background takes effect on the next pane open.
+    /// </summary>
+    private void SendTerminalOptionsUpdate()
+    {
+        if (!_terminalInitSent || !_terminalWebReady)
+        {
+            return;
+        }
+        PostToTerminal(new { type = "options", options = BuildTerminalOptions() });
+    }
+
+    private object BuildTerminalOptions()
+    {
         var theme = BuildTerminalTheme();
         // Terminal font: dedicated [terminal] shell font → [font] terminal → global
         // mono → built-in default. Size: [terminal] fontSize → [font] terminalSize
         // → the saved pane size.
         var terminalFamily = _config.Terminal.Font ?? _config.FontTerminal ?? _config.FontMono;
-        var options = new
+        return new
         {
             fontFamily = string.IsNullOrWhiteSpace(terminalFamily)
                 ? "Cascadia Mono, Consolas, monospace"
@@ -471,7 +492,6 @@ public partial class MainWindow
             focusFilesKey = BuildFocusFilesKeySpec(),
             theme
         };
-        PostToTerminal(new { type = "init", options });
     }
 
     /// <summary>

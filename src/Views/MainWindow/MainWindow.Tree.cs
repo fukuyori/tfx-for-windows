@@ -11,6 +11,7 @@ public partial class MainWindow
 {
     private async void LoadDrives()
     {
+        LoadDisks();
         FolderTree.Items.Clear();
 
         List<(string Path, bool HasChildren)> entries;

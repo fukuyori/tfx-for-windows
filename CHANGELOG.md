@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.10
+
+### Config editing: open in editor + live reload
+
+- **Edit config.toml from the app.** A new title-bar gear button opens a settings menu — **Edit config file...**, **Editor Settings...**, **Terminal Settings...** — and the same entries live on the file-pane context menu; the new `editConfig` shortcut (default `Ctrl+,`) opens the config directly. The editor is chosen via the new **Editor Settings...** dialog (stored in `settings.json`; `{path}` expands to the config file, environment variables are expanded), falling back to the OS `.toml` association and then Notepad. The Columns button icon changed to a checklist so the gear is unambiguous.
+- **config.toml changes apply immediately on save.** tfx now watches the file and re-applies it live: shortcuts (including toolbar tooltips), `[colors]` / `[opacity]`, `[font]`, `[openWith]`, `[[commands]]`, and the built-in terminal's colors / font all update without a restart. Not live: `[startup]` (next launch) and the terminal `shell` / background transparency (reopen the terminal pane).
+- **Configuration errors are shown in a dialog, with line numbers.** At startup and after each reload, all config.toml problems (previously a single status-bar line) are listed in an error dialog plus the status bar, each prefixed with its config.toml line (`line 12: Invalid color for ...`); the app keeps running on the previous / default values.
+- The Terminal Settings dialog was generalized into a shared command/arguments dialog used by both Terminal Settings... and Editor Settings... (no behavior change for terminal settings).
+
+### Sidebar: DISKS section
+
+- **A new `DISKS` section below the pinned folders** lists every ready drive with a thin usage bar (free / total shown in the tooltip). Clicking a disk opens that drive in the active file pane; the current drive root is highlighted. The list refreshes on USB plug / unplug via the existing device-change hook.
+
 ## 0.9.9
 
 ### Fixes

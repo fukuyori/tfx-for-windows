@@ -16,7 +16,16 @@ public partial class MainWindow
 
     private void OpenTerminalSettings()
     {
-        var dialog = new TerminalSettingsDialog(_settings.TerminalCommand, _settings.TerminalArguments);
+        var dialog = new CommandSettingsDialog(
+            Loc.T("Terminal Settings"),
+            Loc.T("Command (leave blank to auto-detect)"),
+            Loc.T("Arguments ({path} expands to the current folder)"),
+            [
+                Loc.T("Examples: wt.exe / pwsh.exe -NoLogo / \"C:\\Program Files\\Git\\bin\\bash.exe\" --login -i"),
+                Loc.T("Environment variables (e.g. %ProgramFiles%) are expanded."),
+            ],
+            _settings.TerminalCommand,
+            _settings.TerminalArguments);
         if (dialog.ShowDialog() == true)
         {
             _settings.TerminalCommand = dialog.Command;

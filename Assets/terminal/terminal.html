@@ -110,6 +110,25 @@
     }
   }
 
+  // Live restyle after a config.toml reload. Assigns the mutable xterm options
+  // on the existing terminals — never rebuild them (a second "init" would
+  // create a duplicate pair). allowTransparency is init-only and is applied on
+  // the next pane open instead.
+  function applyOptions(options) {
+    if (!ready || !options) { return; }
+    focusFilesKey = options.focusFilesKey || null;
+    ["shell", "output"].forEach(function (target) {
+      var t = terms[target];
+      if (!t) { return; }
+      try {
+        t.options.fontFamily = options.fontFamily || "Cascadia Mono, Consolas, monospace";
+        t.options.fontSize = options.fontSize || 14;
+        t.options.theme = options.theme || {};
+      } catch (e) { /* best effort */ }
+    });
+    fitAll();
+  }
+
   function makeTerminal(options, interactive) {
     var theme = options.theme || {};
     var term = new Terminal({
@@ -341,6 +360,7 @@
       var target = msg.target === "output" ? "output" : "shell";
       switch (msg.type) {
         case "init": init(msg.options); break;
+        case "options": applyOptions(msg.options); break;
         case "output": write(target, b64ToBytes(msg.dataB64)); break;
         case "fit": fitOne(activeTab); break;
         case "focus": activate("shell"); break;

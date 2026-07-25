@@ -117,6 +117,7 @@ public partial class MainWindow : Window
         InitializeAutoRefresh();
         InitializeGitWatch();
         InitializeTerminalPane();
+        StartConfigWatcher();
 
         // Reload from Navigate(LeftGrid, ...) is async; the ApplyPendingSelection
         // path focuses the ".." row when items finish loading. Add a belt-and-
@@ -126,7 +127,9 @@ public partial class MainWindow : Window
         {
             if (_config.Errors.Count > 0)
             {
-                SetStatus(Loc.F("Config warning: {0}", _config.Errors[0]));
+                // After ApplicationIdle so the dialog doesn't fight the initial
+                // layout/focus work; ShowConfigErrors also sets the status line.
+                Dispatcher.BeginInvoke(ShowConfigErrors, DispatcherPriority.ApplicationIdle);
             }
             Dispatcher.BeginInvoke(EnsureInitialLeftFocus, DispatcherPriority.ApplicationIdle);
         };
@@ -308,6 +311,7 @@ public partial class MainWindow : Window
         SplitButton.ToolTip = Loc.F("Toggle split pane ({0})", ShortcutText("toggleSplit"));
         SwapPanesButton.ToolTip = Loc.F("Swap left and right panes ({0})", ShortcutText("swapPanes"));
         ColumnsButton.ToolTip = Loc.T("Columns");
+        SettingsButton.ToolTip = Loc.T("Settings");
         TerminalPaneButton.ToolTip = Loc.F("Toggle terminal pane ({0})", ShortcutText("toggleTerminal"));
         TerminalInterruptButton.ToolTip = Loc.T("Interrupt (send Ctrl+C)");
         TerminalQuitButton.ToolTip = Loc.T("Quit (send Ctrl+\\)");
@@ -318,6 +322,7 @@ public partial class MainWindow : Window
         MaximizeRestoreButton.ToolTip = Loc.T("Maximize / restore");
         CloseButton.ToolTip = Loc.T("Close");
         PinnedHeader.Text = Loc.T("PINNED");
+        DisksHeader.Text = Loc.T("DISKS");
         FoldersHeader.Text = Loc.T("FOLDERS");
         CollapseAllButton.ToolTip = Loc.F("Collapse all folders ({0})", ShortcutText("collapseFolders"));
     }
@@ -350,7 +355,16 @@ public partial class MainWindow : Window
     private void LoadConfig()
     {
         _config = AppConfig.LoadOrCreate(_configPath);
+        ApplyLoadedConfig();
+    }
 
+    /// <summary>
+    /// Applies the parsed config: terminal launcher fields, shortcuts, theme.
+    /// Idempotent — also runs when config.toml is auto-reloaded after an edit
+    /// (see MainWindow.Settings.cs).
+    /// </summary>
+    private void ApplyLoadedConfig()
+    {
         if (!string.IsNullOrWhiteSpace(_config.Terminal.Command))
         {
             _settings.TerminalCommand = _config.Terminal.Command;
@@ -1121,6 +1135,7 @@ public partial class MainWindow : Window
 
         DisposeAutoRefresh();
         DisposeGitWatch();
+        DisposeConfigWatcher();
 
         // Best-effort: cancel any in-flight navigation but do NOT call WebView2.Dispose()
         // synchronously here — the WPF wrapper sometimes blocks waiting for the underlying

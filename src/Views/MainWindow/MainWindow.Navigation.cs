@@ -101,6 +101,7 @@ public partial class MainWindow
             if (PaneOf(grid) == ActivePane)
             {
                 SyncPinnedSelectionToActivePane();
+                SyncDiskSelectionToActivePane();
             }
 
             // First successful reload of the left pane after startup: force

@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.9.9
+Version: 0.9.10
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -23,6 +23,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 
 - Two file panes (single or split) with independent navigation history
 - Folder tree sidebar (toolbar show/hide toggle and collapse-all button; single-click shows a folder in the list, double-click expands / collapses it) plus persistent pinned folders
+- Sidebar `DISKS` section: every ready drive with a usage bar (free / total in the tooltip); clicking a disk opens that drive in the active file pane
 - Editable address bar with clickable breadcrumb segments and free-text input
 - Two view modes: **Details** (multi-column metadata) and **Icons** (large-icon grid), with monochrome, theme-aware file-type icons
 - New File (`.txt`) / New Folder with Explorer-style inline naming — type the name and press Enter, or click the empty list area to confirm; inline rename; drag-and-drop with full Windows modifier-key conventions and an Explorer-style translucent drag preview; shortcut (`.lnk`) creation
@@ -58,7 +59,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.9 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.10 |
 +---------------------------------------------------------------------+
 ```
 
@@ -257,6 +258,8 @@ tfx -2 -P -t ~/Downloads
 On startup, tfx creates `%APPDATA%\tfx\config.toml` when it does not already exist. This file uses the same `version = 1` and section names as the macOS tfx configuration guide where the setting makes sense on Windows:
 
 See [docs/configuration.md](docs/configuration.md) for the full file format, supported keys, and examples.
+
+The gear button in the title bar opens the settings menu: **Edit config file...** (also `Ctrl+,` / the file-pane context menu), **Editor Settings...**, and **Terminal Settings...**. Edit config file... opens `config.toml` in an editor: the one set via **Editor Settings...**, else the OS `.toml` association, else Notepad. tfx watches the file and re-applies saved changes immediately — shortcuts, colors, fonts, commands, and the terminal theme update without a restart. Exceptions: `[startup]` takes effect on the next launch, and the built-in terminal's `shell` and background transparency apply when the terminal pane is reopened.
 
 Shortcut values use Windows-native modifier names such as `ctrl`, `shift`, and `alt`. Supported key names include single letters / digits, `.`, `[`, `]`, `backslash`, arrow keys, `enter`, `tab`, `space`, `delete`, `backspace`, and `f1` through `f24`.
 

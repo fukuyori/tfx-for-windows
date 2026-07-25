@@ -221,6 +221,14 @@ public partial class MainWindow
         terminalSettings.Click += (_, _) => OpenTerminalSettings();
         menu.Items.Add(terminalSettings);
 
+        var editConfig = new MenuItem { Header = Loc.T("Edit config file..."), InputGestureText = ShortcutText("editConfig") };
+        editConfig.Click += (_, _) => OpenConfigInEditor();
+        menu.Items.Add(editConfig);
+
+        var editorSettings = new MenuItem { Header = Loc.T("Editor Settings...") };
+        editorSettings.Click += (_, _) => OpenEditorSettings();
+        menu.Items.Add(editorSettings);
+
         AddUserCommandMenuItems(menu, selection);
 
         menu.Items.Add(new Separator());

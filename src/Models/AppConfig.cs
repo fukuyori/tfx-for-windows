@@ -34,6 +34,13 @@ public sealed class AppConfig
     public List<UserCommand> Commands { get; } = [];
     public List<string> Errors { get; } = [];
 
+    // 1-based config.toml line currently being parsed; 0 outside the parse
+    // loop. Lets every parse error carry its source line.
+    private int _parseLine;
+
+    private void AddError(string message) =>
+        Errors.Add(_parseLine > 0 ? $"line {_parseLine}: {message}" : message);
+
     public static AppConfig LoadOrCreate(string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
@@ -49,7 +56,7 @@ public sealed class AppConfig
         catch (Exception ex)
         {
             var config = new AppConfig();
-            config.Errors.Add($"config.toml: {ex.Message}");
+            config.AddError($"config.toml: {ex.Message}");
             return config;
         }
     }
@@ -67,6 +74,7 @@ public sealed class AppConfig
         for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
             var rawLine = lines[lineIndex];
+            config._parseLine = lineIndex + 1;
 
             // Multi-line literal string inside [[commands]]:
             //   run = '''
@@ -83,7 +91,7 @@ public sealed class AppConfig
                 }
                 else
                 {
-                    config.Errors.Add($"Multi-line value not supported for command key: {mlKey}");
+                    config.AddError($"Multi-line value not supported for command key: {mlKey}");
                 }
                 continue;
             }
@@ -100,13 +108,13 @@ public sealed class AppConfig
                 section = line[2..^2].Trim();
                 if (section.Equals("commands", StringComparison.OrdinalIgnoreCase))
                 {
-                    command = new UserCommand();
+                    command = new UserCommand { SourceLine = lineIndex + 1 };
                     config.Commands.Add(command);
                 }
                 else
                 {
                     command = null;
-                    config.Errors.Add($"Unknown array section: {line}");
+                    config.AddError($"Unknown array section: {line}");
                 }
                 continue;
             }
@@ -121,7 +129,7 @@ public sealed class AppConfig
             var equals = line.IndexOf('=');
             if (equals <= 0)
             {
-                config.Errors.Add($"Invalid TOML assignment: {rawLine.Trim()}");
+                config.AddError($"Invalid TOML assignment: {rawLine.Trim()}");
                 continue;
             }
 
@@ -133,7 +141,7 @@ public sealed class AppConfig
                 versionSeen = true;
                 if (!TryParseInt(value, out var version) || version != SupportedVersion)
                 {
-                    config.Errors.Add($"Unsupported config.toml version: {value}");
+                    config.AddError($"Unsupported config.toml version: {value}");
                 }
                 continue;
             }
@@ -150,7 +158,7 @@ public sealed class AppConfig
                     }
                     else
                     {
-                        config.Errors.Add($"Invalid color for {key}: {value}");
+                        config.AddError($"Invalid color for {key}: {value}");
                     }
                     break;
                 case "opacity":
@@ -160,7 +168,7 @@ public sealed class AppConfig
                     }
                     else
                     {
-                        config.Errors.Add($"Invalid opacity for {key}: {value}");
+                        config.AddError($"Invalid opacity for {key}: {value}");
                     }
                     break;
                 case "shortcuts":
@@ -172,7 +180,7 @@ public sealed class AppConfig
                     }
                     else
                     {
-                        config.Errors.Add($"Invalid shortcut for {key}: {shortcutError ?? value}");
+                        config.AddError($"Invalid shortcut for {key}: {shortcutError ?? value}");
                     }
                     break;
                 case "terminal":
@@ -185,7 +193,7 @@ public sealed class AppConfig
                     }
                     else
                     {
-                        config.Errors.Add($"Invalid openWith value for {key}: {value}");
+                        config.AddError($"Invalid openWith value for {key}: {value}");
                     }
                     break;
                 case "startup":
@@ -206,14 +214,16 @@ public sealed class AppConfig
             var c = config.Commands[i];
             if (string.IsNullOrWhiteSpace(c.Name) || string.IsNullOrWhiteSpace(c.Run))
             {
-                config.Errors.Add("Ignored a [[commands]] entry missing name or run.");
+                config._parseLine = c.SourceLine;
+                config.AddError("Ignored a [[commands]] entry missing name or run.");
                 config.Commands.RemoveAt(i);
             }
         }
 
+        config._parseLine = 0;
         if (!versionSeen)
         {
-            config.Errors.Add("Missing top-level version = 1 in config.toml");
+            config.AddError("Missing top-level version = 1 in config.toml");
         }
 
         return config;
@@ -234,7 +244,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid font size for {key}: {value}");
+                config.AddError($"Invalid font size for {key}: {value}");
             }
             return true;
         }
@@ -247,7 +257,7 @@ public sealed class AppConfig
 
         if (!TryParseString(value, out var family))
         {
-            config.Errors.Add($"Invalid font value for {key}: {value}");
+            config.AddError($"Invalid font value for {key}: {value}");
             return;
         }
 
@@ -261,7 +271,7 @@ public sealed class AppConfig
             case "preview": config.FontPreview = ResolveFontAlias(family, ui: false); break;
             case "terminal": config.FontTerminal = ResolveFontAlias(family, ui: false); break;
             case "foldertree": config.FontFolderTree = ResolveFontAlias(family, ui: false); break;
-            default: config.Errors.Add($"Unknown font key: {key}"); break;
+            default: config.AddError($"Unknown font key: {key}"); break;
         }
     }
 
@@ -288,7 +298,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid terminal fontSize: {value}");
+                config.AddError($"Invalid terminal fontSize: {value}");
             }
             return;
         }
@@ -304,14 +314,14 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid terminal color for {key}: {value}");
+                config.AddError($"Invalid terminal color for {key}: {value}");
             }
             return;
         }
 
         if (!TryParseString(value, out var parsed))
         {
-            config.Errors.Add($"Invalid terminal value for {key}: {value}");
+            config.AddError($"Invalid terminal value for {key}: {value}");
             return;
         }
 
@@ -345,12 +355,12 @@ public sealed class AppConfig
         if (key.Equals("name", StringComparison.OrdinalIgnoreCase))
         {
             if (TryParseString(value, out var name)) command.Name = name;
-            else config.Errors.Add($"Invalid command name: {value}");
+            else config.AddError($"Invalid command name: {value}");
         }
         else if (key.Equals("run", StringComparison.OrdinalIgnoreCase))
         {
             if (TryParseString(value, out var run)) command.Run = run;
-            else config.Errors.Add($"Invalid command run: {value}");
+            else config.AddError($"Invalid command run: {value}");
         }
         else if (key.Equals("extensions", StringComparison.OrdinalIgnoreCase))
         {
@@ -360,7 +370,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid command extensions: {value}");
+                config.AddError($"Invalid command extensions: {value}");
             }
         }
         else if (key.Equals("target", StringComparison.OrdinalIgnoreCase))
@@ -375,13 +385,13 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid command target: {value}");
+                config.AddError($"Invalid command target: {value}");
             }
         }
         else if (key.Equals("requireGit", StringComparison.OrdinalIgnoreCase))
         {
             if (TryParseBool(value, out var b)) command.RequireGit = b;
-            else config.Errors.Add($"Invalid command requireGit: {value}");
+            else config.AddError($"Invalid command requireGit: {value}");
         }
         else if (key.Equals("selection", StringComparison.OrdinalIgnoreCase))
         {
@@ -394,13 +404,13 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid command selection: {value}");
+                config.AddError($"Invalid command selection: {value}");
             }
         }
         else if (key.Equals("terminal", StringComparison.OrdinalIgnoreCase))
         {
             if (TryParseBool(value, out var b)) command.Terminal = b;
-            else config.Errors.Add($"Invalid command terminal: {value}");
+            else config.AddError($"Invalid command terminal: {value}");
         }
         else if (key.Equals("shortcut", StringComparison.OrdinalIgnoreCase))
         {
@@ -412,13 +422,13 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid command shortcut: {shortcutError ?? value}");
+                config.AddError($"Invalid command shortcut: {shortcutError ?? value}");
             }
         }
         else if (key.Equals("shell", StringComparison.OrdinalIgnoreCase))
         {
             if (TryParseString(value, out var sh)) command.Shell = sh;
-            else config.Errors.Add($"Invalid command shell: {value}");
+            else config.AddError($"Invalid command shell: {value}");
         }
     }
 
@@ -435,7 +445,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup layout: {value}");
+                config.AddError($"Invalid startup layout: {value}");
             }
         }
         else if (key.Equals("preview", StringComparison.OrdinalIgnoreCase))
@@ -449,7 +459,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup preview: {value}");
+                config.AddError($"Invalid startup preview: {value}");
             }
         }
         else if (key.Equals("terminal", StringComparison.OrdinalIgnoreCase))
@@ -463,7 +473,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup terminal: {value}");
+                config.AddError($"Invalid startup terminal: {value}");
             }
         }
         else if (key.Equals("folderTree", StringComparison.OrdinalIgnoreCase))
@@ -477,7 +487,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup folderTree: {value}");
+                config.AddError($"Invalid startup folderTree: {value}");
             }
         }
         else if (key.Equals("leftFolder", StringComparison.OrdinalIgnoreCase)
@@ -489,7 +499,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup {key}: {value}");
+                config.AddError($"Invalid startup {key}: {value}");
             }
         }
         else if (key.Equals("leftFolders", StringComparison.OrdinalIgnoreCase)
@@ -501,7 +511,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup {key}: {value}");
+                config.AddError($"Invalid startup {key}: {value}");
             }
         }
         else if (key.Equals("rightFolder", StringComparison.OrdinalIgnoreCase)
@@ -513,7 +523,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup {key}: {value}");
+                config.AddError($"Invalid startup {key}: {value}");
             }
         }
         else if (key.Equals("rightFolders", StringComparison.OrdinalIgnoreCase)
@@ -525,7 +535,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup {key}: {value}");
+                config.AddError($"Invalid startup {key}: {value}");
             }
         }
         else if (key.Equals("leftActiveTab", StringComparison.OrdinalIgnoreCase))
@@ -536,7 +546,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup leftActiveTab: {value}");
+                config.AddError($"Invalid startup leftActiveTab: {value}");
             }
         }
         else if (key.Equals("rightActiveTab", StringComparison.OrdinalIgnoreCase))
@@ -547,7 +557,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup rightActiveTab: {value}");
+                config.AddError($"Invalid startup rightActiveTab: {value}");
             }
         }
         else if (key.Equals("geometry", StringComparison.OrdinalIgnoreCase))
@@ -558,7 +568,7 @@ public sealed class AppConfig
             }
             else
             {
-                config.Errors.Add($"Invalid startup geometry: {value}");
+                config.AddError($"Invalid startup geometry: {value}");
             }
         }
     }
@@ -847,6 +857,7 @@ public sealed class AppConfig
         prevTab = "ctrl+shift+["
         toggleTerminal = "ctrl+j"
         quit = "ctrl+q"
+        editConfig = "ctrl+,"
 
         # Startup layout:
         # [startup]
@@ -950,6 +961,9 @@ public sealed class UserCommand
 {
     public string Name { get; set; } = "";
     public string Run { get; set; } = "";
+
+    /// <summary>1-based config.toml line of the <c>[[commands]]</c> header (0 = unknown). Used for error messages.</summary>
+    public int SourceLine { get; set; }
 
     /// <summary>Matching extensions (normalized, no dot). Empty / contains "*" = all files.</summary>
     public List<string> Extensions { get; set; } = [];
