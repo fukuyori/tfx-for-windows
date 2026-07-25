@@ -1,29 +1,21 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 
 namespace Tfx;
 
 /// <summary>
-/// Simple OK-only message dialog (same look as <see cref="ConfirmDialog"/>).
-/// Used to report config.toml errors, where a status-bar line is easy to miss
-/// while the user is editing the file in an external editor.
+/// Simple OK-only message dialog. Used to report config.toml errors, where a
+/// status-bar line is easy to miss while the user is editing the file in an
+/// external editor.
 /// </summary>
-public sealed class MessageDialog : Window
+public sealed class MessageDialog : ThemedDialog
 {
     public MessageDialog(string title, string message)
     {
         Title = title;
-        Owner = Application.Current.MainWindow;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        ResizeMode = ResizeMode.NoResize;
-        SizeToContent = SizeToContent.WidthAndHeight;
         MinWidth = 420;
         MaxWidth = 640;
-        Background = new SolidColorBrush(Color.FromRgb(15, 19, 23));
-        Foreground = new SolidColorBrush(Color.FromRgb(222, 230, 236));
-        FontFamily = new FontFamily("Consolas, Yu Gothic UI");
 
         var root = new Grid { Margin = new Thickness(18) };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -35,19 +27,19 @@ public sealed class MessageDialog : Window
             Margin = new Thickness(0, 0, 0, 16)
         };
 
-        var mark = new TextBlock
-        {
-            Text = "!",
-            Width = 24,
-            Height = 24,
-            Margin = new Thickness(0, 1, 12, 0),
-            TextAlignment = TextAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Top,
-            FontWeight = FontWeights.Bold,
-            Background = new SolidColorBrush(Color.FromRgb(45, 53, 60)),
-            Foreground = new SolidColorBrush(Color.FromRgb(252, 165, 165))
-        };
+        // Error-red badge. There is no error token in the theme palette, so
+        // this stays a fixed red rather than borrowing an unrelated resource.
+        var mark = MakeMark("TfxAccent");
+        mark.Foreground = new SolidColorBrush(Color.FromRgb(252, 165, 165));
         body.Children.Add(mark);
+
+        var text = new TextBlock
+        {
+            Text = message,
+            MaxWidth = 540,
+            TextWrapping = TextWrapping.Wrap
+        };
+        text.SetResourceReference(TextBlock.ForegroundProperty, "TfxForeground");
 
         // Scroll instead of growing past the screen when the config has many
         // errors.
@@ -55,13 +47,7 @@ public sealed class MessageDialog : Window
         {
             MaxHeight = 320,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Content = new TextBlock
-            {
-                Text = message,
-                MaxWidth = 540,
-                TextWrapping = TextWrapping.Wrap,
-                Foreground = Foreground
-            }
+            Content = text
         });
 
         Grid.SetRow(body, 0);
@@ -81,13 +67,5 @@ public sealed class MessageDialog : Window
         Grid.SetRow(ok, 1);
         root.Children.Add(ok);
         Content = root;
-
-        PreviewKeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Escape)
-            {
-                DialogResult = false;
-            }
-        };
     }
 }

@@ -152,12 +152,18 @@ public partial class MainWindow
             _lastConfigText = null;
         }
 
-        _configReloadTimer = new DispatcherTimer { Interval = ConfigReloadDebounce };
-        _configReloadTimer.Tick += (_, _) =>
+        var reloadTimer = new DispatcherTimer { Interval = ConfigReloadDebounce };
+        reloadTimer.Tick += (_, _) =>
         {
-            _configReloadTimer!.Stop();
-            ReloadConfigAndApply();
+            reloadTimer.Stop();
+            // Disposed (window closing) between the queued tick and now — a
+            // late watcher event must not reload against a closed window.
+            if (_configReloadTimer is not null)
+            {
+                ReloadConfigAndApply();
+            }
         };
+        _configReloadTimer = reloadTimer;
 
         try
         {
@@ -197,7 +203,11 @@ public partial class MainWindow
 
     private void DisposeConfigWatcher()
     {
-        _configReloadTimer?.Stop();
+        // Null the timer BEFORE stopping so a watcher event already queued on
+        // the dispatcher (OnConfigFileEvent's BeginInvoke) can't restart it.
+        var timer = _configReloadTimer;
+        _configReloadTimer = null;
+        timer?.Stop();
         if (_configWatcher is not null)
         {
             _configWatcher.EnableRaisingEvents = false;

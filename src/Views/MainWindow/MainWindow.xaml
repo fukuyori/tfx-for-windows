@@ -40,6 +40,36 @@
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="TextAlignment" Value="Center" />
         </Style>
+        <!-- Shared row chrome for the sidebar lists (PINNED / DISKS). -->
+        <Style x:Key="SidebarListItem" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="6,4"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Stretch" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxHover}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxSelection}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Grid>
     <DockPanel>
@@ -226,38 +256,7 @@
             <Border x:Name="SidebarBorder" Grid.Column="0" Background="{DynamicResource TfxPanel}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,0,1,0">
                 <DockPanel>
                     <TextBlock x:Name="PinnedHeader" DockPanel.Dock="Top" Text="PINNED" Foreground="{DynamicResource TfxMuted}" Margin="10,10,10,4" />
-                    <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Padding="4,0,4,12" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="PinnedList_SelectionChanged" PreviewMouseLeftButtonDown="PinnedList_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="PinnedList_PreviewMouseLeftButtonUp" PreviewMouseMove="PinnedList_PreviewMouseMove" PreviewMouseRightButtonDown="PinnedList_PreviewMouseRightButtonDown" ContextMenuOpening="PinnedList_ContextMenuOpening" DragOver="PinnedList_DragOver" Drop="PinnedList_Drop" AllowDrop="True">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
-                                <Setter Property="Background" Value="Transparent" />
-                                <Setter Property="Margin" Value="0,1" />
-                                <Setter Property="Padding" Value="0" />
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="Bd"
-                                                    Background="{TemplateBinding Background}"
-                                                    CornerRadius="4"
-                                                    Padding="6,4"
-                                                    SnapsToDevicePixels="True">
-                                                <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Stretch" />
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxHover}" />
-                                                </Trigger>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxSelection}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
+                    <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Padding="4,0,4,12" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="PinnedList_SelectionChanged" PreviewMouseLeftButtonDown="PinnedList_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="PinnedList_PreviewMouseLeftButtonUp" PreviewMouseMove="PinnedList_PreviewMouseMove" PreviewMouseRightButtonDown="PinnedList_PreviewMouseRightButtonDown" ContextMenuOpening="PinnedList_ContextMenuOpening" DragOver="PinnedList_DragOver" Drop="PinnedList_Drop" AllowDrop="True" ItemContainerStyle="{StaticResource SidebarListItem}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <local:MiddleEllipsisTextBlock FullText="{Binding}"
@@ -266,38 +265,7 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                     <TextBlock x:Name="DisksHeader" DockPanel.Dock="Top" Text="DISKS" Foreground="{DynamicResource TfxMuted}" Margin="10,4,10,4" />
-                    <ListBox x:Name="DisksList" DockPanel.Dock="Top" Padding="4,0,4,12" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="DisksList_SelectionChanged" PreviewMouseLeftButtonUp="DisksList_PreviewMouseLeftButtonUp">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
-                                <Setter Property="Background" Value="Transparent" />
-                                <Setter Property="Margin" Value="0,1" />
-                                <Setter Property="Padding" Value="0" />
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="Bd"
-                                                    Background="{TemplateBinding Background}"
-                                                    CornerRadius="4"
-                                                    Padding="6,4"
-                                                    SnapsToDevicePixels="True">
-                                                <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Stretch" />
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxHover}" />
-                                                </Trigger>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxSelection}" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
+                    <ListBox x:Name="DisksList" DockPanel.Dock="Top" Padding="4,0,4,12" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="DisksList_SelectionChanged" PreviewMouseLeftButtonUp="DisksList_PreviewMouseLeftButtonUp" ItemContainerStyle="{StaticResource SidebarListItem}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid ToolTip="{Binding ToolTip}">

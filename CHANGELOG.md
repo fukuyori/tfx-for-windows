@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.10
+## 0.9.11
 
 ### Config editing: open in editor + live reload
 
@@ -8,6 +8,13 @@
 - **config.toml changes apply immediately on save.** tfx now watches the file and re-applies it live: shortcuts (including toolbar tooltips), `[colors]` / `[opacity]`, `[font]`, `[openWith]`, `[[commands]]`, and the built-in terminal's colors / font all update without a restart. Not live: `[startup]` (next launch) and the terminal `shell` / background transparency (reopen the terminal pane).
 - **Configuration errors are shown in a dialog, with line numbers.** At startup and after each reload, all config.toml problems (previously a single status-bar line) are listed in an error dialog plus the status bar, each prefixed with its config.toml line (`line 12: Invalid color for ...`); the app keeps running on the previous / default values.
 - The Terminal Settings dialog was generalized into a shared command/arguments dialog used by both Terminal Settings... and Editor Settings... (no behavior change for terminal settings).
+
+### Theming & cleanups
+
+- **Dialogs now follow the `[colors]` theme.** The confirm / name-prompt / message / command-settings dialogs shared a hardcoded dark palette; they now derive from a common themed base that pulls the Tfx* theme resources (and picks up live config reloads), and get the DWM dark/light title bar treatment.
+- Removing a `[font]` key from config.toml now restores the default font on the live reload (previously the old font lingered until restart).
+- Fixed a shutdown race where a config-file event queued right before close could re-arm the reload timer after the watcher was disposed.
+- The PINNED / DISKS sidebar lists share one row style instead of duplicating it.
 
 ### Sidebar: DISKS section
 

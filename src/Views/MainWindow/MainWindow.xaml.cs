@@ -428,26 +428,42 @@ public partial class MainWindow : Window
 
     private static void ApplyPaneFont(Control control, string? family, double? size)
     {
+        // Clear (→ inherit the window font) when the config no longer sets a
+        // value, so removing a [font] key from config.toml takes effect on the
+        // live reload instead of lingering until restart.
         if (!string.IsNullOrWhiteSpace(family))
         {
             control.FontFamily = new FontFamily(family);
+        }
+        else
+        {
+            control.ClearValue(Control.FontFamilyProperty);
         }
         if (size is { } s)
         {
             control.FontSize = s;
         }
+        else
+        {
+            control.ClearValue(Control.FontSizeProperty);
+        }
     }
 
     private void ApplyConfigTheme()
     {
-        if (!string.IsNullOrWhiteSpace(_config.FontUi))
-        {
-            FontFamily = new FontFamily(_config.FontUi);
-        }
+        // Fall back to the XAML defaults when the config stops setting a font,
+        // so a live reload after removing [font] keys restores them.
+        FontFamily = !string.IsNullOrWhiteSpace(_config.FontUi)
+            ? new FontFamily(_config.FontUi)
+            : new FontFamily("Consolas, Yu Gothic UI");
 
         if (_config.FontSize is { } fontSize)
         {
             FontSize = fontSize;
+        }
+        else
+        {
+            ClearValue(FontSizeProperty);
         }
 
         ApplyPaneFonts();

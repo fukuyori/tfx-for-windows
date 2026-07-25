@@ -1,50 +1,28 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
 
 namespace Tfx;
 
-public sealed class NamePromptDialog : Window
+public sealed class NamePromptDialog : ThemedDialog
 {
     private readonly TextBox _textBox;
 
     public NamePromptDialog(string title, string label, string defaultValue)
     {
         Title = title;
-        Owner = Application.Current.MainWindow;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        ResizeMode = ResizeMode.NoResize;
-        SizeToContent = SizeToContent.WidthAndHeight;
         MinWidth = 380;
-        Background = new SolidColorBrush(Color.FromRgb(15, 19, 23));
-        Foreground = new SolidColorBrush(Color.FromRgb(222, 230, 236));
-        FontFamily = new FontFamily("Consolas, Yu Gothic UI");
 
         var root = new Grid { Margin = new Thickness(16) };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var labelBlock = new TextBlock
-        {
-            Text = label,
-            Margin = new Thickness(0, 0, 0, 8),
-            Foreground = Foreground
-        };
+        var labelBlock = MakeLabel(label);
+        labelBlock.Margin = new Thickness(0, 0, 0, 8);
         Grid.SetRow(labelBlock, 0);
         root.Children.Add(labelBlock);
 
-        _textBox = new TextBox
-        {
-            Text = defaultValue,
-            MinWidth = 340,
-            Padding = new Thickness(6, 3, 6, 3),
-            Background = new SolidColorBrush(Color.FromRgb(13, 16, 19)),
-            Foreground = Foreground,
-            CaretBrush = new SolidColorBrush(Color.FromRgb(126, 211, 164)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(47, 58, 67))
-        };
+        _textBox = MakeTextBox(defaultValue, 340);
         Grid.SetRow(_textBox, 1);
         root.Children.Add(_textBox);
 
@@ -62,7 +40,7 @@ public sealed class NamePromptDialog : Window
             MinWidth = 76,
             Margin = new Thickness(0, 0, 8, 0)
         };
-        ok.Click += (_, _) => Accept();
+        ok.Click += (_, _) => DialogResult = true;
         buttons.Children.Add(ok);
 
         var cancel = new Button
@@ -82,19 +60,7 @@ public sealed class NamePromptDialog : Window
             _textBox.Focus();
             _textBox.SelectAll();
         };
-        PreviewKeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Escape)
-            {
-                DialogResult = false;
-            }
-        };
     }
 
     public string EnteredText => _textBox.Text;
-
-    private void Accept()
-    {
-        DialogResult = true;
-    }
 }
