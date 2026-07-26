@@ -286,7 +286,7 @@ public partial class MainWindow
     /// paths, sorted), keeping existing child nodes — and their expansion
     /// state — for folders that still exist. No disk IO of its own.
     /// </summary>
-    private static void ApplyTreeNodeChildren(TreeViewItem node, IReadOnlyList<string> directories)
+    private void ApplyTreeNodeChildren(TreeViewItem node, IReadOnlyList<string> directories)
     {
         if (HasExpandPlaceholder(node))
         {
@@ -298,20 +298,38 @@ public partial class MainWindow
             .GroupBy(i => (string)i.Tag, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        // A realized-empty node (leaf) goes through the same rebuild: since the
-        // child list is already known, the new nodes are added directly — no
-        // lazy placeholder, which would render as a blank row and would never
-        // populate without a collapse / re-expand.
-        node.Items.Clear();
-        foreach (var directory in directories)
+        // Detaching the selected node (or one of its ancestors) during the
+        // rebuild makes the TreeView move its selection, and the unguarded
+        // SelectedItemChanged would then NAVIGATE the active pane (e.g. after
+        // a paste, the pane jumped to the refreshed parent folder). Suppress
+        // selection-driven navigation for the whole synchronous rebuild;
+        // re-adding the same node instance (IsSelected still true) restores
+        // the selection before the guard lifts.
+        var previousGuard = _syncingFolderTree;
+        _syncingFolderTree = true;
+        try
         {
-            node.Items.Add(existing.TryGetValue(directory, out var old) ? old : CreateFolderNode(directory));
-        }
+            // A realized-empty node (leaf) goes through the same rebuild: since
+            // the child list is already known, the new nodes are added directly
+            // — no lazy placeholder, which would render as a blank row and
+            // would never populate without a collapse / re-expand.
+            node.Items.Clear();
+            foreach (var directory in directories)
+            {
+                node.Items.Add(existing.TryGetValue(directory, out var old) ? old : CreateFolderNode(directory));
+            }
 
-        if (node.Items.Count == 0)
+            if (node.Items.Count == 0)
+            {
+                // Lost its last subfolder: close the now-empty expander.
+                // (Collapsing selects the node if a removed child was selected —
+                // also covered by the guard above.)
+                node.IsExpanded = false;
+            }
+        }
+        finally
         {
-            // Lost its last subfolder: close the now-empty expander.
-            node.IsExpanded = false;
+            _syncingFolderTree = previousGuard;
         }
     }
 }

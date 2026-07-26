@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.14
+
+- Fixed: after creating / deleting / pasting items, the active pane could jump to another folder (often a pinned one). Rebuilding the tree's children detaches the selected node for an instant; the TreeView moves its selection and the selection-changed handler navigated the pane. Tree rebuilds now suppress selection-driven navigation.
+- README (English / Japanese): added a Screenshots section (sidebar overview, split view with preview / context menu / terminal, custom theme).
+
 ## 0.9.13
 
 - **Drop onto the folder tree.** Files / folders dragged from the file panes (or external apps) can now be dropped onto a FOLDERS-tree node: same volume defaults to Move, across volumes to Copy, with the usual Shift / Ctrl / Alt overrides and the right-drag Copy / Move / Shortcut menu. Dropping a folder onto itself or its own subtree is rejected (the same guard was added to the file-pane drop, which previously relied on the shell's error dialog). Hovering a collapsed node during a drag auto-expands it after a short delay; the hovered node is highlighted without selecting it (selection would navigate the pane). After a copy / move, the affected realized tree nodes refresh in place. Tree nodes themselves are intentionally not draggable.

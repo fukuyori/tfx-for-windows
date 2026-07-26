@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.9.13
+Version: 0.9.14
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -16,6 +16,22 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 - Development roadmap: [docs/roadmap.md](docs/roadmap.md)
 - Configuration guide: [docs/configuration.md](docs/configuration.md) / [日本語](docs/configuration.ja.md)
 - Contributing guide: [docs/contributing.md](docs/contributing.md)
+
+---
+
+## Screenshots
+
+Single-pane view with the sidebar (pinned folders, disks with usage bars, folder tree):
+
+![Single pane with the pinned / disks / folder-tree sidebar](images/screenshot1.png)
+
+Split view with the rendered Markdown preview, the Windows 11–style context menu, and the built-in terminal pane:
+
+![Split view with Markdown preview, context menu, and built-in terminal](images/screenshot2.png)
+
+Colors, fonts, and the terminal palette are fully themeable via `config.toml`:
+
+![Custom color theme configured in config.toml](images/screenshot3.png)
 
 ---
 
@@ -59,7 +75,7 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.13 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.14 |
 +---------------------------------------------------------------------+
 ```
 

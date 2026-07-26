@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 読み方: **Tafix**
-Version: 0.9.13
+Version: 0.9.14
 
 [English](README.md) | 日本語
 
@@ -16,6 +16,22 @@ tfx for Windows は、キーボード操作を重視した Windows 向けのダ�
 - Roadmap: [docs/roadmap.md](docs/roadmap.md)
 - 設定ガイド: [docs/configuration.ja.md](docs/configuration.ja.md)
 - Contributing: [docs/contributing.md](docs/contributing.md)
+
+---
+
+## スクリーンショット
+
+シングルペイン表示とサイドバー（ピン留め、使用量バー付きディスク、フォルダーツリー）:
+
+![シングルペインとピン留め / ディスク / フォルダーツリーのサイドバー](images/screenshot1.png)
+
+分割表示・Markdown レンダリングプレビュー・Windows 11 風コンテキストメニュー・内蔵ターミナル:
+
+![分割表示と Markdown プレビュー、コンテキストメニュー、内蔵ターミナル](images/screenshot2.png)
+
+カラー・フォント・ターミナル配色は `config.toml` で自由にテーマ設定できます:
+
+![config.toml で設定したカスタムテーマ](images/screenshot3.png)
 
 ---
 
