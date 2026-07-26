@@ -18,6 +18,9 @@ public partial class MainWindow
             return;
         }
 
+        // A folder change starts type-ahead from scratch.
+        ResetTypeAhead();
+
         // Navigating cancels any in-flight subfolder search and clears the
         // search box so the new folder shows real contents.
         if (_subfolderSearchActive)

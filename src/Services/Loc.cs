@@ -23,6 +23,7 @@ internal static class Loc
         ["Searching {0}..."] = "検索中: {0}...",
         ["Searching: {0} matches"] = "検索中: {0} 件",
         ["Search complete: {0} matches"] = "検索完了: {0} 件",
+        ["Find: {0}"] = "検索: {0}",
         ["Switch view mode"] = "表示モード切替",
         ["Toggle hidden files ({0})"] = "隠しファイル表示切替 ({0})",
         ["Open Terminal here ({0})"] = "ここでターミナルを開く ({0})",

@@ -20,6 +20,7 @@
         FontFamily="Consolas, Yu Gothic UI"
         KeyDown="Window_KeyDown"
         PreviewKeyDown="Window_PreviewKeyDown"
+        PreviewTextInput="Window_PreviewTextInput"
         SizeChanged="Window_SizeChanged"
         Closing="Window_Closing">
     <Window.Resources>

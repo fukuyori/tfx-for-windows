@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.15
+
+- **Type-to-select in the file panes (Explorer / Finder style).** Typing a printable character jumps the selection to the first row whose name starts with it; more characters within one second extend the prefix ("c", "h", "a", "r" lands on the first name starting with "char"). Pressing the same single character repeatedly cycles through the rows with that initial, wrapping at the end — so files sorted behind the folder block stay reachable with one key. A mistyped key that matches nothing keeps the current prefix and selection. The active prefix is shown in the status line as "Find: ..." while the one-second window is open. The prefix resets on folder navigation; text fields, the terminal, and modifier shortcuts are unaffected.
+- **The folder tree scrolls the current folder to the top.** Navigating from the file list (double-click, Enter, "..", back / forward / up, path bar, pinned / disk lists) now positions the folder's tree node as the topmost visible row, so the subfolders revealed under it are in view. Clicking a tree node itself keeps the tree where it is (no scroll jump).
+
 ## 0.9.14
 
 - Fixed: after creating / deleting / pasting items, the active pane could jump to another folder (often a pinned one). Rebuilding the tree's children detaches the selected node for an instant; the TreeView moves its selection and the selection-changed handler navigated the pane. Tree rebuilds now suppress selection-driven navigation.

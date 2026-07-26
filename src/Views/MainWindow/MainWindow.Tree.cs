@@ -220,6 +220,10 @@ public partial class MainWindow
 
         if (FolderTree.SelectedItem is TreeViewItem item && item.Tag is string path && Directory.Exists(path))
         {
+            // The user clicked the node they want — the follow-up tree sync
+            // must not scroll it to the top of the tree (see
+            // SyncFolderTreeToActivePane).
+            _treeClickNavigation = true;
             Navigate(_activeGrid, path, true);
         }
     }
@@ -274,14 +278,23 @@ public partial class MainWindow
     // whenever the tree is rebuilt (LoadDrives) so the next sync re-runs.
     private string? _lastFolderTreeSyncPath;
 
+    // True while the pending navigation originated from a click on a folder
+    // tree node itself. That node is already where the user is looking, so the
+    // sync keeps it in place (plain BringIntoView) instead of scrolling it to
+    // the top of the tree.
+    private bool _treeClickNavigation;
+
     private void SyncFolderTreeToActivePane()
     {
+        var fromTreeClick = _treeClickNavigation;
+        _treeClickNavigation = false;
+
         var path = GetCurrentPath(_activeGrid);
         if (string.Equals(path, _lastFolderTreeSyncPath, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
-        SyncFolderTreeToPath(path);
+        SyncFolderTreeToPath(path, scrollToTop: !fromTreeClick);
         _lastFolderTreeSyncPath = path;
     }
 
@@ -290,7 +303,7 @@ public partial class MainWindow
         Dispatcher.BeginInvoke(() => SyncFolderTreeToActivePane(), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
-    private void SyncFolderTreeToPath(string path)
+    private void SyncFolderTreeToPath(string path, bool scrollToTop = true)
     {
         if (ArchivePath.TryParse(path, out var archive, out _))
         {
@@ -347,12 +360,44 @@ public partial class MainWindow
                 current.IsExpanded = true;
             }
             current.IsSelected = true;
-            current.BringIntoView();
+            if (scrollToTop)
+            {
+                ScrollTreeNodeToTop(current);
+            }
+            else
+            {
+                current.BringIntoView();
+            }
         }
         finally
         {
             _syncingFolderTree = false;
         }
+    }
+
+    /// <summary>
+    /// Scrolls the folder tree so <paramref name="item"/> becomes the topmost
+    /// visible row, keeping the current folder and its subfolders in view.
+    /// Deferred to after the pending layout pass so nodes expanded by the
+    /// reveal walk above have their final positions.
+    /// </summary>
+    private void ScrollTreeNodeToTop(TreeViewItem item)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (!item.IsVisible ||
+                FindVisualChild<ScrollViewer>(FolderTree) is not { } scrollViewer)
+            {
+                item.BringIntoView();
+                return;
+            }
+
+            // The TreeView scrolls physically (pixels), so the item's Y offset
+            // inside the viewport added to the current offset lands its top row
+            // at the top. ScrollToVerticalOffset clamps at the content end.
+            var y = item.TransformToVisual(scrollViewer).Transform(new Point(0, 0)).Y;
+            scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset + y);
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private void EnsureFolderNodeChildren(TreeViewItem item)

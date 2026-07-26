@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.9.14
+Version: 0.9.15
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -75,7 +75,7 @@ Colors, fonts, and the terminal palette are fully themeable via `config.toml`:
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.14 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.15 |
 +---------------------------------------------------------------------+
 ```
 
