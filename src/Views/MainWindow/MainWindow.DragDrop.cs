@@ -247,6 +247,8 @@ public partial class MainWindow
     private void CompleteFileDrag(DragDropEffects effect, bool suppressNextContextMenu)
     {
         SetDropHighlight(null);
+        SetTreeDropHighlight(null);
+        CancelTreeHoverExpand();
 
         if (suppressNextContextMenu)
         {
@@ -287,6 +289,15 @@ public partial class MainWindow
         if (ArchivePath.Contains(destination))
         {
             e.Handled = true;
+            return;
+        }
+
+        // Rejected in Grid_DragOver already; re-checked here because a drop can
+        // land without a preceding DragOver on the final element.
+        if (IsInvalidFolderDrop(paths, destination))
+        {
+            e.Handled = true;
+            e.Effects = DragDropEffects.None;
             return;
         }
 
@@ -424,6 +435,9 @@ public partial class MainWindow
                 // clear-and-repopulate.
                 _ = ReloadDiffAsync(LeftGrid);
                 _ = ReloadDiffAsync(RightGrid);
+                // The folder tree has no watcher: update the realized nodes the
+                // operation touched so moved / copied folders show up.
+                RefreshFolderTreeNodes(sourcesCopy, destination);
                 if (error is not null)
                 {
                     SetStatus(Loc.F("Operation failed: {0}", error));
@@ -503,6 +517,17 @@ public partial class MainWindow
 
         var destination = DropDestinationFor(kind, targetItem, view);
         if (ArchivePath.Contains(destination))
+        {
+            SetDropHighlight(null);
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        // A folder cannot be dropped onto itself or into its own subtree
+        // (e.g. split panes showing a folder and one of its descendants).
+        if (e.Data.GetData(DataFormats.FileDrop) is string[] dragPaths &&
+            IsInvalidFolderDrop(dragPaths, destination))
         {
             SetDropHighlight(null);
             e.Effects = DragDropEffects.None;

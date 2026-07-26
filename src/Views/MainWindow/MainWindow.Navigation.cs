@@ -94,6 +94,9 @@ public partial class MainWindow
 
             ApplyPendingSelection(grid, pane);
             ApplyGitBadges(pane);
+            // Keep the FOLDERS tree's realized node in sync with the fresh
+            // listing (folders created / renamed / deleted since last load).
+            SyncTreeNodeToListing(path, items);
             // Refresh the pinned-list highlight so it matches the freshly
             // loaded folder (or clears if the path no longer corresponds to
             // any pinned entry). Without this the pinned list stays stuck on

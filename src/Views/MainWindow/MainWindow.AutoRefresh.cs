@@ -362,6 +362,9 @@ public partial class MainWindow
         }
 
         DiffApply(target, newItems);
+        // The FOLDERS tree has no watcher of its own: mirror the subfolder set
+        // this refresh just observed onto the realized tree node.
+        SyncTreeNodeToListing(path, newItems);
         // External change → re-fetch git status and re-stamp badges.
         RefreshGitStatusForPane(pane);
         UpdateStatus();

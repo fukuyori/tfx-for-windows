@@ -323,9 +323,7 @@ public partial class MainWindow
             foreach (var part in parts)
             {
                 // `current` is an ancestor of the target here, so expand it to
-                // reveal and realize the next level. The target node itself (the
-                // final `current` after the loop) is left at its own expanded /
-                // collapsed state so double-click stays in control of open/close.
+                // reveal and realize the next level.
                 current.IsExpanded = true;
                 EnsureFolderNodeChildren(current);
                 accumulated = Path.Combine(accumulated, part);
@@ -341,6 +339,13 @@ public partial class MainWindow
                 current = next;
             }
 
+            // Also expand the target node itself so the tree shows the same
+            // subfolders the file pane is listing (one level deeper than the
+            // selection). Populated lazily via the Expanded handler.
+            if (current.Items.Count > 0)
+            {
+                current.IsExpanded = true;
+            }
             current.IsSelected = true;
             current.BringIntoView();
         }

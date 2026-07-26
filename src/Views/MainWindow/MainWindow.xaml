@@ -303,7 +303,7 @@
                         <Button x:Name="CollapseAllButton" DockPanel.Dock="Right" Style="{StaticResource ToolbarButton}" Click="CollapseAllFolders_Click" ToolTip="Collapse all folders" Content="&#xE738;" />
                         <TextBlock x:Name="FoldersHeader" Text="FOLDERS" Foreground="{DynamicResource TfxMuted}" VerticalAlignment="Center" />
                     </DockPanel>
-                    <TreeView x:Name="FolderTree" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" SelectedItemChanged="FolderTree_SelectedItemChanged" PreviewMouseLeftButtonDown="FolderTree_PreviewMouseLeftButtonDown" />
+                    <TreeView x:Name="FolderTree" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" SelectedItemChanged="FolderTree_SelectedItemChanged" PreviewMouseLeftButtonDown="FolderTree_PreviewMouseLeftButtonDown" AllowDrop="True" DragOver="FolderTree_DragOver" Drop="FolderTree_Drop" DragLeave="FolderTree_DragLeave" />
                 </DockPanel>
             </Border>
 

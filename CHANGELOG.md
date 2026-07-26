@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.13
+
+- **Drop onto the folder tree.** Files / folders dragged from the file panes (or external apps) can now be dropped onto a FOLDERS-tree node: same volume defaults to Move, across volumes to Copy, with the usual Shift / Ctrl / Alt overrides and the right-drag Copy / Move / Shortcut menu. Dropping a folder onto itself or its own subtree is rejected (the same guard was added to the file-pane drop, which previously relied on the shell's error dialog). Hovering a collapsed node during a drag auto-expands it after a short delay; the hovered node is highlighted without selecting it (selection would navigate the pane). After a copy / move, the affected realized tree nodes refresh in place. Tree nodes themselves are intentionally not draggable.
+- **The folder tree reveal now goes one level deeper.** When the tree syncs to the active pane's folder, the selected node itself is expanded too, so the subfolders the file list is showing are also visible in the tree (previously the reveal stopped at selecting the folder).
+- **The folder tree now follows the file panes.** Whenever a pane (re)loads or auto-refreshes a folder, the matching realized tree node mirrors the observed subfolder set — so New Folder, rename, delete, and external changes appear in the tree immediately, at no extra disk IO (previously the tree only updated on expand or full rebuild).
+
 ## 0.9.12
 
 - **Collapsible PINNED / DISKS sidebar sections.** Clicking the PINNED or DISKS header toggles that section (chevron shows the state); the collapse state persists in `settings.json`.
