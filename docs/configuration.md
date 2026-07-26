@@ -353,6 +353,7 @@ Supported action keys:
 | `toggleTerminal` | `ctrl+j` | Show or hide the built-in terminal pane. (Default avoids `` ctrl+` `` because the `` ` `` key is hard to reach / IME-bound on Japanese keyboards; you can set it to `` ctrl+` `` here if your layout allows.) |
 | `quit` | `ctrl+q` | Quit the application (saves the session and tears down the terminal). Ignored while the terminal pane is focused so the shell keeps `Ctrl+Q`; `Alt+F4` always closes the window. |
 | `editConfig` | `ctrl+,` | Open `config.toml` in an editor (Editor Settings... command → OS `.toml` association → Notepad). |
+| `showProperties` | `alt+enter` | Show the Windows properties dialog for the selected item (or the current folder when nothing is selected). |
 
 The `` ` `` (backtick / grave) key token is accepted for `toggleTerminal`; `[` and `]` are accepted for the tab-cycle shortcuts.
 

@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.9.11
+Version: 0.9.12
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -52,14 +52,14 @@ A keyboard-friendly, dark-themed file explorer for Windows. C# / WPF port of the
 ```text
 +-- Toolbar -----------------------------------------------------------+
 | Back Forward Up Pin |      drag area      [Search] | View Hidden    |
-| Terminal Reload Preview Split Swap Columns | Min Max Close           |
+| Terminal Reload Preview Split Swap Settings | Min Max Close          |
 +--------------+----------------+----------------+--------------------+
 | PINNED       | Address bar    | Address bar    | PREVIEW            |
 | folder list  | Left file view | Right file view| info / image / text|
 | pinned paths |                |                |                    |
 | FOLDERS tree |                |                |                    |
 +--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.11 |
+| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.12 |
 +---------------------------------------------------------------------+
 ```
 
@@ -76,7 +76,7 @@ Buttons use **Segoe Fluent Icons** with **Segoe MDL2 Assets** fallback. Hover fo
 | Navigation | Back, Forward, Up, Pin / unpin current folder |
 | Drag / search | Empty drag area, Search, Focus search |
 | View | View mode (Details / Icons), Toggle hidden files |
-| Utility | Open Terminal here, Reload, Preview toggle, Split toggle, Swap panes, Columns |
+| Utility | Open Terminal here, Reload, Preview toggle, Split toggle, Swap panes, Settings menu (column settings moved to the column-header right-click menu) |
 | Window | Minimize, maximize / restore, close |
 | Status bar | Item count / selection size, current Git branch (if inside a working copy), free space on the active drive, version |
 
@@ -179,7 +179,7 @@ In Details mode, items are ordered as: parent (`..`) row first, then directories
 
 ## Columns popup
 
-Open via the Columns button. The popup stays open while you toggle items.
+Right-click a column header and choose **Columns...**. The popup stays open while you toggle items.
 
 - Check / uncheck a column to show / hide it
 - Up / Down arrows reorder columns. Order applies to both panes

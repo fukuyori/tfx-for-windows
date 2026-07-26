@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -22,10 +23,54 @@ public partial class MainWindow
     }
 
 
+    /// <summary>
+    /// Shows the Windows properties sheet for the selected item, or for the
+    /// current folder when nothing is selected. No-op inside an archive (the
+    /// entries do not exist on disk). Shared by the context menu and the
+    /// showProperties shortcut.
+    /// </summary>
+    private void ShowPropertiesDialog()
+    {
+        var selection = ActiveSelectedItems().Where(i => !i.IsParent).ToArray();
+        var target = selection.Length switch
+        {
+            1 => selection[0].FullPath,
+            0 => GetCurrentPath(_activeGrid),
+            _ => null,
+        };
+        if (target is null || ArchivePath.Contains(target))
+        {
+            return;
+        }
+        try
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            ShellProperties.Show(hwnd, target);
+        }
+        catch (Exception ex)
+        {
+            SetStatus(Loc.F("Properties failed: {0}", ex.Message));
+        }
+    }
+
     private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
+        // A new right-press is a new gesture: drop any suppression armed by a
+        // previous right-drag whose button-up the drag loop consumed (the
+        // suppressed ContextMenuOpening never fired, so the flag would
+        // otherwise eat this gesture's menu).
+        _suppressNextContextMenu = false;
+
         if (sender is not DataGrid grid)
         {
+            return;
+        }
+
+        // A right-click on a column header gets its own menu (column settings)
+        // instead of the file menu, and must not prime a row drag.
+        if (FindVisualAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject) is { } header)
+        {
+            grid.ContextMenu = BuildHeaderContextMenu(header);
             return;
         }
 
@@ -82,7 +127,26 @@ public partial class MainWindow
             return;
         }
 
+        if (FindVisualAncestor<DataGridColumnHeader>(e.OriginalSource as DependencyObject) is { } header)
+        {
+            grid.ContextMenu = BuildHeaderContextMenu(header);
+            return;
+        }
+
         grid.ContextMenu = BuildGridContextMenu(grid);
+    }
+
+    /// <summary>
+    /// The column-header context menu: a single entry opening the column
+    /// visibility / order popup, anchored below the clicked header.
+    /// </summary>
+    private ContextMenu BuildHeaderContextMenu(DataGridColumnHeader header)
+    {
+        var menu = new ContextMenu();
+        var columns = new MenuItem { Header = Loc.T("Columns...") };
+        columns.Click += (_, _) => OpenColumnsPopup(header);
+        menu.Items.Add(columns);
+        return menu;
     }
 
     private ContextMenu BuildGridContextMenu(DataGrid grid)
@@ -250,6 +314,15 @@ public partial class MainWindow
         var perm = new MenuItem { Header = Loc.T("Delete permanently"), InputGestureText = "Shift+Del", IsEnabled = hasSelection && writableContext };
         perm.Click += (_, _) => DeletePermanently();
         menu.Items.Add(perm);
+
+        menu.Items.Add(new Separator());
+
+        // Single item → that item's sheet; no selection → the current folder's.
+        // Multi-select is ambiguous (only one sheet would open), so disabled.
+        var propertiesEnabled = oneSelected ? !selectionHasArchive : !hasSelection && !inArchive;
+        var properties = new MenuItem { Header = Loc.T("Properties"), InputGestureText = ShortcutText("showProperties"), IsEnabled = propertiesEnabled };
+        properties.Click += (_, _) => ShowPropertiesDialog();
+        menu.Items.Add(properties);
 
         return menu;
     }

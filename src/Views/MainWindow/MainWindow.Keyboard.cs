@@ -44,6 +44,7 @@ public partial class MainWindow
         ["toggleTerminal"] = "ctrl+j",
         ["quit"] = "ctrl+q",
         ["editConfig"] = "ctrl+,",
+        ["showProperties"] = "alt+enter",
     };
 
     private bool InArchiveContext => ArchivePath.Contains(GetCurrentPath(_activeGrid));
@@ -299,6 +300,11 @@ public partial class MainWindow
         else if (IsShortcut("editConfig", e))
         {
             OpenConfigInEditor();
+            e.Handled = true;
+        }
+        else if (IsShortcut("showProperties", e))
+        {
+            ShowPropertiesDialog();
             e.Handled = true;
         }
         else if (IsShortcut("moveToTrash", e))

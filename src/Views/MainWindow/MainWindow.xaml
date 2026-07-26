@@ -208,7 +208,6 @@
                         </Viewbox>
                     </ToggleButton>
                     <ToggleButton x:Name="TerminalPaneButton" Style="{StaticResource ToolbarToggleButton}" Click="TerminalPane_Click" Content="&#xE756;" />
-                    <Button Style="{StaticResource ToolbarButton}" x:Name="ColumnsButton" Click="Columns_Click" ToolTip="Columns" Content="&#xE762;" />
                     <Button Style="{StaticResource ToolbarButton}" x:Name="SettingsButton" Click="Settings_Click" ToolTip="Settings" Content="&#xE713;" />
                 </StackPanel>
                 <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="8,0,0,0">
@@ -255,7 +254,10 @@
 
             <Border x:Name="SidebarBorder" Grid.Column="0" Background="{DynamicResource TfxPanel}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock x:Name="PinnedHeader" DockPanel.Dock="Top" Text="PINNED" Foreground="{DynamicResource TfxMuted}" Margin="10,10,10,4" />
+                    <DockPanel DockPanel.Dock="Top" Margin="10,10,10,4" Background="Transparent" Cursor="Hand" MouseLeftButtonUp="PinnedHeader_Click">
+                        <TextBlock x:Name="PinnedChevron" DockPanel.Dock="Right" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource TfxMuted}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="PinnedHeader" Text="PINNED" Foreground="{DynamicResource TfxMuted}" />
+                    </DockPanel>
                     <ListBox x:Name="PinnedList" DockPanel.Dock="Top" Padding="4,0,4,12" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="PinnedList_SelectionChanged" PreviewMouseLeftButtonDown="PinnedList_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="PinnedList_PreviewMouseLeftButtonUp" PreviewMouseMove="PinnedList_PreviewMouseMove" PreviewMouseRightButtonDown="PinnedList_PreviewMouseRightButtonDown" ContextMenuOpening="PinnedList_ContextMenuOpening" DragOver="PinnedList_DragOver" Drop="PinnedList_Drop" AllowDrop="True" ItemContainerStyle="{StaticResource SidebarListItem}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -264,7 +266,10 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    <TextBlock x:Name="DisksHeader" DockPanel.Dock="Top" Text="DISKS" Foreground="{DynamicResource TfxMuted}" Margin="10,4,10,4" />
+                    <DockPanel DockPanel.Dock="Top" Margin="10,4,10,4" Background="Transparent" Cursor="Hand" MouseLeftButtonUp="DisksHeader_Click">
+                        <TextBlock x:Name="DisksChevron" DockPanel.Dock="Right" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" Foreground="{DynamicResource TfxMuted}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="DisksHeader" Text="DISKS" Foreground="{DynamicResource TfxMuted}" />
+                    </DockPanel>
                     <ListBox x:Name="DisksList" DockPanel.Dock="Top" Padding="4,0,4,12" Background="{DynamicResource TfxPanel}" Foreground="{DynamicResource TfxForeground}" BorderThickness="0" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="DisksList_SelectionChanged" PreviewMouseLeftButtonUp="DisksList_PreviewMouseLeftButtonUp" ItemContainerStyle="{StaticResource SidebarListItem}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>

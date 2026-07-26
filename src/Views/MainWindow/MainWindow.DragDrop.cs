@@ -144,6 +144,34 @@ public partial class MainWindow
             ? DragDropEffects.Copy
             : DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link;
 
+        // WPF's default QueryContinueDrag only watches the LEFT button, so a
+        // right-button drag would report "drop" on the very first callback —
+        // the drag ended at the start position while the user was still
+        // holding the button, leaving them "dragging" nothing. Track the
+        // right button explicitly for the fallback right-drag.
+        QueryContinueDragEventHandler? rightDragContinue = null;
+        if (isRightDrag)
+        {
+            rightDragContinue = (_, args) =>
+            {
+                args.Handled = true;
+                if (args.EscapePressed ||
+                    (args.KeyStates & DragDropKeyStates.LeftMouseButton) != 0)
+                {
+                    args.Action = DragAction.Cancel;
+                }
+                else if ((args.KeyStates & DragDropKeyStates.RightMouseButton) == 0)
+                {
+                    args.Action = DragAction.Drop;
+                }
+                else
+                {
+                    args.Action = DragAction.Continue;
+                }
+            };
+            DragDrop.AddQueryContinueDragHandler(source, rightDragContinue);
+        }
+
         // Show the terminal drop overlay (if the pane is open) so files can be
         // dropped onto the shell. WebView2 is a native child window that swallows
         // WPF drops, so a WPF overlay must sit on top of it during the drag.
@@ -156,6 +184,10 @@ public partial class MainWindow
         finally
         {
             ShowTerminalDropOverlay(false);
+            if (rightDragContinue is not null)
+            {
+                DragDrop.RemoveQueryContinueDragHandler(source, rightDragContinue);
+            }
         }
 
         CompleteFileDrag(effect, suppressNextContextMenu: isRightDrag);
@@ -259,19 +291,28 @@ public partial class MainWindow
         }
 
         // Right-button drag started from a tfx pane: pop the Copy / Move /
-        // Shortcut / Cancel menu and act on the user's choice.
+        // Shortcut / Cancel menu and act on the user's choice. The menu opens
+        // via BeginInvoke so it runs AFTER this drop callback — which is
+        // nested inside the source's DoDragDrop modal loop — returns. Opening
+        // it synchronously here risks a mouse-capture fight with the ending
+        // drag that closes the menu instantly (and the previous
+        // DispatcherFrame pump could then spin forever, leaving the app stuck
+        // in a phantom drag).
         if (_nativeRightDragInProgress || e.Data.GetDataPresent(TfxRightDragFormat))
         {
             e.Handled = true;
+            // Provisional effect for the source (triggers its reload); the
+            // actual operation runs from the menu choice below.
+            e.Effects = DragDropEffects.Copy;
+            var placement = view as UIElement;
             var allowMoveLink = !paths.Any(ArchivePath.Contains);
-            var chosen = ShowRightDragMenu(view as UIElement, allowMoveLink);
-            if (chosen is null)
+            Dispatcher.BeginInvoke(() => ShowRightDragMenu(placement, allowMoveLink, chosen =>
             {
-                e.Effects = DragDropEffects.None;
-                return;
-            }
-            ExecuteDrop(paths, destination, chosen.Value);
-            e.Effects = chosen.Value;
+                if (chosen is { } chosenEffect)
+                {
+                    ExecuteDrop(paths, destination, chosenEffect);
+                }
+            }));
             return;
         }
 
@@ -403,10 +444,12 @@ public partial class MainWindow
 
     /// <summary>
     /// Pops a ContextMenu at the current cursor with the four standard
-    /// right-drag options. Returns the chosen <see cref="DragDropEffects"/>,
-    /// or null if the user cancels / dismisses the menu.
+    /// right-drag options and reports the chosen <see cref="DragDropEffects"/>
+    /// (null = cancelled / dismissed) via <paramref name="onChosen"/> when the
+    /// menu closes. No nested message pump: acting on Closed keeps this safe
+    /// to call right after a drag loop unwinds.
     /// </summary>
-    private DragDropEffects? ShowRightDragMenu(UIElement? placement, bool allowMoveAndLink)
+    private void ShowRightDragMenu(UIElement? placement, bool allowMoveAndLink, Action<DragDropEffects?> onChosen)
     {
         DragDropEffects? chosen = null;
         var menu = new ContextMenu { PlacementTarget = placement, Placement = PlacementMode.MousePoint };
@@ -429,14 +472,12 @@ public partial class MainWindow
         cancelItem.Click += (_, _) => chosen = null;
         menu.Items.Add(cancelItem);
 
-        // Open synchronously: pump the dispatcher until the menu closes so the
-        // Drop handler can act on the user's choice before returning.
+        // A MenuItem's Click fires before the menu's Closed, so `chosen` is
+        // final by the time Closed runs; dismissing without a choice reports
+        // null. The handler is attached BEFORE IsOpen so an instant close
+        // (e.g. capture denied) still completes the drop instead of leaking it.
+        menu.Closed += (_, _) => onChosen(chosen);
         menu.IsOpen = true;
-        var frame = new DispatcherFrame();
-        menu.Closed += (_, _) => frame.Continue = false;
-        Dispatcher.PushFrame(frame);
-
-        return chosen;
     }
 
     private void Grid_DragOver(object sender, DragEventArgs e)

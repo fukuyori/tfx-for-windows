@@ -75,6 +75,9 @@ public partial class MainWindow
 
     private void IconView_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
+        // New gesture: see Grid_PreviewMouseRightButtonDown.
+        _suppressNextContextMenu = false;
+
         if (sender is not ListBox lb)
         {
             return;

@@ -1,13 +1,13 @@
 # Changelog
 
+## 0.9.12
+
+- **Collapsible PINNED / DISKS sidebar sections.** Clicking the PINNED or DISKS header toggles that section (chevron shows the state); the collapse state persists in `settings.json`.
+- **Right-button drag: releasing the button now reliably ends the drag.** Two fixes: (1) the WPF fallback drag (used for archive items and when the native shell drag is unavailable) relied on WPF's default continue/drop logic, which only watches the *left* button — a right-button drag "dropped" immediately at the start position while the button was still held, leaving a phantom drag; it now tracks the right button (release = drop, Esc or left-click = cancel). (2) The Copy / Move / Shortcut / Cancel menu for drops inside tfx was pumped synchronously from inside the drop callback (nested in the drag's modal loop); a capture fight could close it instantly and leave the pump spinning in a stuck drag state. The menu now opens after the drag loop unwinds and acts on its Closed event. Also, a right-drag no longer swallows the *next* right-click's context menu.
+- **Column settings moved to the header context menu.** Right-clicking a column header now shows a **Columns...** entry that opens the column visibility / order popup below the clicked header (previously the file context menu appeared there). The toolbar Columns button was removed.
+- **Properties on the context menu.** The file-pane context menu now ends with **Properties**, opening the standard Windows properties dialog for the selected item — or for the current folder when nothing is selected. Also bound to the new `showProperties` shortcut (default `Alt+Enter`). Disabled for multi-selection and inside archives.
+
 ## 0.9.11
-
-### Config editing: open in editor + live reload
-
-- **Edit config.toml from the app.** A new title-bar gear button opens a settings menu — **Edit config file...**, **Editor Settings...**, **Terminal Settings...** — and the same entries live on the file-pane context menu; the new `editConfig` shortcut (default `Ctrl+,`) opens the config directly. The editor is chosen via the new **Editor Settings...** dialog (stored in `settings.json`; `{path}` expands to the config file, environment variables are expanded), falling back to the OS `.toml` association and then Notepad. The Columns button icon changed to a checklist so the gear is unambiguous.
-- **config.toml changes apply immediately on save.** tfx now watches the file and re-applies it live: shortcuts (including toolbar tooltips), `[colors]` / `[opacity]`, `[font]`, `[openWith]`, `[[commands]]`, and the built-in terminal's colors / font all update without a restart. Not live: `[startup]` (next launch) and the terminal `shell` / background transparency (reopen the terminal pane).
-- **Configuration errors are shown in a dialog, with line numbers.** At startup and after each reload, all config.toml problems (previously a single status-bar line) are listed in an error dialog plus the status bar, each prefixed with its config.toml line (`line 12: Invalid color for ...`); the app keeps running on the previous / default values.
-- The Terminal Settings dialog was generalized into a shared command/arguments dialog used by both Terminal Settings... and Editor Settings... (no behavior change for terminal settings).
 
 ### Theming & cleanups
 
@@ -15,6 +15,15 @@
 - Removing a `[font]` key from config.toml now restores the default font on the live reload (previously the old font lingered until restart).
 - Fixed a shutdown race where a config-file event queued right before close could re-arm the reload timer after the watcher was disposed.
 - The PINNED / DISKS sidebar lists share one row style instead of duplicating it.
+
+## 0.9.10
+
+### Config editing: open in editor + live reload
+
+- **Edit config.toml from the app.** A new title-bar gear button opens a settings menu — **Edit config file...**, **Editor Settings...**, **Terminal Settings...** — and the same entries live on the file-pane context menu; the new `editConfig` shortcut (default `Ctrl+,`) opens the config directly. The editor is chosen via the new **Editor Settings...** dialog (stored in `settings.json`; `{path}` expands to the config file, environment variables are expanded), falling back to the OS `.toml` association and then Notepad. The Columns button icon changed to a checklist so the gear is unambiguous.
+- **config.toml changes apply immediately on save.** tfx now watches the file and re-applies it live: shortcuts (including toolbar tooltips), `[colors]` / `[opacity]`, `[font]`, `[openWith]`, `[[commands]]`, and the built-in terminal's colors / font all update without a restart. Not live: `[startup]` (next launch) and the terminal `shell` / background transparency (reopen the terminal pane).
+- **Configuration errors are shown in a dialog, with line numbers.** At startup and after each reload, all config.toml problems (previously a single status-bar line) are listed in an error dialog plus the status bar, each prefixed with its config.toml line (`line 12: Invalid color for ...`); the app keeps running on the previous / default values.
+- The Terminal Settings dialog was generalized into a shared command/arguments dialog used by both Terminal Settings... and Editor Settings... (no behavior change for terminal settings).
 
 ### Sidebar: DISKS section
 

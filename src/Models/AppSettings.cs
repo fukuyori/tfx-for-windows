@@ -34,6 +34,9 @@ public sealed class AppSettings
     public int LeftActiveTab { get; set; }
     public int RightActiveTab { get; set; }
     public List<string> PinnedFolders { get; set; } = [];
+    // Sidebar sections collapse by clicking their PINNED / DISKS headers.
+    public bool PinnedCollapsed { get; set; }
+    public bool DisksCollapsed { get; set; }
     public string TerminalCommand { get; set; } = "";
     public string TerminalArguments { get; set; } = "";
 

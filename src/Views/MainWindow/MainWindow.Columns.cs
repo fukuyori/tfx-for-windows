@@ -151,7 +151,11 @@ public partial class MainWindow
         }
     }
 
-    private void Columns_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Opens the column visibility / order popup below <paramref name="anchor"/>
+    /// (the right-clicked column header).
+    /// </summary>
+    private void OpenColumnsPopup(UIElement anchor)
     {
         if ((DateTime.Now - _columnsClosedAt).TotalMilliseconds < 200)
         {
@@ -160,7 +164,8 @@ public partial class MainWindow
 
         EnsureColumnsPopup();
         PopulateColumnsPanel();
-        _columnsPopup!.IsOpen = true;
+        _columnsPopup!.PlacementTarget = anchor;
+        _columnsPopup.IsOpen = true;
     }
 
     private void EnsureColumnsPopup()
@@ -184,7 +189,6 @@ public partial class MainWindow
 
         _columnsPopup = new Popup
         {
-            PlacementTarget = ColumnsButton,
             Placement = PlacementMode.Bottom,
             StaysOpen = false,
             AllowsTransparency = true,
