@@ -45,6 +45,9 @@
             </Style.Triggers>
         </Style>
 
+        <!-- Dialog buttons are Tab-navigated; the default focus visual (a
+             dotted rectangle) is invisible on the dark palette, so keyboard
+             focus gets an accent border + selection fill instead. -->
         <Style TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource TfxHover}" />
             <Setter Property="Foreground" Value="{DynamicResource TfxForeground}" />
@@ -54,6 +57,41 @@
             <Setter Property="Margin" Value="3,0" />
             <Setter Property="FontFamily" Value="Consolas, Yu Gothic UI" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                CornerRadius="3"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"
+                                              TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxSelection}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxSelection}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource TfxAccent}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TfxSelectionForeground}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxBorder}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.38" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="ToolbarButton" TargetType="Button">

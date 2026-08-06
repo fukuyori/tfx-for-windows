@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.16
+
+- **Dialog buttons now show keyboard focus.** Tab / Shift+Tab always moved the focus between dialog buttons (e.g. "Move to Recycle Bin" / "Cancel"), but the default WPF focus visual — a dotted rectangle — was invisible on the dark palette, so there was no way to tell which button Enter would activate. The focused button now gets an accent border and a selection fill, including the default button right when the dialog opens. Hover / pressed / disabled states were tidied up at the same time.
+- **Rename failures now show a dialog.** The error ("invalid name", "already exists", locked / access denied, ...) was written to the status bar, but the Enter that commits the edit also moves the DataGrid selection, whose handler immediately rewrites the status line — so the message was never seen. Failures now open the themed OK dialog instead.
+- README: removed the ASCII "UI overview" diagram — redundant since the Screenshots section, and it embedded the version number, needing an edit every release.
+
 ## 0.9.15
 
 - **Type-to-select in the file panes (Explorer / Finder style).** Typing a printable character jumps the selection to the first row whose name starts with it; more characters within one second extend the prefix ("c", "h", "a", "r" lands on the first name starting with "char"). Pressing the same single character repeatedly cycles through the rows with that initial, wrapping at the end — so files sorted behind the folder block stay reachable with one key. A mistyped key that matches nothing keeps the current prefix and selection. The active prefix is shown in the status line as "Find: ..." while the one-second window is open. The prefix resets on folder navigation; text fields, the terminal, and modifier shortcuts are unaffected.

@@ -1013,7 +1013,7 @@ public partial class MainWindow
 
         if (!FsHelpers.IsValidFileName(newName, out var nameError))
         {
-            SetStatus(Loc.F("Invalid name: {0}", nameError));
+            ShowRenameError(Loc.F("Invalid name: {0}", nameError));
             return;
         }
 
@@ -1026,7 +1026,7 @@ public partial class MainWindow
         var caseOnly = string.Equals(newName, item.Name, StringComparison.OrdinalIgnoreCase);
         if (!caseOnly && (File.Exists(target) || Directory.Exists(target)))
         {
-            SetStatus(Loc.F("Rename failed: \"{0}\" already exists", newName));
+            ShowRenameError(Loc.F("Rename failed: \"{0}\" already exists", newName));
             return;
         }
 
@@ -1043,7 +1043,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            SetStatus(Loc.F("Rename failed: {0}", ex.Message));
+            ShowRenameError(Loc.F("Rename failed: {0}", ex.Message));
             return;
         }
 
@@ -1059,6 +1059,18 @@ public partial class MainWindow
             Reload(LeftGrid, renamedPane == Pane.Left ? renamedName : null);
             Reload(RightGrid, renamedPane == Pane.Right ? renamedName : null);
         }, DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// Rename errors get a dialog rather than a status-bar line: the Enter
+    /// that commits the edit also moves the DataGrid selection, and the
+    /// selection-changed handler rewrites the status line immediately, so a
+    /// SetStatus here is never seen. Deferred so the dialog doesn't open in
+    /// the middle of the DataGrid's commit sequence.
+    /// </summary>
+    private void ShowRenameError(string message)
+    {
+        Dispatcher.BeginInvoke(() => new MessageDialog("tfx", message).ShowDialog());
     }
 
     private void RenameTextBox_Loaded(object sender, RoutedEventArgs e)

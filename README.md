@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.9.15
+Version: 0.9.16
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -37,7 +37,7 @@ Colors, fonts, and the terminal palette are fully themeable via `config.toml`:
 
 ## Highlights
 
-- Two file panes (single or split) with independent navigation history
+- Two file panes (single or split) with independent navigation history; the active pane is outlined with a bright green border
 - Folder tree sidebar (toolbar show/hide toggle and collapse-all button; single-click shows a folder in the list, double-click expands / collapses it) plus persistent pinned folders. Files can be dropped onto a tree folder — same drive moves, across drives copies (modifier keys and the right-drag menu work as in the panes); a folder can't be dropped into its own subtree, and hovering a collapsed node auto-expands it
 - Sidebar `DISKS` section: every ready drive with a usage bar (free / total in the tooltip); clicking a disk opens that drive in the active file pane
 - Editable address bar with clickable breadcrumb segments and free-text input
@@ -60,26 +60,6 @@ Colors, fonts, and the terminal palette are fully themeable via `config.toml`:
 - Japanese / English UI based on the OS UI language
 - All view state, paths, pinned folders, column layout, and view mode are persisted
 - File panes auto-refresh on external changes via `FileSystemWatcher` (with a low-frequency periodic fallback) and apply a diff so scroll position and selection are preserved
-
----
-
-## UI overview
-
-```text
-+-- Toolbar -----------------------------------------------------------+
-| Back Forward Up Pin |      drag area      [Search] | View Hidden    |
-| Terminal Reload Preview Split Swap Settings | Min Max Close          |
-+--------------+----------------+----------------+--------------------+
-| PINNED       | Address bar    | Address bar    | PREVIEW            |
-| folder list  | Left file view | Right file view| info / image / text|
-| pinned paths |                |                |                    |
-| FOLDERS tree |                |                |                    |
-+--------------+----------------+----------------+--------------------+
-| <path>  K of N selected (size)   C:\  120 GB free of 476 GB  0.9.15 |
-+---------------------------------------------------------------------+
-```
-
-The active file pane is outlined with a bright green border.
 
 ---
 
