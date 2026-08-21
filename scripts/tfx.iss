@@ -47,6 +47,13 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 LicenseFile=..\LICENSE
+; Authenticode signing. build-installer.ps1 -Sign passes /DMySignTool=<name>
+; together with a matching /S<name>=<command> so ISCC signs both the generated
+; uninstaller and the finished setup.exe. Unsigned builds skip this entirely.
+#ifdef MySignTool
+SignTool={#MySignTool}
+SignedUninstaller=yes
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
