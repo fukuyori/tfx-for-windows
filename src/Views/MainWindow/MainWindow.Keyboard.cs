@@ -129,6 +129,17 @@ public partial class MainWindow
         // unhandled, so stealing them here would break text editing.
         var inTextBox = Keyboard.FocusedElement is TextBox;
 
+        // Esc anywhere outside a text box leaves subfolder-search mode, so
+        // the walk can be stopped from the results list too (the search box
+        // handles its own Esc; rename / address-bar editing keep theirs).
+        if (e.Key == Key.Escape && !inTextBox && _subfolderSearchShown)
+        {
+            LeaveSubfolderSearch();
+            FocusActiveListing();
+            e.Handled = true;
+            return;
+        }
+
         if (IsShortcut("focusSearch", e))
         {
             SearchBox.Focus();

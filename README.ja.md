@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 読み方: **Tafix**
-Version: 0.9.16
+Version: 0.9.17
 
 [English](README.md) | 日本語
 
@@ -48,7 +48,7 @@ tfx for Windows は、キーボード操作を重視した Windows 向けのダ�
 - Windows 11 風の右クリックメニュー、"Open with..." ダイアログ、ソート可能な列、列の表示 / 順序カスタマイズ（ヘッダーのドラッグで並べ替え＝保存・両ペイン同期）。
 - 画像 / テキストプレビュー、Markdown / HTML / CSV / TSV / JSON のレンダリング表示とソース表示切替。
 - 複数選択時の要約プレビュー。
-- 検索ボックスで Enter を押す recursive subfolder search。
+- 検索ボックスで Enter を押す recursive subfolder search。ステータスバーに経過時間・走査件数・一致件数を表示し、結果表示中はその要約を維持。検索ボックスから **↑ / ↓** で結果を選択でき、**Esc**(検索ボックスまたは一覧)で中止して元の一覧に戻る。
 - Git 作業ツリー内では **Git** 列に `M` / `A` / `?` などのバッジを表示し、ステータスバーに branch を表示。
 - USB / リムーバブルドライブの追加・削除を検出してフォルダーツリーを更新。
 - `%APPDATA%\tfx\config.toml` による tfx 互換のフォント、カラー、ショートカット、起動、ターミナル、拡張子別 open-with 設定。
@@ -118,6 +118,7 @@ tfx [options] [folder]
 | オプション | ロング形式 | 動作 |
 | --- | --- | --- |
 | `-h` | `--help` | ヘルプを表示して終了 |
+| `-v` | `--version` | バージョン（`tfx X.Y.Z`）を表示して終了 |
 | `-1` | `--single` | 単一ペインで起動 |
 | `-2` | `--split` | 分割（2ペイン）で起動 |
 | `-r` | `--restore` | 保存済みレイアウトを復元 |
@@ -128,6 +129,8 @@ tfx [options] [folder]
 | `-g G` | `--geometry=G` | ウィンドウ位置/サイズ `[幅x高さ][+X+Y]`（DIP、`-X`/`-Y` は右端/下端基準）。例 `1200x800+100+50` |
 
 末尾の `[folder]` は左ペインに開くフォルダ（`~` と `%VAR%` 展開対応）。短縮フラグは結合可（例 `-2Pt`）。コマンドラインオプションは `config.toml [startup]` や保存済みセッションより優先されます。ジオメトリ指定時は最大化を解除して配置します。
+
+`--help` と `--version` は起動元のターミナルに出力し、ターミナルが無い場合はメッセージボックスに表示します。リダイレクトやパイプでも受け取れます（`tfx --version > file`、`tfx --version | Out-String`）。tfx は GUI アプリなのでシェルは終了を待たず、PowerShell の `$v = tfx --version` のような単純な代入では何も取得できません。スクリプトでは `tfx --version | Out-String` または `cmd /c tfx --version` を使ってください。
 
 タブ構成は既定ではセッション内だけの状態です。次回起動時は、復元されたペインパスから各ペイン 1 タブで始まります。`config.toml` の `[startup] leftFolders` / `rightFolders` を指定した場合だけ、その一覧を起動時タブとして反映します。
 
@@ -197,6 +200,8 @@ dotnet run -- "C:\path\to\folder"
 # インストーラー -> artifacts\release\tfx-for-windows-<version>-setup.exe
 .\scripts\build-installer.ps1
 ```
+
+どちらのスクリプトも `-Sign` を付けると Authenticode 署名を行います。証明書は証明書ストアからサブジェクト名で選び（環境変数 `CODESIGN_CERT`、または `-CertSubject`）、Windows SDK の `signtool.exe` は自動検出します（見つからなければ `-SignToolPath`）。`Tfx.exe` はリリースフォルダー内でその場で署名されるため、先に実行した方が署名し、もう一方は署名済みファイルをそのまま使います。`build-installer.ps1 -Sign` は加えてアンインストーラーと `setup.exe` を Inno Setup 経由で署名します。いずれもパッケージ化の前に署名を検証します。
 
 ZIP は単一のトップレベルフォルダーに `Tfx.exe`・`LICENSE`・`NOTICE`・README 類を格納します。インストーラーは [Inno Setup 6](https://jrsoftware.org/isdl.php)（`winget install JRSoftware.InnoSetup`）で作成します。`ISCC.exe` が `PATH` や既定の場所に無い場合は `-IsccPath` で指定してください。インストーラーはスタートメニュー（任意でデスクトップ）ショートカットとアンインストーラーを追加し、`Program Files\tfx` にインストールします。
 

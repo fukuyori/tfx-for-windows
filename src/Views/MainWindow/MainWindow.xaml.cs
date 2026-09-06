@@ -916,6 +916,18 @@ public partial class MainWindow : Window
     {
         var grid = _activeGrid;
         var path = GetCurrentPath(grid);
+
+        // While the active pane shows subfolder-search results, the status
+        // line is owned by the search summary (elapsed / scanned / matched).
+        // Every caller of UpdateStatus (selection change, refresh, ...) goes
+        // through here, so the two never interleave.
+        if (IsSearchStatusShown)
+        {
+            SetStatus(BuildSearchStatusText());
+            FreeSpaceText.Text = GetFreeSpaceText(path);
+            return;
+        }
+
         var source = ItemsOf(PaneOf(grid));
         var totalCount = source.Count(i => !i.IsParent);
         var selected = ActiveSelectedItems().Where(i => !i.IsParent).ToList();

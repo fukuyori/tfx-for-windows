@@ -278,6 +278,14 @@ public partial class MainWindow
         }
 
         var pane = PaneOf(grid);
+        // The pane holds subfolder-search results, not the folder listing:
+        // a diff against the real folder would wipe them (their names are
+        // relative paths that match nothing there).
+        if (_subfolderSearchShown && pane == _subfolderSearchPane)
+        {
+            return;
+        }
+
         var inFlight = pane == Pane.Left ? _leftRefreshInFlight : _rightRefreshInFlight;
         if (inFlight)
         {

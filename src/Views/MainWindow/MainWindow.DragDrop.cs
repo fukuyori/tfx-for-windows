@@ -257,8 +257,22 @@ public partial class MainWindow
 
         if (effect != DragDropEffects.None)
         {
-            Reload(LeftGrid);
-            Reload(RightGrid);
+            // A pane showing search results stays in search mode and only
+            // drops the dragged rows that are gone (moved away). For an
+            // intra-app drop the shell operation may still be running here;
+            // its completion prunes again once the files have actually moved.
+            var dragged = _pendingFileDragPaths;
+            foreach (var pane in new[] { Pane.Left, Pane.Right })
+            {
+                if (IsPaneInSearchMode(pane))
+                {
+                    PruneSearchResults(pane, dragged);
+                }
+                else
+                {
+                    Reload(GridOf(pane));
+                }
+            }
         }
 
         ClearPendingFileDrag();
@@ -432,9 +446,10 @@ public partial class MainWindow
                 // Use the in-place diff refresh (not a full Reload) so the new
                 // items appear without clearing the lists — this preserves the
                 // current selection and keyboard focus and avoids the flicker of a
-                // clear-and-repopulate.
-                _ = ReloadDiffAsync(LeftGrid);
-                _ = ReloadDiffAsync(RightGrid);
+                // clear-and-repopulate. A pane in search mode is patched instead
+                // (rows that moved away are dropped; a paste into the searched
+                // folder itself leaves search mode).
+                RefreshPanesAfterShellOperation(sourcesCopy, destination);
                 // The folder tree has no watcher: update the realized nodes the
                 // operation touched so moved / copied folders show up.
                 RefreshFolderTreeNodes(sourcesCopy, destination);

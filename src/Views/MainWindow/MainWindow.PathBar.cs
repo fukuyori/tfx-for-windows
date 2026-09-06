@@ -1,5 +1,4 @@
 using System.IO;
-using System.Reflection;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Path = System.IO.Path;
@@ -8,15 +7,8 @@ namespace Tfx;
 
 public partial class MainWindow
 {
-    private static readonly string _appVersion = LoadAppVersion();
-
-    private static string LoadAppVersion()
-    {
-        var attr = typeof(MainWindow).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-        var version = attr?.InformationalVersion ?? "";
-        var plus = version.IndexOf('+');
-        return plus >= 0 ? version[..plus] : version;
-    }
+    // Shared with `tfx --version` (StartupOptions.WriteVersion).
+    private static readonly string _appVersion = AppVersion.Value;
 
     private void UpdatePathText()
     {

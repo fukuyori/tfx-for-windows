@@ -25,6 +25,12 @@ public partial class App : Application
             Shutdown(options.HasError ? 1 : 0);
             return;
         }
+        if (options.ShowVersion)
+        {
+            StartupOptions.WriteVersion();
+            Shutdown(0);
+            return;
+        }
 
         new MainWindow(options).Show();
     }

@@ -13,6 +13,11 @@ public sealed class FileItem : INotifyPropertyChanged
     public required string Kind { get; init; }
     public bool IsDirectory { get; init; }
     public bool IsParent { get; init; }
+    /// <summary>
+    /// True for rows produced by the subfolder search. Their <see cref="Name"/>
+    /// is the path relative to the searched folder, not the bare file name.
+    /// </summary>
+    public bool IsSearchResult { get; init; }
     public DateTime Created { get; init; }
     public string CreatedText { get; init; } = "";
     public ImageSource? Icon { get; init; }

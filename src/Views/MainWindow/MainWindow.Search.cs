@@ -9,11 +9,61 @@ namespace Tfx;
 public partial class MainWindow
 {
     private const int SubfolderSearchBatch = 50;
-    private static readonly TimeSpan SubfolderStatusInterval = TimeSpan.FromMilliseconds(120);
+    private static readonly TimeSpan SubfolderStatusInterval = TimeSpan.FromMilliseconds(250);
 
     private CancellationTokenSource? _subfolderSearchCts;
+    // True while the walker is running.
     private bool _subfolderSearchActive;
+    // True from search start until the user leaves search mode (Esc, empty
+    // Enter, navigation, reload). Covers the "complete" state too, so the
+    // status line keeps the search summary while results are on screen.
+    private bool _subfolderSearchShown;
     private Pane _subfolderSearchPane;
+    private string _subfolderSearchRoot = "";
+    private string _subfolderSearchQuery = "";
+    private int _subfolderSearchMatches;
+    private SubfolderSearchProgress? _subfolderSearchProgress;
+    private readonly System.Diagnostics.Stopwatch _subfolderSearchStopwatch = new();
+    private System.Windows.Threading.DispatcherTimer? _subfolderSearchTimer;
+
+    /// <summary>
+    /// Shared between the walker thread and the UI: the number of entries
+    /// enumerated so far (matching or not). Read on the UI thread by the
+    /// status timer; written with Interlocked on the walker thread.
+    /// </summary>
+    private sealed class SubfolderSearchProgress
+    {
+        public long Scanned;
+    }
+
+    /// <summary>True when the active pane is showing subfolder-search results.</summary>
+    private bool IsSearchStatusShown => _subfolderSearchShown && _subfolderSearchPane == ActivePane;
+
+    /// <summary>
+    /// Single source of the search status text: "Searching / Search complete",
+    /// elapsed time, entries scanned, matches. UpdateStatus renders this while
+    /// search results are shown, so no other status writer interleaves with it.
+    /// </summary>
+    private string BuildSearchStatusText()
+    {
+        var scanned = _subfolderSearchProgress is { } progress
+            ? Interlocked.Read(ref progress.Scanned)
+            : 0L;
+        var elapsed = FormatSearchElapsed(_subfolderSearchStopwatch.Elapsed);
+        var key = _subfolderSearchActive
+            ? "Searching \"{0}\"  {1}  scanned {2:N0}  matched {3:N0}"
+            : "Search complete \"{0}\"  {1}  scanned {2:N0}  matched {3:N0}";
+        return Loc.F(key, _subfolderSearchQuery, elapsed, scanned, _subfolderSearchMatches);
+    }
+
+    private static string FormatSearchElapsed(TimeSpan elapsed)
+    {
+        if (elapsed.TotalSeconds < 60)
+        {
+            return Loc.F("{0:0.0}s", elapsed.TotalSeconds);
+        }
+        return Loc.F("{0}m {1:00}s", (int)elapsed.TotalMinutes, elapsed.Seconds);
+    }
 
     private void FocusSearch_Click(object sender, RoutedEventArgs e)
     {
@@ -25,10 +75,17 @@ public partial class MainWindow
     {
         if (e.Key == Key.Escape)
         {
-            SearchBox.Text = "";
-            CancelSubfolderSearch();
-            Reload(LeftGrid);
-            Reload(RightGrid);
+            if (_subfolderSearchShown)
+            {
+                LeaveSubfolderSearch();
+            }
+            else
+            {
+                // No search on screen: Esc just clears the box and refreshes.
+                SearchBox.Text = "";
+                Reload(LeftGrid);
+                Reload(RightGrid);
+            }
             FocusActiveListing();
             e.Handled = true;
         }
@@ -51,7 +108,12 @@ public partial class MainWindow
 
     private void SearchBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (!string.IsNullOrEmpty(SearchBox.Text) || Keyboard.Modifiers != ModifierKeys.None)
+        // Up / Down / PageUp / PageDown drive the listing selection from the
+        // search box when the box is empty, and also while search results are
+        // on screen (the query text stays in the box after Enter, so the
+        // empty-box rule alone left no way to step into the results).
+        var forwardToListing = string.IsNullOrEmpty(SearchBox.Text) || _subfolderSearchShown;
+        if (!forwardToListing || Keyboard.Modifiers != ModifierKeys.None)
         {
             return;
         }
@@ -82,16 +144,56 @@ public partial class MainWindow
         }
 
         var cts = new CancellationTokenSource();
+        var progress = new SubfolderSearchProgress();
         _subfolderSearchCts = cts;
         _subfolderSearchActive = true;
+        _subfolderSearchShown = true;
         _subfolderSearchPane = pane;
+        _subfolderSearchRoot = root;
+        _subfolderSearchQuery = query;
+        _subfolderSearchMatches = 0;
+        _subfolderSearchProgress = progress;
+        _subfolderSearchStopwatch.Restart();
         var target = ItemsOf(pane);
         target.Clear();
 
         var showHidden = ShowHidden;
-        SetStatus(Loc.F("Searching {0}...", query));
+        UpdateStatus();
+        StartSearchStatusTimer();
 
-        _ = RunSubfolderSearchAsync(target, root, query, showHidden, cts);
+        _ = RunSubfolderSearchAsync(target, root, query, showHidden, progress, cts);
+    }
+
+    // Periodic status refresh on the UI thread. Decoupled from match arrival
+    // so a search that finds nothing for a long stretch still shows elapsed
+    // time and the scanned count moving.
+    private void StartSearchStatusTimer()
+    {
+        if (_subfolderSearchTimer is null)
+        {
+            _subfolderSearchTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = SubfolderStatusInterval,
+            };
+            _subfolderSearchTimer.Tick += (_, _) =>
+            {
+                if (_subfolderSearchActive)
+                {
+                    UpdateStatus();
+                }
+                else
+                {
+                    _subfolderSearchTimer!.Stop();
+                }
+            };
+        }
+        _subfolderSearchTimer.Start();
+    }
+
+    private void StopSearchStatusTimer()
+    {
+        _subfolderSearchTimer?.Stop();
+        _subfolderSearchStopwatch.Stop();
     }
 
     private async Task RunSubfolderSearchAsync(
@@ -99,16 +201,16 @@ public partial class MainWindow
         string root,
         string query,
         bool showHidden,
+        SubfolderSearchProgress progress,
         CancellationTokenSource cts)
     {
         var token = cts.Token;
         var matches = 0;
-        var lastStatusAt = DateTime.UtcNow;
         var batch = new List<FileItem>();
 
         try
         {
-            await foreach (var item in EnumerateMatchesAsync(root, query, showHidden, token))
+            await foreach (var item in EnumerateMatchesAsync(root, query, showHidden, progress, token))
             {
                 token.ThrowIfCancellationRequested();
                 batch.Add(item);
@@ -117,17 +219,6 @@ public partial class MainWindow
                 {
                     await FlushBatchAsync(target, batch, matches, token);
                     batch = new List<FileItem>();
-                    lastStatusAt = DateTime.UtcNow;
-                }
-                else if (DateTime.UtcNow - lastStatusAt >= SubfolderStatusInterval)
-                {
-                    var current = matches;
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        if (token.IsCancellationRequested) return;
-                        SetStatus(Loc.F("Searching: {0} matches", current));
-                    });
-                    lastStatusAt = DateTime.UtcNow;
                 }
             }
 
@@ -139,7 +230,9 @@ public partial class MainWindow
             await Dispatcher.InvokeAsync(() =>
             {
                 if (token.IsCancellationRequested) return;
-                SetStatus(Loc.F("Search complete: {0} matches", matches));
+                _subfolderSearchMatches = matches;
+                FinishSubfolderSearch(cts);
+                UpdateStatus();
             });
         }
         catch (OperationCanceledException)
@@ -148,17 +241,31 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            await Dispatcher.InvokeAsync(() => SetStatus(ex.Message));
+            await Dispatcher.InvokeAsync(() =>
+            {
+                FinishSubfolderSearch(cts);
+                SetStatus(ex.Message);
+            });
         }
         finally
         {
-            if (ReferenceEquals(_subfolderSearchCts, cts))
-            {
-                _subfolderSearchCts = null;
-                _subfolderSearchActive = false;
-            }
+            FinishSubfolderSearch(cts);
             cts.Dispose();
         }
+    }
+
+    // Marks the walker as finished (idempotent). Leaves _subfolderSearchShown
+    // set: results stay on screen with the "Search complete" summary until the
+    // user leaves search mode.
+    private void FinishSubfolderSearch(CancellationTokenSource cts)
+    {
+        if (!ReferenceEquals(_subfolderSearchCts, cts))
+        {
+            return;
+        }
+        _subfolderSearchCts = null;
+        _subfolderSearchActive = false;
+        StopSearchStatusTimer();
     }
 
     private async Task FlushBatchAsync(
@@ -175,7 +282,8 @@ public partial class MainWindow
             {
                 target.Add(item);
             }
-            SetStatus(Loc.F("Searching: {0} matches", totalMatches));
+            _subfolderSearchMatches = totalMatches;
+            UpdateStatus();
         });
     }
 
@@ -183,6 +291,7 @@ public partial class MainWindow
         string root,
         string query,
         bool showHidden,
+        SubfolderSearchProgress progress,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token)
     {
         // Bounded with backpressure: an unbounded channel let a search that
@@ -200,7 +309,7 @@ public partial class MainWindow
         {
             try
             {
-                Walk(root, query, showHidden, channel.Writer, token);
+                Walk(root, query, showHidden, progress, channel.Writer, token);
             }
             catch (OperationCanceledException) { }
             finally
@@ -219,6 +328,7 @@ public partial class MainWindow
         string root,
         string query,
         bool showHidden,
+        SubfolderSearchProgress progress,
         System.Threading.Channels.ChannelWriter<FileItem> writer,
         CancellationToken token)
     {
@@ -290,6 +400,9 @@ public partial class MainWindow
                 if (!moved) break;
 
                 var info = iterator.Current;
+                // Count every enumerated entry, matching or not: this is the
+                // "scanned" figure in the status line.
+                Interlocked.Increment(ref progress.Scanned);
                 var name = info.Name;
                 if (string.IsNullOrEmpty(name)) continue;
 
@@ -335,6 +448,7 @@ public partial class MainWindow
             Kind = item.Kind,
             IsDirectory = item.IsDirectory,
             IsParent = false,
+            IsSearchResult = true,
             Size = item.Size,
             Modified = item.Modified,
             Created = item.Created,
@@ -363,10 +477,181 @@ public partial class MainWindow
         return fullPath;
     }
 
+    /// <summary>
+    /// User-initiated exit from search mode (Esc in the search box or in the
+    /// listing): clears the box, stops the walk, and restores the real folder
+    /// listing in the pane that held the results.
+    /// </summary>
+    private void LeaveSubfolderSearch()
+    {
+        var pane = _subfolderSearchPane;
+        SearchBox.Text = "";
+        CancelSubfolderSearch();
+        Reload(GridOf(pane));
+    }
+
+    /// <summary>True when <paramref name="pane"/> is showing subfolder-search results.</summary>
+    private bool IsPaneInSearchMode(Pane pane) => _subfolderSearchShown && _subfolderSearchPane == pane;
+
+    // ─── File operations while results are shown ──────────────────────────
+    //
+    // Rule: an operation that removes or renames result rows keeps the pane
+    // in search mode and patches the rows in place (delete, move out, rename);
+    // an operation that creates something in the searched folder itself
+    // (paste / drop into it, new item, zip, extract) leaves search mode and
+    // shows the real listing, since the results view cannot show the new item.
+
+    /// <summary>
+    /// After a delete / move, drops result rows whose entry no longer exists at
+    /// its recorded path. Only rows at or under <paramref name="affectedPaths"/>
+    /// are probed (one stat per candidate), so a large result set is not
+    /// re-checked wholesale.
+    /// </summary>
+    private void PruneSearchResults(Pane pane, IReadOnlyCollection<string> affectedPaths)
+    {
+        if (!IsPaneInSearchMode(pane) || affectedPaths.Count == 0)
+        {
+            return;
+        }
+
+        var items = ItemsOf(pane);
+        var removed = 0;
+        for (var i = items.Count - 1; i >= 0; i--)
+        {
+            var path = items[i].FullPath;
+            if (!IsAtOrUnderAny(path, affectedPaths))
+            {
+                continue;
+            }
+            if (File.Exists(path) || Directory.Exists(path))
+            {
+                continue;
+            }
+            items.RemoveAt(i);
+            removed++;
+        }
+
+        if (removed > 0)
+        {
+            _subfolderSearchMatches = Math.Max(0, _subfolderSearchMatches - removed);
+            UpdateStatus();
+        }
+    }
+
+    private static bool IsAtOrUnderAny(string path, IEnumerable<string> roots)
+    {
+        foreach (var root in roots)
+        {
+            if (FsHelpers.SamePath(path, root))
+            {
+                return true;
+            }
+            var prefix = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// After an in-place rename of a result row, rebuilds that row — and, for
+    /// a renamed folder, every result beneath it — with the new path, keeping
+    /// the pane in search mode. Returns the replacement row for the renamed
+    /// item (null when the pane is not in search mode).
+    /// </summary>
+    private FileItem? ReplaceSearchResultAfterRename(Pane pane, FileItem renamed, string newFullPath)
+    {
+        if (!IsPaneInSearchMode(pane))
+        {
+            return null;
+        }
+
+        var items = ItemsOf(pane);
+        var root = _subfolderSearchRoot;
+        var oldPath = renamed.FullPath;
+        var oldPrefix = oldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        FileItem? replacement = null;
+
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            string? movedTo = null;
+            if (ReferenceEquals(item, renamed) || FsHelpers.SamePath(item.FullPath, oldPath))
+            {
+                movedTo = newFullPath;
+            }
+            else if (renamed.IsDirectory && item.FullPath.StartsWith(oldPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                movedTo = Path.Combine(newFullPath, item.FullPath[oldPrefix.Length..]);
+            }
+            if (movedTo is null)
+            {
+                continue;
+            }
+
+            try
+            {
+                FileSystemInfo info = item.IsDirectory ? new DirectoryInfo(movedTo) : new FileInfo(movedTo);
+                var rebuilt = BuildSearchResult(info, root);
+                items[i] = rebuilt;
+                if (ReferenceEquals(item, renamed))
+                {
+                    replacement = rebuilt;
+                }
+            }
+            catch
+            {
+                // Metadata for the new path could not be read (e.g. it vanished
+                // right after the rename); leave the stale row rather than
+                // dropping it silently.
+            }
+        }
+
+        return replacement;
+    }
+
+    /// <summary>
+    /// Refreshes both panes after a shell copy / move finished. A pane in
+    /// search mode either leaves it (the destination is the searched folder
+    /// itself, so the new items must be shown) or prunes rows that moved away.
+    /// </summary>
+    private void RefreshPanesAfterShellOperation(string[] sources, string destination)
+    {
+        foreach (var pane in new[] { Pane.Left, Pane.Right })
+        {
+            if (IsPaneInSearchMode(pane))
+            {
+                if (FsHelpers.SamePath(destination, _subfolderSearchRoot))
+                {
+                    LeaveSubfolderSearch();
+                }
+                else
+                {
+                    PruneSearchResults(pane, sources);
+                }
+            }
+            else
+            {
+                _ = ReloadDiffAsync(GridOf(pane));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Leaves search mode: stops an in-flight walk and drops the "results
+    /// shown" state so the status line returns to the normal folder summary.
+    /// </summary>
     private void CancelSubfolderSearch()
     {
         _subfolderSearchCts?.Cancel();
         _subfolderSearchCts = null;
         _subfolderSearchActive = false;
+        _subfolderSearchShown = false;
+        _subfolderSearchProgress = null;
+        StopSearchStatusTimer();
     }
 }

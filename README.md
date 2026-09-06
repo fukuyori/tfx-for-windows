@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.9.16
+Version: 0.9.17
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -49,7 +49,7 @@ Colors, fonts, and the terminal palette are fully themeable via `config.toml`:
 - Right-click context menu (Windows 11–style ordering), "Open with..." dialog, sortable columns, customizable column visibility and order
 - Image / text preview pane with rendered Markdown, HTML, CSV / TSV tables, and pretty-printed JSON (toggle between rendered view and source)
 - Multi-selection preview: when more than one item is selected, the preview pane shows a compact summary (count, combined size, per-item name / kind / size / modified) up to a cap of 8 entries
-- Recursive subfolder search: type a query in the search box and press **Enter** to walk the current folder's subtree on a background thread, streaming matches into the active pane with live status-bar progress; **Esc** cancels and restores the real listing
+- Recursive subfolder search: type a query in the search box and press **Enter** to walk the current folder's subtree on a background thread, streaming matches into the active pane. The status bar shows live progress — elapsed time, entries scanned, matches — and keeps the final summary while the results are on screen. **Up / Down** from the search box step through the results; **Esc** (in the search box or in the list) cancels and restores the real listing
 - Git working-copy integration: when inside a Git repository, file rows show a one-character status badge (M / A / ? / D / R / C / U) in the **Git** column and the current branch appears in the status bar as `⎇ name`
 - USB / removable drive hot detection: the folder-tree drive list refreshes when devices are added or removed (via `WM_DEVICECHANGE`)
 - User-editable `%APPDATA%\tfx\config.toml` for tfx-compatible font, color, shortcut, startup, terminal, and per-extension open-with settings
@@ -230,6 +230,7 @@ tfx [options] [folder]
 | Option | Long form | Effect |
 | --- | --- | --- |
 | `-h` | `--help` | Show help and exit |
+| `-v` | `--version` | Print the version (`tfx X.Y.Z`) and exit |
 | `-1` | `--single` | Start in single-pane layout |
 | `-2` | `--split` | Start in split (two-pane) layout |
 | `-r` | `--restore` | Restore the saved layout |
@@ -240,6 +241,8 @@ tfx [options] [folder]
 | `-g G` | `--geometry=G` | Window geometry `[WxH][+X+Y]` (DIPs; `-X`/`-Y` = from right/bottom), e.g. `1200x800+100+50` |
 
 `[folder]` opens that folder in the left pane (supports `~` and `%VARS%`). Short flags can be combined, e.g. `-2Pt`. Command-line options take precedence over `config.toml [startup]` and the saved session state. A geometry also forces a normal (non-maximized) window.
+
+`--help` and `--version` print to the terminal they were launched from, or to a message box when there is none. Their output can also be redirected or piped (`tfx --version > file`, `tfx --version | Out-String`). tfx is a GUI-subsystem executable, so the shell does not wait for it and a plain PowerShell assignment such as `$v = tfx --version` captures nothing; use `tfx --version | Out-String` or `cmd /c tfx --version` in scripts.
 
 Example — split layout, preview hidden, terminal shown, `~/Downloads` in the left pane:
 
@@ -338,6 +341,8 @@ Both packaging scripts consume the already-built `Tfx.exe` above (run `build-rel
 # Installer -> artifacts\release\tfx-for-windows-<version>-setup.exe
 .\scripts\build-installer.ps1
 ```
+
+Both scripts accept `-Sign` to Authenticode-sign the binaries: the certificate is looked up in the certificate store by subject name (`CODESIGN_CERT` environment variable or `-CertSubject`), and `signtool.exe` from the Windows SDK is located automatically (or pass `-SignToolPath`). `Tfx.exe` is signed in place in the release folder, so whichever script runs first signs it and the other reuses the signed file; `build-installer.ps1 -Sign` additionally signs the uninstaller and `setup.exe` through Inno Setup. Each script verifies the signature before packaging.
 
 The ZIP contains a single top-level folder with `Tfx.exe`, `LICENSE`, `NOTICE`, and the READMEs. The installer is built with [Inno Setup 6](https://jrsoftware.org/isdl.php) (`winget install JRSoftware.InnoSetup`); if `ISCC.exe` is not on `PATH` or in the default location, pass `-IsccPath`. The installer adds Start Menu (and optional desktop) shortcuts and an uninstaller, and installs to `Program Files\tfx`.
 

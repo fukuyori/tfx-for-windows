@@ -21,9 +21,10 @@ public partial class MainWindow
         // A folder change starts type-ahead from scratch.
         ResetTypeAhead();
 
-        // Navigating cancels any in-flight subfolder search and clears the
-        // search box so the new folder shows real contents.
-        if (_subfolderSearchActive)
+        // Navigating leaves search mode (cancels an in-flight walk, drops a
+        // completed result set) and clears the search box so the new folder
+        // shows real contents.
+        if (_subfolderSearchShown)
         {
             CancelSubfolderSearch();
             SearchBox.Text = "";
@@ -64,6 +65,13 @@ public partial class MainWindow
     {
         var pane = PaneOf(grid);
         var path = GetCurrentPath(grid);
+        // A full reload replaces search results with the real listing, so the
+        // pane leaves search mode (status summary, search box) at the same time.
+        if (_subfolderSearchShown && pane == _subfolderSearchPane)
+        {
+            CancelSubfolderSearch();
+            SearchBox.Text = "";
+        }
         // Keep the current rows visible while the new folder loads (Explorer
         // behavior) — the swap happens in one step below. Clearing here blanked
         // the pane for the duration of the load.
@@ -411,11 +419,34 @@ public partial class MainWindow
     /// <paramref name="focusIndex"/> (clamped) so focus stays on a sensible
     /// neighbour of the removed item.
     /// </summary>
-    private async void RefreshActivePaneAfterMutation(int focusIndex)
+    /// <summary>
+    /// Refreshes both panes after items were removed (delete). A pane showing
+    /// subfolder-search results stays in search mode and only drops the rows
+    /// under <paramref name="affectedPaths"/> that no longer exist.
+    /// </summary>
+    private async void RefreshActivePaneAfterMutation(int focusIndex, IReadOnlyCollection<string>? affectedPaths = null)
     {
         var pane = ActivePane;
-        await ReloadDiffAsync(GridOf(pane));
-        _ = ReloadDiffAsync(GridOf(pane == Pane.Left ? Pane.Right : Pane.Left));
+        var other = pane == Pane.Left ? Pane.Right : Pane.Left;
+
+        if (affectedPaths is not null && IsPaneInSearchMode(pane))
+        {
+            PruneSearchResults(pane, affectedPaths);
+        }
+        else
+        {
+            await ReloadDiffAsync(GridOf(pane));
+        }
+
+        if (affectedPaths is not null && IsPaneInSearchMode(other))
+        {
+            PruneSearchResults(other, affectedPaths);
+        }
+        else
+        {
+            _ = ReloadDiffAsync(GridOf(other));
+        }
+
         if (pane == ActivePane)
         {
             SelectAndFocusActiveIndex(focusIndex);

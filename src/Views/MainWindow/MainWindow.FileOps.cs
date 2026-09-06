@@ -899,7 +899,7 @@ public partial class MainWindow
 
             Dispatcher.BeginInvoke(() =>
             {
-                RefreshActivePaneAfterMutation(focusIndex);
+                RefreshActivePaneAfterMutation(focusIndex, paths);
                 if (error is not null)
                 {
                     SetStatus(Loc.F("Delete failed: {0}", error));
@@ -1005,8 +1005,11 @@ public partial class MainWindow
             return;
         }
 
+        // A search-result row displays its relative path in Name; the editable
+        // name is the last segment of FullPath.
+        var currentName = item.IsSearchResult ? Path.GetFileName(item.FullPath) : item.Name;
         var newName = (tb.Text ?? "").Trim();
-        if (string.IsNullOrEmpty(newName) || newName == item.Name)
+        if (string.IsNullOrEmpty(newName) || newName == currentName)
         {
             return;
         }
@@ -1023,7 +1026,7 @@ public partial class MainWindow
         // A case-only change ("readme.txt" → "README.txt") targets the same file
         // on a case-insensitive volume, so the existence probe would see the
         // source itself; File/Directory.Move applies the in-place case change.
-        var caseOnly = string.Equals(newName, item.Name, StringComparison.OrdinalIgnoreCase);
+        var caseOnly = string.Equals(newName, currentName, StringComparison.OrdinalIgnoreCase);
         if (!caseOnly && (File.Exists(target) || Directory.Exists(target)))
         {
             ShowRenameError(Loc.F("Rename failed: \"{0}\" already exists", newName));
@@ -1054,6 +1057,32 @@ public partial class MainWindow
         var renamedName = Path.GetFileName(target);
         var renamedPane = PaneOf(grid);
 
+        if (item.IsSearchResult)
+        {
+            // Stay in search mode: swap the renamed row (and any rows beneath a
+            // renamed folder) for rebuilt ones, keep the selection on it, and
+            // refresh the other pane in place.
+            var otherPane = renamedPane == Pane.Left ? Pane.Right : Pane.Left;
+            Dispatcher.BeginInvoke(() =>
+            {
+                var replacement = ReplaceSearchResultAfterRename(renamedPane, item, target);
+                if (replacement is not null && renamedPane == ActivePane)
+                {
+                    // Index in the displayed (possibly sorted) view, which is
+                    // what SelectAndFocusActiveIndex expects.
+                    var view = _settings.ViewMode == ViewMode.Icons
+                        ? IconViewOf(renamedPane).Items
+                        : GridOf(renamedPane).Items;
+                    SelectAndFocusActiveIndex(view.IndexOf(replacement));
+                }
+                if (!IsPaneInSearchMode(otherPane))
+                {
+                    _ = ReloadDiffAsync(GridOf(otherPane));
+                }
+            }, DispatcherPriority.Background);
+            return;
+        }
+
         Dispatcher.BeginInvoke(() =>
         {
             Reload(LeftGrid, renamedPane == Pane.Left ? renamedName : null);
@@ -1081,6 +1110,12 @@ public partial class MainWindow
         }
 
         tb.Focus();
+        if (tb.DataContext is FileItem result && result.IsSearchResult)
+        {
+            // The cell shows the path relative to the searched folder; only
+            // the file name itself is editable.
+            tb.Text = Path.GetFileName(result.FullPath);
+        }
         var text = tb.Text ?? "";
 
         if (tb.DataContext is FileItem item && !item.IsDirectory)
