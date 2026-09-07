@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.9.17
+Version: 0.9.18
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -149,6 +149,8 @@ Works within tfx, between tfx and Windows Explorer, or any other app that exchan
 | `Alt` | Create shortcut (`.lnk`) at destination | Shortcut |
 
 After any drag-out (move or copy by external app), tfx refreshes both panes automatically. Name conflicts are resolved by appending `(2)`, `(3)`, and so on. Dragging an item back into the same folder with Move does nothing instead of creating a duplicate name.
+
+Items dragged in from Explorer's Recycle Bin window (or cut there and pasted into tfx) are restored into the destination under their original names, as a Move regardless of modifier keys — the same shell operation Explorer performs.
 
 ---
 

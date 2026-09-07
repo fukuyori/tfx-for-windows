@@ -354,6 +354,15 @@ public partial class MainWindow
     /// </summary>
     private void ExecuteDrop(string[] paths, string destination, DragDropEffects effect)
     {
+        // Items dragged out of the Recycle Bin are always moved (restored into
+        // the destination under their original names) — a copy would leave the
+        // $R file behind, and a shortcut would point at the $R path.
+        if (paths.Any(FsHelpers.IsRecycleBinPath))
+        {
+            CopyOrMoveWithProgress(paths, destination, move: true);
+            return;
+        }
+
         if (effect == DragDropEffects.Link)
         {
             ExecuteCreateShortcuts(paths, destination);
@@ -424,6 +433,10 @@ public partial class MainWindow
     {
         var sourcesCopy = sources.ToArray();
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        // Sources dragged / cut from the Recycle Bin arrive as $R… physical
+        // paths; they go through the shell-item route that restores the
+        // original names and always move (the bin entry must go away).
+        var fromRecycleBin = sourcesCopy.Any(FsHelpers.IsRecycleBinPath);
 
         var thread = new System.Threading.Thread(() =>
         {
@@ -431,7 +444,14 @@ public partial class MainWindow
             string? error = null;
             try
             {
-                ShellFileOperation.CopyOrMove(hwnd, sourcesCopy, destination, move, renameOnCollision, out aborted);
+                if (fromRecycleBin)
+                {
+                    ShellFileOperation.MoveFromRecycleBin(hwnd, sourcesCopy, destination, out aborted);
+                }
+                else
+                {
+                    ShellFileOperation.CopyOrMove(hwnd, sourcesCopy, destination, move, renameOnCollision, out aborted);
+                }
             }
             catch (Exception ex)
             {
@@ -700,6 +720,14 @@ public partial class MainWindow
 
     private static DragDropEffects ResolveDropEffect(DragEventArgs e, string destinationPath)
     {
+        // Recycle Bin items are only ever moved out (see ExecuteDrop); show the
+        // move cursor regardless of modifier keys.
+        if (e.Data.GetData(DataFormats.FileDrop) is string[] dropPaths &&
+            dropPaths.Any(FsHelpers.IsRecycleBinPath))
+        {
+            return DragDropEffects.Move;
+        }
+
         if (e.KeyStates.HasFlag(DragDropKeyStates.AltKey))
         {
             return DragDropEffects.Link;

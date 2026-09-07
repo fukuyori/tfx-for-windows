@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace Tfx;
@@ -106,6 +107,139 @@ internal static class ShellFileOperation
                 Marshal.FinalReleaseComObject(op);
             }
         }
+    }
+
+    /// <summary>
+    /// Moves items out of the Recycle Bin into <paramref name="destinationFolder"/>,
+    /// restoring their original names. <paramref name="sources"/> are the
+    /// physical paths the shell puts in CF_HDROP for Recycle Bin items
+    /// (<c>X:\$RECYCLE.BIN\&lt;SID&gt;\$Rxxxxxx.ext</c>); handing those to
+    /// <see cref="CopyOrMove"/> would produce a file named <c>$Rxxxxxx.ext</c>
+    /// and orphan the <c>$I</c> metadata. Instead the Recycle Bin shell folder is
+    /// enumerated, each source is matched to its shell item by file-system path,
+    /// and that item is moved through <c>IFileOperation</c> — the same thing
+    /// Explorer does, so the original name comes back. Sources that are not in
+    /// the Recycle Bin are moved as plain paths. Throws when a Recycle Bin
+    /// source cannot be found (e.g. the bin was emptied meanwhile).
+    /// </summary>
+    public static bool MoveFromRecycleBin(
+        IntPtr ownerHwnd,
+        IReadOnlyList<string> sources,
+        string destinationFolder,
+        out bool aborted)
+    {
+        aborted = false;
+        if (sources.Count == 0)
+        {
+            return true;
+        }
+
+        IFileOperation? op = null;
+        object? destObj = null;
+        var iidShellItem = typeof(IShellItem).GUID;
+        var items = new List<object>();
+        try
+        {
+            op = (IFileOperation)new FileOperation();
+            op.SetOperationFlags(FOF_NOCONFIRMMKDIR | FOFX_ADDUNDORECORD | FOFX_SHOWELEVATIONPROMPT);
+            if (ownerHwnd != IntPtr.Zero)
+            {
+                op.SetOwnerWindow(ownerHwnd);
+            }
+
+            SHCreateItemFromParsingName(destinationFolder, IntPtr.Zero, ref iidShellItem, out destObj);
+            var destItem = (IShellItem)destObj;
+
+            var binItems = EnumerateRecycleBinItems(items);
+            var missing = new List<string>();
+            foreach (var source in sources)
+            {
+                IShellItem srcItem;
+                if (FsHelpers.IsRecycleBinPath(source))
+                {
+                    if (!binItems.TryGetValue(source, out var found))
+                    {
+                        missing.Add(Path.GetFileName(source));
+                        continue;
+                    }
+                    srcItem = found;
+                }
+                else
+                {
+                    SHCreateItemFromParsingName(source, IntPtr.Zero, ref iidShellItem, out var srcObj);
+                    items.Add(srcObj);
+                    srcItem = (IShellItem)srcObj;
+                }
+                op.MoveItem(srcItem, destItem, null, IntPtr.Zero);
+            }
+
+            if (missing.Count > 0)
+            {
+                throw new FileNotFoundException(
+                    Loc.F("Not found in the Recycle Bin: {0}", string.Join(", ", missing)));
+            }
+
+            op.PerformOperations();
+            op.GetAnyOperationsAborted(out aborted);
+            return true;
+        }
+        finally
+        {
+            foreach (var item in items)
+            {
+                if (item is not null && Marshal.IsComObject(item))
+                {
+                    Marshal.ReleaseComObject(item);
+                }
+            }
+            if (destObj is not null && Marshal.IsComObject(destObj))
+            {
+                Marshal.ReleaseComObject(destObj);
+            }
+            if (op is not null && Marshal.IsComObject(op))
+            {
+                Marshal.FinalReleaseComObject(op);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Enumerates the Recycle Bin virtual folder and maps each item's physical
+    /// path (<c>SIGDN_FILESYSPATH</c>) to its shell item. Every COM object
+    /// created is appended to <paramref name="owned"/> so the caller releases
+    /// them after the operation.
+    /// </summary>
+    private static Dictionary<string, IShellItem> EnumerateRecycleBinItems(List<object> owned)
+    {
+        var map = new Dictionary<string, IShellItem>(StringComparer.OrdinalIgnoreCase);
+        var iidShellItem = typeof(IShellItem).GUID;
+        SHCreateItemFromParsingName(RecycleBinParsingName, IntPtr.Zero, ref iidShellItem, out var binObj);
+        owned.Add(binObj);
+
+        var bhidEnumItems = BHID_EnumItems;
+        var iidEnum = typeof(IEnumShellItems).GUID;
+        ((IShellItem)binObj).BindToHandler(IntPtr.Zero, ref bhidEnumItems, ref iidEnum, out var enumObj);
+        owned.Add(enumObj);
+        var enumerator = (IEnumShellItems)enumObj;
+
+        while (enumerator.Next(1, out var item, out var fetched) == 0 && fetched == 1)
+        {
+            owned.Add(item);
+            string? fsPath = null;
+            try
+            {
+                item.GetDisplayName(SIGDN_FILESYSPATH, out fsPath);
+            }
+            catch (COMException)
+            {
+                // Not a file-system item; skip.
+            }
+            if (!string.IsNullOrEmpty(fsPath))
+            {
+                map[fsPath] = item;
+            }
+        }
+        return map;
     }
 
     /// <summary>
@@ -228,12 +362,34 @@ internal static class ShellFileOperation
         void GetAnyOperationsAborted([MarshalAs(UnmanagedType.Bool)] out bool pfAnyOperationsAborted);
     }
 
-    // Empty pass-through wrapper: we never call IShellItem members, we only hand
-    // the pointer from SHCreateItemFromParsingName back into IFileOperation.
+    // Parsing name of the Recycle Bin virtual folder (CLSID_RecycleBin).
+    private const string RecycleBinParsingName = "::{645FF040-5081-101B-9F08-00AA002F954E}";
+    private static readonly Guid BHID_EnumItems = new("94f60519-2850-4924-aa5a-d15e84868039");
+    private const uint SIGDN_FILESYSPATH = 0x80058000;
+
+    // Vtable order matches the native IShellItem. Only GetDisplayName and
+    // BindToHandler are called (Recycle Bin enumeration); the rest are declared
+    // so the slots line up.
     [ComImport]
     [Guid("43826d1e-e718-42ee-bc55-a1e261c37bfe")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IShellItem
     {
+        void BindToHandler(IntPtr pbc, ref Guid bhid, ref Guid riid, [MarshalAs(UnmanagedType.IUnknown)] out object ppv);
+        [PreserveSig] int GetParent(out IShellItem ppsi);
+        void GetDisplayName(uint sigdnName, [MarshalAs(UnmanagedType.LPWStr)] out string ppszName);
+        [PreserveSig] int GetAttributes(uint sfgaoMask, out uint psfgaoAttribs);
+        [PreserveSig] int Compare(IShellItem psi, uint hint, out int piOrder);
+    }
+
+    [ComImport]
+    [Guid("70629033-e363-4a28-a567-0db78006e6d7")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IEnumShellItems
+    {
+        [PreserveSig] int Next(uint celt, out IShellItem rgelt, out uint pceltFetched);
+        [PreserveSig] int Skip(uint celt);
+        [PreserveSig] int Reset();
+        [PreserveSig] int Clone(out IEnumShellItems ppenum);
     }
 }

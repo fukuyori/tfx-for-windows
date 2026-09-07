@@ -214,6 +214,7 @@ internal static class Loc
         ["Extracting from archive..."] = "アーカイブから展開しています...",
         ["Delete failed: {0}"] = "削除に失敗しました: {0}",
         ["Operation failed: {0}"] = "操作に失敗しました: {0}",
+        ["Not found in the Recycle Bin: {0}"] = "ごみ箱に見つかりません: {0}",
         ["Compressing to {0}..."] = "{0} に圧縮しています...",
         ["Extracting {0} archive(s)..."] = "{0} 個のアーカイブを展開しています...",
         ["Failed to save settings: {0}"] = "設定の保存に失敗しました: {0}",

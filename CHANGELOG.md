@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.18
+
+- **Dropping items from the Recycle Bin restores them under their original names.** Explorer hands over the physical `X:\$RECYCLE.BIN\<SID>\$Rxxxxxx.ext` paths for Recycle Bin items, and tfx used to copy or move those as plain files — producing a `$R…` file at the destination and, for a same-drive move, orphaning the bin's `$I` metadata. Such drops (and a cut + paste from the Recycle Bin) now look the item up in the Recycle Bin shell folder and move that shell item through `IFileOperation`, which is what Explorer does, so the original name comes back. Recycle Bin items are always moved out, regardless of modifier keys.
+
 ## 0.9.17
 
 - **Subfolder search shows its progress.** The status line now reads `Searching "query"  12.3s  scanned 48,213  matched 12` and refreshes every 250 ms from a UI timer, so a walk that finds nothing for a long stretch still visibly advances (elapsed time and scanned count). On completion it switches to `Search complete "query"  ...` with the final figures. The walker counts every enumerated entry with an `Interlocked` increment; no extra I/O, and no pre-count pass (a percentage would need a full second walk to get the denominator).

@@ -202,6 +202,28 @@ internal static class FsHelpers
         }
     }
 
+    /// <summary>
+    /// True when <paramref name="path"/> is the physical location of a Recycle
+    /// Bin item (<c>X:\$RECYCLE.BIN\...</c>). Explorer puts these paths in the
+    /// FileDrop data when items are dragged out of the Recycle Bin window; the
+    /// file there carries a generated <c>$R…</c> name, not the original one.
+    /// </summary>
+    public static bool IsRecycleBinPath(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return false;
+        }
+        var root = Path.GetPathRoot(path);
+        if (string.IsNullOrEmpty(root) || path.Length <= root.Length)
+        {
+            return false;
+        }
+        var rest = path[root.Length..];
+        return rest.StartsWith("$RECYCLE.BIN\\", StringComparison.OrdinalIgnoreCase)
+            || rest.StartsWith("$RECYCLE.BIN/", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static bool SamePath(string left, string right)
     {
         try
