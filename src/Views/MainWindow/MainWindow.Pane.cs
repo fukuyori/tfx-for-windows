@@ -48,6 +48,7 @@ public partial class MainWindow
 
     private void UpdateActivePane(DataGrid grid)
     {
+        var paneChanged = _activeGrid != grid;
         _activeGrid = grid;
         var focusBrush = (Brush)FindResource("TfxFocusBorder");
         var defaultBrush = (Brush)FindResource("TfxBorder");
@@ -60,6 +61,12 @@ public partial class MainWindow
         // by 1px when the highlight line appears on the active pane.
         SetPaneBorderThickness(LeftPaneBorder, grid == LeftGrid);
         SetPaneBorderThickness(RightPaneBorder, grid == RightGrid);
+        if (paneChanged && IsQuickPreviewOpen)
+        {
+            // The panel shows the previous pane's item; commands now target the
+            // new active pane, so close it rather than let the two disagree.
+            CloseQuickPreview();
+        }
         UpdatePathText();
         QueueFolderTreeSyncToActivePane();
         UpdateGitBranchText();

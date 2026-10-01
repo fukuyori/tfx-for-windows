@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 読み方: **Tafix**
-Version: 0.10.0
+Version: 0.10.1
 
 [English](README.md) | 日本語
 
@@ -65,6 +65,7 @@ tfx for Windows は、キーボード操作を重視した Windows 向けのダ�
 | Key | Action |
 | --- | --- |
 | `Enter` | 選択ファイルを開く / 選択フォルダーへ入る |
+| `Space` | ファイルペインに重ねるクイックプレビュー（Space / Esc / Enter で閉じる、上下キーで選択に追従） |
 | `Backspace` | 親フォルダーへ移動 |
 | `Alt + Left` / `Alt + Right` | 戻る / 進む |
 | `Alt + Up` / `Backspace` | 親フォルダーへ移動 |

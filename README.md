@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.10.0
+Version: 0.10.1
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -87,6 +87,7 @@ The native title bar is replaced by custom chrome when transparency is enabled. 
 | Key | Action |
 | --- | --- |
 | `Enter` | Open selected file / Enter selected folder |
+| `Space` | Quick preview panel over the file panes (Space / Esc / Enter closes; Up / Down follow the selection) |
 | `Backspace` | Parent folder |
 | `Alt + Left` / `Alt + Right` | Back / Forward |
 | `Alt + Up` / `Backspace` | Parent folder |

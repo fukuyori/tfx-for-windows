@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.1
+
+- **Quick preview: switching the active pane closes the panel.** With both panes holding a selection, pressing Tab (or clicking the other pane) while the panel was open left it showing the previous pane's item while Delete and other commands targeted the other pane's selection. The panel now closes when the active pane changes; moving the selection within the same pane still keeps it following.
+- **Quick preview: no hidden inline editing.** Pressing F2 (rename), the new-file or the new-folder shortcut while the panel was open started inline editing in the listing underneath, where the editor was hidden behind the opaque panel — typing and Enter could rename a file without showing the editor. The panel now closes before these actions start.
+- **Quick preview: folder listing is bounded and cancellable.** The folder entries were sorted before the 500-entry cap and cancellation were applied, so a huge folder or a slow network share was enumerated and buffered in full even after the panel was closed or the selection moved on. Enumeration now checks for cancellation as it goes and stops collecting at 5,000 entries before sorting and showing the first 500; a trailing "first N entries shown" line marks a truncated listing.
+
 ## 0.10.0
 
 - **Quick preview panel on Space (yazi style).** With the file list focused, Space opens a bordered panel laid over the file panes, separate from the preview pane, showing the selected item: text (first 256 KB), an image, or a folder's entries (up to 500). The header shows the name, size and modified time. It keeps following the selection with Up / Down, PageUp / PageDown scroll the panel, and Space, Esc or Enter closes it. Long lines wrap to the panel width. The text is selectable with the mouse and copyable with Ctrl+C. Space is ignored while a text field (search box, inline rename, path bar) or the terminal has focus and during the one-second type-ahead window, so typing never triggers it. Items inside archives show a notice instead of content. Rebindable via `[shortcuts] quickPreview` (default `space`).

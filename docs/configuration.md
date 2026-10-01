@@ -356,7 +356,7 @@ Supported action keys:
 | `quit` | `ctrl+q` | Quit the application (saves the session and tears down the terminal). Ignored while the terminal pane is focused so the shell keeps `Ctrl+Q`; `Alt+F4` always closes the window. |
 | `editConfig` | `ctrl+,` | Open `config.toml` in an editor (Editor Settings... command → OS `.toml` association → Notepad). |
 | `showProperties` | `alt+enter` | Show the Windows properties dialog for the selected item (or the current folder when nothing is selected). |
-| `quickPreview` | `space` | Open / close the quick preview panel laid over the file panes (text, image, or a folder's entries). Up / Down keep following the selection, PageUp / PageDown scroll the panel, and Space, Esc or Enter closes it. The text can be selected with the mouse and copied with Ctrl+C. Ignored while a text field has focus and during type-ahead input. |
+| `quickPreview` | `space` | Open / close the quick preview panel laid over the file panes (text, image, or a folder's entries). Up / Down keep following the selection, PageUp / PageDown scroll the panel, and Space, Esc or Enter closes it. The text can be selected with the mouse and copied with Ctrl+C. The panel also closes when the active pane changes and before rename / new file / new folder start inline editing. Folder listings show at most 500 entries (sorted from the first 5,000 enumerated). Ignored while a text field has focus and during type-ahead input. |
 
 The `` ` `` (backtick / grave) key token is accepted for `toggleTerminal`; `[` and `]` are accepted for the tab-cycle shortcuts.
 

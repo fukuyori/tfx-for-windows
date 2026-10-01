@@ -14,6 +14,7 @@ namespace Tfx;
 public partial class MainWindow
 {
     private const int QuickPreviewFolderEntryCap = 500;
+    private const int QuickPreviewFolderEnumerationCap = 5000;
 
     private CancellationTokenSource? _quickPreviewCts;
 
@@ -77,6 +78,14 @@ public partial class MainWindow
             {
                 CloseQuickPreview();
                 return true;
+            }
+
+            if (IsShortcut("rename", e) || IsShortcut("newFile", e) || IsShortcut("newFolder", e))
+            {
+                // These start inline editing in the listing underneath; the
+                // editor would be hidden behind the opaque panel.
+                CloseQuickPreview();
+                return false;
             }
 
             if (e.Key is Key.PageUp or Key.PageDown)
@@ -200,33 +209,41 @@ public partial class MainWindow
 
     private static string BuildFolderListing(string path, CancellationToken token)
     {
-        var builder = new StringBuilder();
-        var count = 0;
-        var truncated = false;
-        var entries = new DirectoryInfo(path)
-            .EnumerateFileSystemInfos()
-            .OrderByDescending(e => e is DirectoryInfo)
-            .ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase);
-        foreach (var entry in entries)
+        // Enumerate with a hard cap and cancellation checks BEFORE sorting, so a
+        // huge folder or a slow share neither buffers everything nor keeps
+        // running after the panel is closed.
+        var collected = new List<FileSystemInfo>();
+        var enumerationCapped = false;
+        foreach (var entry in new DirectoryInfo(path).EnumerateFileSystemInfos())
         {
             token.ThrowIfCancellationRequested();
-            if (count >= QuickPreviewFolderEntryCap)
+            if (collected.Count >= QuickPreviewFolderEnumerationCap)
             {
-                truncated = true;
+                enumerationCapped = true;
                 break;
             }
-            builder.Append(entry is DirectoryInfo ? entry.Name + Path.DirectorySeparatorChar : entry.Name).Append('\n');
-            count++;
+            collected.Add(entry);
         }
 
-        if (count == 0)
+        if (collected.Count == 0)
         {
             return Loc.T("(empty folder)");
         }
 
-        if (truncated)
+        var shown = collected
+            .OrderByDescending(e => e is DirectoryInfo)
+            .ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Take(QuickPreviewFolderEntryCap)
+            .ToList();
+        var builder = new StringBuilder();
+        foreach (var entry in shown)
         {
-            builder.Append(Loc.F("... first {0} entries shown", QuickPreviewFolderEntryCap));
+            builder.Append(entry is DirectoryInfo ? entry.Name + Path.DirectorySeparatorChar : entry.Name).Append('\n');
+        }
+
+        if (enumerationCapped || collected.Count > shown.Count)
+        {
+            builder.Append(Loc.F("... first {0} entries shown", shown.Count));
         }
         return builder.ToString().TrimEnd('\n');
     }
