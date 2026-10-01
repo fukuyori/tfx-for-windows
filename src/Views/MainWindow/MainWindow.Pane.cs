@@ -56,13 +56,21 @@ public partial class MainWindow
         RightPaneBorder.Background = grid == RightGrid ? _activeBrush : _inactiveBrush;
         LeftPaneBorder.BorderBrush = grid == LeftGrid ? focusBrush : defaultBrush;
         RightPaneBorder.BorderBrush = grid == RightGrid ? focusBrush : defaultBrush;
-        LeftPaneBorder.BorderThickness = new Thickness(grid == LeftGrid ? 2 : 1);
-        RightPaneBorder.BorderThickness = new Thickness(grid == RightGrid ? 2 : 1);
+        // Border + Padding always total 2px so the content does not shift
+        // by 1px when the highlight line appears on the active pane.
+        SetPaneBorderThickness(LeftPaneBorder, grid == LeftGrid);
+        SetPaneBorderThickness(RightPaneBorder, grid == RightGrid);
         UpdatePathText();
         QueueFolderTreeSyncToActivePane();
         UpdateGitBranchText();
         SyncPinnedSelectionToActivePane();
         SyncDiskSelectionToActivePane();
+    }
+
+    private static void SetPaneBorderThickness(Border border, bool active)
+    {
+        border.BorderThickness = new Thickness(active ? 2 : 1);
+        border.Padding = new Thickness(active ? 0 : 1);
     }
 
     private void Grid_SelectionChanged(object sender, SelectionChangedEventArgs e)

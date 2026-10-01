@@ -858,6 +858,7 @@ public sealed class AppConfig
         toggleTerminal = "ctrl+j"
         quit = "ctrl+q"
         editConfig = "ctrl+,"
+        quickPreview = "space"
 
         # Startup layout:
         # [startup]

@@ -18,7 +18,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#202830" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource TfxHover}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -26,7 +26,7 @@
             </Setter>
         </Style>
     </UserControl.Resources>
-    <Border Background="#0D1013"
+    <Border Background="{DynamicResource TfxInput}"
             BorderBrush="{DynamicResource TfxBorder}"
             BorderThickness="1"
             MinHeight="28"
@@ -46,7 +46,7 @@
             </DockPanel>
             <TextBox x:Name="EditBox"
                      Visibility="Collapsed"
-                     Background="#0D1013"
+                     Background="{DynamicResource TfxInput}"
                      Foreground="{DynamicResource TfxForeground}"
                      CaretBrush="{DynamicResource TfxAccent}"
                      BorderThickness="0"

@@ -35,8 +35,8 @@ public partial class MainWindow : Window
     private readonly List<FileColumnDefinition> _fileColumns = [];
     private readonly string _settingsPath;
     private readonly string _configPath;
-    private Brush _activeBrush = new SolidColorBrush(Color.FromRgb(30, 37, 43));
-    private Brush _inactiveBrush = new SolidColorBrush(Color.FromRgb(23, 27, 31));
+    private Brush _activeBrush = new SolidColorBrush(Def("TfxPanelActive"));
+    private Brush _inactiveBrush = new SolidColorBrush(Def("TfxPanel"));
 
     private AppSettings _settings = new();
     private AppConfig _config = new();
@@ -472,44 +472,48 @@ public partial class MainWindow : Window
         var inactivePaneOpacity = OpacityToken("inactivePane", backgroundOpacity);
         Opacity = 1.0;
 
-        SetResourceBrush("TfxBackground", ColorToken("fileListBackground", "headerBackground", fallback: Color.FromRgb(16, 19, 22)), backgroundOpacity);
-        SetResourceBrush("TfxPanel", ColorToken("fileListBackground", fallback: Color.FromRgb(23, 27, 31)), backgroundOpacity);
+        SetResourceBrush("TfxBackground", ColorToken("fileListBackground", "headerBackground", fallback: Def("TfxBackground")), backgroundOpacity);
+        SetResourceBrush("TfxPanel", ColorToken("fileListBackground", fallback: Def("TfxPanel")), backgroundOpacity);
         // Floating surfaces (context menus, the columns popup) get much weaker
         // translucency than the panes: at the pane opacity whatever is behind
         // the window showed through the menu text. Overridable per theme via
         // [opacity] floating.
         var floatingOpacity = OpacityToken("floating", Math.Max(backgroundOpacity, 0.94));
-        SetResourceBrush("TfxFloatingPanel", ColorToken("fileListBackground", fallback: Color.FromRgb(23, 27, 31)), floatingOpacity);
-        SetResourceBrush("TfxPanelActive", ColorToken("titleBarBackgroundActive", "fileListRowSelected", fallback: Color.FromRgb(30, 37, 43)), backgroundOpacity);
-        SetResourceBrush("TfxBorder", ColorToken("paneBorderInactive", fallback: Color.FromRgb(45, 53, 60)));
-        SetResourceBrush("TfxForeground", ColorToken("fileForeground", fallback: Color.FromRgb(214, 222, 230)));
-        SetResourceBrush("TfxMuted", ColorToken("secondaryForeground", "headerForeground", fallback: Color.FromRgb(143, 155, 168)));
-        SetResourceBrush("TfxAccent", ColorToken("directoryForeground", "splitHandleActive", fallback: Color.FromRgb(125, 211, 252)));
-        SetResourceBrush("TfxFocusBorder", ColorToken("paneBorderKeyboardTarget", "paneBorderActive", fallback: Color.FromRgb(74, 222, 128)));
-        SetResourceBrush("TfxChrome", ColorToken("headerBackground", fallback: Color.FromRgb(11, 14, 16)), backgroundOpacity);
-        SetResourceBrush("TfxInput", ColorToken("inputBackground", "headerBackground", fallback: Color.FromRgb(13, 16, 19)), backgroundOpacity);
+        SetResourceBrush("TfxFloatingPanel", ColorToken("fileListBackground", fallback: Def("TfxFloatingPanel")), floatingOpacity);
+        SetResourceBrush("TfxPanelActive", ColorToken("titleBarBackgroundActive", "fileListRowSelected", fallback: Def("TfxPanelActive")), backgroundOpacity);
+        SetResourceBrush("TfxBorder", ColorToken("paneBorderInactive", fallback: Def("TfxBorder")));
+        SetResourceBrush("TfxForeground", ColorToken("fileForeground", fallback: Def("TfxForeground")));
+        SetResourceBrush("TfxMuted", ColorToken("secondaryForeground", "headerForeground", fallback: Def("TfxMuted")));
+        SetResourceBrush("TfxAccent", ColorToken("directoryForeground", "splitHandleActive", fallback: Def("TfxAccent")));
+        SetResourceBrush("TfxFocusBorder", ColorToken("paneBorderKeyboardTarget", "paneBorderActive", fallback: Def("TfxFocusBorder")));
+        SetResourceBrush("TfxChrome", ColorToken("headerBackground", fallback: Def("TfxChrome")), backgroundOpacity);
+        SetResourceBrush("TfxInput", ColorToken("inputBackground", "headerBackground", fallback: Def("TfxInput")), backgroundOpacity);
 
-        var hoverColor = ColorToken("fileListRowHovered", "fileListRowDropTarget", fallback: Color.FromRgb(32, 38, 43));
-        var selectionColor = ColorToken("fileListRowSelected", fallback: Color.FromRgb(38, 56, 69));
+        var hoverColor = ColorToken("fileListRowHovered", "fileListRowDropTarget", fallback: Def("TfxHover"));
+        var selectionColor = ColorToken("fileListRowSelected", fallback: Def("TfxSelection"));
         var selectionForeground = ColorToken("fileListRowSelectedForeground", fallback: ContrastText(selectionColor));
 
         SetResourceBrush("TfxHover", hoverColor);
         SetResourceBrush("TfxSelection", selectionColor);
         SetResourceBrush("TfxSelectionForeground", selectionForeground);
         SetResourceBrush("TfxInactiveSelection", ColorToken("folderTreeSelectedInactive", fallback: selectionColor));
-        SetResourceBrush("TfxDisabledForeground", ColorToken("disabledForeground", "secondaryForeground", fallback: Color.FromRgb(89, 99, 110)));
-        SetResourceBrush("TfxScrollThumb", ColorToken("scrollbarThumb", "paneBorderInactive", fallback: Color.FromRgb(58, 68, 77)));
-        SetResourceBrush("TfxScrollThumbHover", ColorToken("scrollbarThumbHovered", "paneBorderActive", fallback: Color.FromRgb(74, 86, 97)));
-        SetResourceBrush("TfxScrollThumbDragging", ColorToken("scrollbarThumbDragging", "paneBorderKeyboardTarget", fallback: Color.FromRgb(91, 104, 116)));
-        SetResourceBrush("TfxAlternatingRow", ColorToken("fileListRowAlternate", "fileListBackground", fallback: Color.FromRgb(20, 25, 29)));
-        SetResourceBrush("TfxSelectionOverlay", ColorToken("directoryForeground", "splitHandleActive", fallback: Color.FromRgb(125, 211, 252)), 0.2);
+        SetResourceBrush("TfxDisabledForeground", ColorToken("disabledForeground", "secondaryForeground", fallback: Def("TfxDisabledForeground")));
+        SetResourceBrush("TfxScrollThumb", ColorToken("scrollbarThumb", "paneBorderInactive", fallback: Def("TfxScrollThumb")));
+        SetResourceBrush("TfxScrollThumbHover", ColorToken("scrollbarThumbHovered", "paneBorderActive", fallback: Def("TfxScrollThumbHover")));
+        SetResourceBrush("TfxScrollThumbDragging", ColorToken("scrollbarThumbDragging", "paneBorderKeyboardTarget", fallback: Def("TfxScrollThumbDragging")));
+        SetResourceBrush("TfxAlternatingRow", ColorToken("fileListRowAlternate", "fileListBackground", fallback: Def("TfxAlternatingRow")));
+        SetResourceBrush("TfxSelectionOverlay", ColorToken("directoryForeground", "splitHandleActive", fallback: Def("TfxSelectionOverlay")), 0.2);
         SetResourceBrush("TfxHitSurface", ColorToken("headerBackground", fallback: Colors.White), 0.01);
 
-        _activeBrush = new SolidColorBrush(ColorToken("titleBarBackgroundActive", fallback: Color.FromRgb(30, 37, 43)))
+        // The quick preview panel covers the file list, so it stays fully
+        // opaque regardless of [opacity] background.
+        QuickPreviewOverlay.Background = new SolidColorBrush(ColorToken("fileListBackground", fallback: Def("TfxPanel")));
+
+        _activeBrush = new SolidColorBrush(ColorToken("titleBarBackgroundActive", fallback: Def("TfxPanelActive")))
         {
             Opacity = backgroundOpacity,
         };
-        _inactiveBrush = new SolidColorBrush(ColorToken("titleBarBackgroundInactive", fallback: Color.FromRgb(23, 27, 31)))
+        _inactiveBrush = new SolidColorBrush(ColorToken("titleBarBackgroundInactive", fallback: Def("TfxPanel")))
         {
             Opacity = inactivePaneOpacity,
         };
@@ -598,6 +602,21 @@ public partial class MainWindow : Window
     private void ToggleMaximizeRestore()
     {
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
+
+    // Default theme colors come from App.xaml only. SetResourceBrush later
+    // overwrites those brushes in place, so the defaults are snapshotted the
+    // first time they are needed (before any config override is applied).
+    private static Dictionary<string, Color>? _defaultTheme;
+
+    private static Color Def(string resourceKey)
+    {
+        _defaultTheme ??= Application.Current.Resources.Keys
+            .OfType<string>()
+            .Where(k => k.StartsWith("Tfx", StringComparison.Ordinal) &&
+                        Application.Current.Resources[k] is SolidColorBrush)
+            .ToDictionary(k => k, k => ((SolidColorBrush)Application.Current.Resources[k]).Color);
+        return _defaultTheme[resourceKey];
     }
 
     private Color ColorToken(string key, string? alternate = null, Color? fallback = null)

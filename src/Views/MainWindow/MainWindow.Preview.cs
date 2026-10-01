@@ -60,6 +60,11 @@ public partial class MainWindow
 
     private async void UpdatePreview(IReadOnlyList<FileItem> selection)
     {
+        if (IsQuickPreviewOpen)
+        {
+            UpdateQuickPreview(selection);
+        }
+
         // Capture the token immediately: lambdas and later awaits read it after
         // a newer preview may have disposed `cts` (cts.Token would then throw).
         var cts = ReplacePreviewToken();

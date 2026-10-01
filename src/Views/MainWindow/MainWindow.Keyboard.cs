@@ -45,6 +45,7 @@ public partial class MainWindow
         ["quit"] = "ctrl+q",
         ["editConfig"] = "ctrl+,",
         ["showProperties"] = "alt+enter",
+        ["quickPreview"] = "space",
     };
 
     private bool InArchiveContext => ArchivePath.Contains(GetCurrentPath(_activeGrid));
@@ -380,6 +381,12 @@ public partial class MainWindow
 
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var inTextBox = Keyboard.FocusedElement is TextBox;
+
+        if (HandleQuickPreviewKey(e, inTextBox))
+        {
+            e.Handled = true;
+            return;
+        }
 
         // Clipboard copy / cut / paste for the file list, handled in the tunneling
         // pass so the DataGrid's built-in Ctrl+C (and any other control handling)

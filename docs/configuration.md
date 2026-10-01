@@ -212,6 +212,8 @@ disabledItem = 0.45
 | `floating` | Applies to floating surfaces (context menus, the columns popup). If omitted, `max(background, 0.94)` is used so menus stay readable under a translucent theme. |
 | `disabledItem` | Accepted for tfx compatibility. WPF disabled-control opacity is still defined by the application styles. |
 
+The Space quick preview panel, which covers the file list, is always fully opaque regardless of `background`, so the list underneath does not bleed through.
+
 When `background = 0.0`, tfx keeps a nearly invisible hit-test surface for the custom title/drag area and right-edge resize handle, so the window can still be moved and resized.
 
 ### `[startup]`
@@ -354,6 +356,7 @@ Supported action keys:
 | `quit` | `ctrl+q` | Quit the application (saves the session and tears down the terminal). Ignored while the terminal pane is focused so the shell keeps `Ctrl+Q`; `Alt+F4` always closes the window. |
 | `editConfig` | `ctrl+,` | Open `config.toml` in an editor (Editor Settings... command → OS `.toml` association → Notepad). |
 | `showProperties` | `alt+enter` | Show the Windows properties dialog for the selected item (or the current folder when nothing is selected). |
+| `quickPreview` | `space` | Open / close the quick preview panel laid over the file panes (text, image, or a folder's entries). Up / Down keep following the selection, PageUp / PageDown scroll the panel, and Space, Esc or Enter closes it. The text can be selected with the mouse and copied with Ctrl+C. Ignored while a text field has focus and during type-ahead input. |
 
 The `` ` `` (backtick / grave) key token is accepted for `toggleTerminal`; `[` and `]` are accepted for the tab-cycle shortcuts.
 
@@ -402,7 +405,7 @@ The `app` / `arguments` keys above configure the **external** terminal. The keys
 
 The terminal supports 16-color, xterm 256-color, and 24-bit truecolor SGR sequences. If `background` is omitted, the terminal surface stays transparent so the window's `[opacity] background` translucency shows through; set `background` to force an opaque color.
 
-Recognized color keys (all quoted `#RRGGBB`): `background`, `foreground`, `cursor`, and the 16 ANSI slots `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `brightBlack`, `brightRed`, `brightGreen`, `brightYellow`, `brightBlue`, `brightMagenta`, `brightCyan`, `brightWhite`.
+When `cursor` is omitted, the theme accent color is used. Recognized color keys (all quoted `#RRGGBB`): `background`, `foreground`, `cursor`, and the 16 ANSI slots `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `brightBlack`, `brightRed`, `brightGreen`, `brightYellow`, `brightBlue`, `brightMagenta`, `brightCyan`, `brightWhite`.
 
 ```toml
 [terminal]
@@ -410,7 +413,7 @@ shell = "pwsh.exe -NoLogo"
 font = "Cascadia Mono"
 fontSize = 14
 foreground = "#CCCCCC"
-cursor = "#7DD3FC"
+cursor = "#00FFA3"
 brightBlack = "#5A5A5A"   # PSReadLine history-prediction "ghost" text
 # background = "#0C0C0C"   # omit to let window translucency show through
 ```

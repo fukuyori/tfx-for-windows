@@ -2,30 +2,30 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
-        <SolidColorBrush x:Key="TfxBackground" Color="#101316" />
-        <SolidColorBrush x:Key="TfxPanel" Color="#171B1F" />
+        <SolidColorBrush x:Key="TfxBackground" Color="#000604" />
+        <SolidColorBrush x:Key="TfxPanel" Color="#010D09" />
         <!-- Floating surfaces (context menus, popups). Same color family as
              TfxPanel but kept nearly opaque even under a translucent theme —
              at the pane opacity the desktop showed through the menu text. -->
-        <SolidColorBrush x:Key="TfxFloatingPanel" Color="#171B1F" />
-        <SolidColorBrush x:Key="TfxPanelActive" Color="#1E252B" />
-        <SolidColorBrush x:Key="TfxBorder" Color="#2D353C" />
-        <SolidColorBrush x:Key="TfxForeground" Color="#D6DEE6" />
-        <SolidColorBrush x:Key="TfxMuted" Color="#8F9BA8" />
-        <SolidColorBrush x:Key="TfxAccent" Color="#7DD3FC" />
-        <SolidColorBrush x:Key="TfxFocusBorder" Color="#4ADE80" />
-        <SolidColorBrush x:Key="TfxChrome" Color="#0B0E10" />
-        <SolidColorBrush x:Key="TfxInput" Color="#0D1013" />
-        <SolidColorBrush x:Key="TfxHover" Color="#20262B" />
-        <SolidColorBrush x:Key="TfxSelection" Color="#263845" />
+        <SolidColorBrush x:Key="TfxFloatingPanel" Color="#010D09" />
+        <SolidColorBrush x:Key="TfxPanelActive" Color="#03170F" />
+        <SolidColorBrush x:Key="TfxBorder" Color="#0E6B4B" />
+        <SolidColorBrush x:Key="TfxForeground" Color="#A6FFD9" />
+        <SolidColorBrush x:Key="TfxMuted" Color="#4FA883" />
+        <SolidColorBrush x:Key="TfxAccent" Color="#00FFA3" />
+        <SolidColorBrush x:Key="TfxFocusBorder" Color="#FFB000" />
+        <SolidColorBrush x:Key="TfxChrome" Color="#000302" />
+        <SolidColorBrush x:Key="TfxInput" Color="#000A06" />
+        <SolidColorBrush x:Key="TfxHover" Color="#07281B" />
+        <SolidColorBrush x:Key="TfxSelection" Color="#0B4D36" />
         <SolidColorBrush x:Key="TfxSelectionForeground" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="TfxInactiveSelection" Color="#285A86" />
-        <SolidColorBrush x:Key="TfxDisabledForeground" Color="#59636E" />
-        <SolidColorBrush x:Key="TfxScrollThumb" Color="#3A444D" />
-        <SolidColorBrush x:Key="TfxScrollThumbHover" Color="#4A5661" />
-        <SolidColorBrush x:Key="TfxScrollThumbDragging" Color="#5B6874" />
-        <SolidColorBrush x:Key="TfxAlternatingRow" Color="#14191D" />
-        <SolidColorBrush x:Key="TfxSelectionOverlay" Color="#7DD3FC" Opacity="0.2" />
+        <SolidColorBrush x:Key="TfxInactiveSelection" Color="#0A3A2A" />
+        <SolidColorBrush x:Key="TfxDisabledForeground" Color="#2F6B55" />
+        <SolidColorBrush x:Key="TfxScrollThumb" Color="#0E6B4B" />
+        <SolidColorBrush x:Key="TfxScrollThumbHover" Color="#00B872" />
+        <SolidColorBrush x:Key="TfxScrollThumbDragging" Color="#FFB000" />
+        <SolidColorBrush x:Key="TfxAlternatingRow" Color="#010A07" />
+        <SolidColorBrush x:Key="TfxSelectionOverlay" Color="#00FFA3" Opacity="0.2" />
         <SolidColorBrush x:Key="TfxHitSurface" Color="#FFFFFF" Opacity="0.01" />
 
         <!-- Highlights a folder's name in the file list when a drag would drop
@@ -66,7 +66,7 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}"
-                                CornerRadius="3"
+                                CornerRadius="0"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
@@ -110,7 +110,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="5" SnapsToDevicePixels="True">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="0" SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               TextElement.Foreground="{TemplateBinding Foreground}"
@@ -149,7 +149,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="5" SnapsToDevicePixels="True">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="0" SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               TextElement.Foreground="{TemplateBinding Foreground}"
@@ -270,7 +270,7 @@
                     <ControlTemplate TargetType="Thumb">
                         <Border x:Name="ThumbBorder"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="4"
+                                CornerRadius="0"
                                 Margin="2" />
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">

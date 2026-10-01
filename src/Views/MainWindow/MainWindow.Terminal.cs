@@ -554,7 +554,7 @@ public partial class MainWindow
         var theme = new Dictionary<string, string>
         {
             ["foreground"] = Hex("foreground", "#CCCCCC"),
-            ["cursor"] = Hex("cursor", "#7DD3FC"),
+            ["cursor"] = Hex("cursor", CssColor("TfxAccent")),
             ["black"] = Hex("black", "#0C0C0C"),
             ["red"] = Hex("red", "#C50F1F"),
             ["green"] = Hex("green", "#13A10E"),

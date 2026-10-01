@@ -212,6 +212,8 @@ disabledItem = 0.45
 | `floating` | フローティング面(コンテキストメニュー、列選択ポップアップ)に反映されます。省略時は `max(background, 0.94)` を使い、半透明テーマでもメニューが読みやすい濃さを保ちます。 |
 | `disabledItem` | tfx 互換のため受け付けます。WPF の無効状態の透明度は、現時点ではアプリ側スタイルの値を使います。 |
 
+ファイル一覧に重なる Space のクイックプレビュー枠は、`background` に関わらず常に不透明で描画し、下の一覧が透けて読みにくくならないようにします。
+
 `background = 0.0` の場合でも、カスタムタイトル / ドラッグ領域と右端リサイズ領域にはほぼ見えないヒットテスト面を残すため、ウィンドウ移動と幅変更は可能です。
 
 ### `[startup]`
@@ -354,6 +356,7 @@ openTerminal = "ctrl+shift+t"
 | `quit` | `ctrl+q` | アプリを終了する（セッションを保存しターミナルを破棄）。ターミナルペインにフォーカスがある間はシェルの `Ctrl+Q` を優先するため無視されます。`Alt+F4` は常にウィンドウを閉じます。 |
 | `editConfig` | `ctrl+,` | `config.toml` をエディターで開く（エディター設定のコマンド → OS の `.toml` 関連付け → メモ帳の順）。 |
 | `showProperties` | `alt+enter` | 選択項目（未選択時は現在のフォルダー）の Windows プロパティダイアログを表示。 |
+| `quickPreview` | `space` | ファイルペインに重ねるクイックプレビューを開閉（テキスト・画像・フォルダーの中身）。開いている間も上下キーで選択に追従し、PageUp / PageDown でスクロール、Space・Esc・Enter で閉じます。テキストはマウスで範囲選択でき、Ctrl+C でコピーできます。テキスト入力欄にフォーカスがあるときやタイプ先頭選択の入力中は無効です。 |
 
 `toggleTerminal` には `` ` ``（バッククォート）キー、タブ切替には `[` / `]` キーが使えます。
 
@@ -384,7 +387,7 @@ arguments = "start --cwd {path}"
 | `fontSize` | number | (セッション) | フォントサイズ（`8`〜`40`）。`size` も使用可。永続値より優先。 |
 | 色キー | string `#RRGGBB` | Campbell | パレット上書き（下記）。 |
 
-256 色（xterm）および 24bit トゥルーカラーのエスケープシーケンスを描画します。指定できる名前付き色キー（すべて `#RRGGBB` を引用）: `background`, `foreground`, `cursor`, および 16 の ANSI スロット `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `brightBlack`, `brightRed`, `brightGreen`, `brightYellow`, `brightBlue`, `brightMagenta`, `brightCyan`, `brightWhite`。
+`cursor` を省略するとテーマのアクセント色になります。256 色（xterm）および 24bit トゥルーカラーのエスケープシーケンスを描画します。指定できる名前付き色キー（すべて `#RRGGBB` を引用）: `background`, `foreground`, `cursor`, および 16 の ANSI スロット `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `brightBlack`, `brightRed`, `brightGreen`, `brightYellow`, `brightBlue`, `brightMagenta`, `brightCyan`, `brightWhite`。
 
 ```toml
 [terminal]
@@ -392,7 +395,7 @@ shell = "pwsh.exe -NoLogo"
 font = "Cascadia Mono"
 fontSize = 14
 foreground = "#CCCCCC"
-cursor = "#7DD3FC"
+cursor = "#00FFA3"
 brightBlack = "#5A5A5A"   # PSReadLine の履歴予測（ゴースト）テキスト
 # background = "#0C0C0C"   # 省略するとウィンドウの透過に追従
 ```

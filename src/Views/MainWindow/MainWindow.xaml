@@ -53,7 +53,7 @@
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="Bd"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="4"
+                                CornerRadius="0"
                                 Padding="6,4"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Stretch" />
@@ -317,7 +317,7 @@
                     <ColumnDefinition x:Name="RightPaneColumn" Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Border x:Name="LeftPaneBorder" Grid.Column="0" Background="{DynamicResource TfxPanelActive}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="1" Margin="8">
+                <Border x:Name="LeftPaneBorder" Grid.Column="0" Background="{DynamicResource TfxPanelActive}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="1" Padding="1" Margin="8">
                     <DockPanel>
                         <ItemsControl x:Name="LeftTabStrip" DockPanel.Dock="Top" Margin="6,4,6,0" Visibility="Collapsed">
                             <ItemsControl.ItemsPanel>
@@ -409,7 +409,7 @@
 
                 <GridSplitter Grid.Column="1" Width="5" Background="{DynamicResource TfxBorder}" HorizontalAlignment="Stretch" />
 
-                <Border x:Name="RightPaneBorder" Grid.Column="2" Background="{DynamicResource TfxPanel}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="1" Margin="8">
+                <Border x:Name="RightPaneBorder" Grid.Column="2" Background="{DynamicResource TfxPanel}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="1" Padding="1" Margin="8">
                     <DockPanel>
                         <ItemsControl x:Name="RightTabStrip" DockPanel.Dock="Top" Margin="6,4,6,0" Visibility="Collapsed">
                             <ItemsControl.ItemsPanel>
@@ -498,6 +498,30 @@
                         </Grid>
                     </DockPanel>
                 </Border>
+
+                <!-- yazi-style quick preview (Space): laid over the file panes.
+                     See MainWindow.QuickPreview.cs. -->
+                <Border x:Name="QuickPreviewOverlay" Grid.Column="0" Grid.ColumnSpan="3" Margin="8" Visibility="Collapsed"
+                        BorderBrush="{DynamicResource TfxFocusBorder}" BorderThickness="2">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Background="{DynamicResource TfxChrome}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,0,0,1" Padding="10,4">
+                            <DockPanel>
+                                <TextBlock x:Name="QuickPreviewMeta" DockPanel.Dock="Right" Foreground="{DynamicResource TfxMuted}" Margin="16,0,0,0" />
+                                <TextBlock x:Name="QuickPreviewTitle" Foreground="{DynamicResource TfxAccent}" TextTrimming="CharacterEllipsis" />
+                            </DockPanel>
+                        </Border>
+                        <Grid>
+                            <ScrollViewer x:Name="QuickPreviewScroll" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                <!-- Read-only TextBox so the text can be selected with the mouse and copied (Ctrl+C). -->
+                                <TextBox x:Name="QuickPreviewText" IsReadOnly="True" IsReadOnlyCaretVisible="False" Background="Transparent" BorderThickness="0"
+                                         Padding="0" Margin="10,6" TextWrapping="Wrap" AcceptsReturn="True"
+                                         SelectionBrush="{DynamicResource TfxSelection}" SelectionTextBrush="{DynamicResource TfxSelectionForeground}"
+                                         Foreground="{DynamicResource TfxForeground}" FontFamily="Consolas, Yu Gothic UI" />
+                            </ScrollViewer>
+                            <Image x:Name="QuickPreviewImage" Margin="10" Stretch="Uniform" Visibility="Collapsed" RenderOptions.BitmapScalingMode="HighQuality" />
+                        </Grid>
+                    </DockPanel>
+                </Border>
             </Grid>
 
             <GridSplitter Grid.Column="3" Width="5" Background="{DynamicResource TfxBorder}" HorizontalAlignment="Stretch" />
@@ -538,7 +562,7 @@
                       Visibility="Collapsed" />
 
         <Border x:Name="TerminalHost" Grid.Row="2" Visibility="Collapsed"
-                Background="#0C0C0C" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,1,0,0">
+                Background="{DynamicResource TfxInput}" BorderBrush="{DynamicResource TfxBorder}" BorderThickness="0,1,0,0">
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Background="{DynamicResource TfxChrome}" LastChildFill="True">
                     <Button x:Name="TerminalCloseButton" DockPanel.Dock="Right" Style="{StaticResource ToolbarButton}"
@@ -580,9 +604,9 @@
                            AllowsTransparency="True" Placement="Relative"
                            PlacementTarget="{Binding ElementName=Terminal}">
                         <Border x:Name="TerminalDropOverlayBorder" AllowDrop="True"
-                                Background="#3007AACC" BorderBrush="#7DD3FC" BorderThickness="2"
+                                Background="{DynamicResource TfxSelectionOverlay}" BorderBrush="{DynamicResource TfxAccent}" BorderThickness="2"
                                 DragOver="Terminal_DragOver" Drop="Terminal_FileDrop">
-                            <TextBlock Text="Drop to paste path" Foreground="#FFFFFF"
+                            <TextBlock Text="Drop to paste path" Foreground="{DynamicResource TfxSelectionForeground}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        FontFamily="Consolas, Yu Gothic UI" FontSize="14" />
                         </Border>
