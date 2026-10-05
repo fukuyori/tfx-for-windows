@@ -321,9 +321,9 @@ public sealed class FileItem : INotifyPropertyChanged
         string[] units = ["B", "KB", "MB", "GB", "TB"];
         var size = (double)bytes;
         var unit = 0;
-        while (size >= 1024 && unit < units.Length - 1)
+        while (size >= 1000 && unit < units.Length - 1)
         {
-            size /= 1024;
+            size /= 1000;
             unit++;
         }
 

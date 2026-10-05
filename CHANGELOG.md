@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.2
+
+- **File sizes use decimal units.** Sizes in the file list, the selection total, and the drive free / total space were computed in powers of 1024 but labelled KB / MB / GB / TB, so a 73,496,879-byte file read "70.09 MB". They are now computed in powers of 1000 (73.5 MB), matching the labels.
+
 ## 0.10.1
 
 - **Quick preview: switching the active pane closes the panel.** With both panes holding a selection, pressing Tab (or clicking the other pane) while the panel was open left it showing the previous pane's item while Delete and other commands targeted the other pane's selection. The panel now closes when the active pane changes; moving the selection within the same pane still keeps it following.
