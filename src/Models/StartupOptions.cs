@@ -23,6 +23,11 @@ public sealed class StartupOptions
     public Toggle Terminal { get; private set; } = Toggle.Unset;
     public string? FolderPath { get; private set; }
     public WindowGeometry? Geometry { get; private set; }
+    /// <summary>
+    /// Always open a new window, even when started from the built-in terminal of
+    /// a running tfx (which would otherwise navigate that instance).
+    /// </summary>
+    public bool NewWindow { get; private set; }
     public bool ShowHelp { get; private set; }
     public bool ShowVersion { get; private set; }
     public bool HasError { get; private set; }
@@ -113,6 +118,7 @@ public sealed class StartupOptions
             case "no-preview": Preview = Toggle.Off; break;
             case "terminal": Terminal = Toggle.On; break;
             case "no-terminal": Terminal = Toggle.Off; break;
+            case "new-window": NewWindow = true; break;
             case "help": ShowHelp = true; break;
             case "version": ShowVersion = true; break;
             default: SetError($"Unknown option: --{name}"); break;
@@ -130,6 +136,7 @@ public sealed class StartupOptions
             case 'P': Preview = Toggle.Off; break;
             case 't': Terminal = Toggle.On; break;
             case 'T': Terminal = Toggle.Off; break;
+            case 'n': NewWindow = true; break;
             case 'h': ShowHelp = true; break;
             case 'v': ShowVersion = true; break;
             default: SetError($"Unknown option: -{c} (in {source})"); break;
@@ -157,12 +164,17 @@ public sealed class StartupOptions
         "  -P, --no-preview    Hide the preview pane\r\n" +
         "  -t, --terminal      Show the built-in terminal\r\n" +
         "  -T, --no-terminal   Hide the built-in terminal\r\n" +
-        "  -g, --geometry G    Window geometry [WxH][+X+Y] (DIPs; -X/-Y = from right/bottom)\r\n" +
+        "  -n, --new-window    Open a new window even when run from tfx's built-in terminal\r\n" +
+        "  -g, --geometry G   Window geometry [WxH][+X+Y] (DIPs; -X/-Y = from right/bottom)\r\n" +
         "                      e.g. -g 1200x800  |  --geometry=1200x800+100+50\r\n" +
         "\r\n" +
         "  [folder]            Open this folder in the left pane (supports ~ and %VARS%)\r\n" +
         "\r\n" +
         "Short flags can be combined, e.g. -2Pt.\r\n" +
+        "\r\n" +
+        "Run from tfx's built-in terminal, tfx opens no window: it points the running\r\n" +
+        "tfx's active file pane at [folder] (default: the terminal's current folder).\r\n" +
+        "Other options are ignored in that case; use -n to open a new window instead.\r\n" +
         "\r\n" +
         "Example:\r\n" +
         "  tfx -2 -P -t ~/Downloads\r\n" +
@@ -190,6 +202,10 @@ public sealed class StartupOptions
         var text = string.IsNullOrEmpty(version) ? "tfx" : $"tfx {version}";
         WriteToConsoleOrMessageBox(text + Environment.NewLine, MessageBoxImage.Information);
     }
+
+    /// <summary>Prints an error line to the parent console (or a message box when there is none).</summary>
+    public static void WriteError(string message) =>
+        WriteToConsoleOrMessageBox(message + Environment.NewLine, MessageBoxImage.Warning);
 
     private static void WriteToConsoleOrMessageBox(string text, MessageBoxImage icon)
     {

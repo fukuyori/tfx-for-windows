@@ -2,7 +2,7 @@
 
 **Terminal-inspired interface File eXplorer**
 Pronunciation: **Tafix**
-Version: 0.10.2
+Version: 0.10.3
 
 [English](README.md) | [日本語](README.ja.md)
 
@@ -241,7 +241,10 @@ tfx [options] [folder]
 | `-P` | `--no-preview` | Hide the preview pane |
 | `-t` | `--terminal` | Show the built-in terminal |
 | `-T` | `--no-terminal` | Hide the built-in terminal |
+| `-n` | `--new-window` | Open a new window even when run from tfx's built-in terminal |
 | `-g G` | `--geometry=G` | Window geometry `[WxH][+X+Y]` (DIPs; `-X`/`-Y` = from right/bottom), e.g. `1200x800+100+50` |
+
+**Run from tfx's built-in terminal**, `tfx` opens no new window. It points the running tfx's active file pane at `[folder]`, or at the terminal's current folder when no folder is given (relative paths are resolved against it). Other options are ignored in that case, focus stays in the terminal, and a folder that does not exist is reported on the console without changing anything. Use `-n` to open a new window instead. This relies on the `TFX_PARENT_PID` environment variable the terminal's shell receives, so it does not apply to shells where that variable is not passed on (e.g. inside WSL or over SSH); there `tfx` starts normally.
 
 `[folder]` opens that folder in the left pane (supports `~` and `%VARS%`). Short flags can be combined, e.g. `-2Pt`. Command-line options take precedence over `config.toml [startup]` and the saved session state. A geometry also forces a normal (non-maximized) window.
 

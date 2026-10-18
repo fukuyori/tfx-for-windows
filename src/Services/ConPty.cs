@@ -192,6 +192,9 @@ internal sealed class ConPty : IDisposable
         }
         vars["TERM"] = "xterm-256color";
         vars["COLORTERM"] = "truecolor";
+        // Lets a `tfx` run inside this terminal hand its folder to this instance
+        // instead of opening a second window (see InstanceLink).
+        vars[InstanceLink.ParentPidVariable] = Environment.ProcessId.ToString();
 
         var sb = new System.Text.StringBuilder();
         foreach (var kv in vars)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.3
+
+- **`tfx` run inside tfx's built-in terminal navigates the running tfx.** Instead of opening a second window, it points the active file pane at the given folder, or at the terminal's current folder when none is given (the command-line counterpart of the terminal's "sync folder" button). Focus stays in the terminal; a folder that does not exist is reported on the console and changes nothing. The terminal's shell receives `TFX_PARENT_PID`, and the folder is sent over a per-process, current-user-only named pipe; if the parent cannot be reached, tfx starts a normal window. New option `-n` / `--new-window` always opens a new window.
+
 ## 0.10.2
 
 - **File sizes use decimal units.** Sizes in the file list, the selection total, and the drive free / total space were computed in powers of 1024 but labelled KB / MB / GB / TB, so a 73,496,879-byte file read "70.09 MB". They are now computed in powers of 1000 (73.5 MB), matching the labels.

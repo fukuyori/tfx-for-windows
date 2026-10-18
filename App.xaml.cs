@@ -32,7 +32,41 @@ public partial class App : Application
             return;
         }
 
+        if (TryForwardToParentInstance(options) is { } exitCode)
+        {
+            Shutdown(exitCode);
+            return;
+        }
+
         new MainWindow(options).Show();
+    }
+
+    /// <summary>
+    /// When started from the built-in terminal of a running tfx, hands the folder
+    /// (the argument, else the shell's current folder) to that instance instead of
+    /// opening a window. Returns the exit code when handled, or null to continue
+    /// with a normal window (not in a tfx terminal, <c>-n</c> given, or the parent
+    /// is unreachable).
+    /// </summary>
+    private static int? TryForwardToParentInstance(StartupOptions options)
+    {
+        if (options.NewWindow
+            || !int.TryParse(Environment.GetEnvironmentVariable(InstanceLink.ParentPidVariable), out var pid)
+            || pid <= 0)
+        {
+            return null;
+        }
+
+        var raw = string.IsNullOrWhiteSpace(options.FolderPath)
+            ? Environment.CurrentDirectory
+            : options.FolderPath;
+        if (!Tfx.MainWindow.TryResolveStartupFolder(raw, out var folder))
+        {
+            StartupOptions.WriteError($"tfx: folder not found: {raw}");
+            return 1;
+        }
+
+        return InstanceLink.TrySend(pid, folder) ? 0 : null;
     }
 
     /// <summary>

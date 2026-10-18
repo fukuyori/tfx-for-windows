@@ -118,6 +118,7 @@ public partial class MainWindow : Window
         InitializeAutoRefresh();
         InitializeGitWatch();
         InitializeTerminalPane();
+        StartInstanceLink();
         StartConfigWatcher();
 
         // Reload from Navigate(LeftGrid, ...) is async; the ApplyPendingSelection
@@ -212,7 +213,7 @@ public partial class MainWindow : Window
     /// Expands a command-line folder argument (<c>~</c>, <c>~/sub</c>, and
     /// <c>%VARS%</c>) and returns its full path when it exists.
     /// </summary>
-    private static bool TryResolveStartupFolder(string raw, out string fullPath)
+    internal static bool TryResolveStartupFolder(string raw, out string fullPath)
     {
         fullPath = "";
         try
@@ -1180,6 +1181,7 @@ public partial class MainWindow : Window
         _rightReloadCts?.Dispose();
         _rightReloadCts = null;
 
+        DisposeInstanceLink();
         DisposeAutoRefresh();
         DisposeGitWatch();
         DisposeConfigWatcher();
