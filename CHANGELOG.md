@@ -1,12 +1,8 @@
 # Changelog
 
-## Unreleased
-
-- **Quick preview is tied to the item it was opened for.** It no longer follows the selection: it closes (returning to the file list) when the selection moves to another item or becomes empty (Up / Down, Home / End, a search or reload), when the folder, the tab (click, new, close, next / previous) or the active pane changes, and on Tab, which previously could leave the panel open with focus on an unseen control in single-pane layout. Up / Down still move the selection. Moving focus to the terminal or the search box does not close it; running a search does. This replaces the 0.10.4 "Nothing selected." handling.
-
 ## 0.10.4
 
-- **Quick preview closes when nothing is selected.** If the selection becomes empty while the panel is open, it now closes and returns to the file list instead of showing "Nothing selected."
+- **Quick preview is tied to the item it was opened for.** It no longer follows the selection: it closes (returning to the file list) when the selection moves to another item or becomes empty (Up / Down, Home / End, a search or reload), when the folder, the tab (click, new, close, next / previous) or the active pane changes, and on Tab, which previously could leave the panel open with focus on an unseen control in single-pane layout. Up / Down still move the selection. Moving focus to the terminal or the search box does not close it; running a search does. The "Nothing selected." message is gone: an empty selection now closes the panel.
 
 ## 0.10.3
 
