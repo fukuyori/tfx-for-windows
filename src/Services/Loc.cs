@@ -25,7 +25,6 @@ internal static class Loc
         ["{0:0.0}s"] = "{0:0.0} 秒",
         ["{0}m {1:00}s"] = "{0} 分 {1:00} 秒",
         ["Find: {0}"] = "検索: {0}",
-        ["Nothing selected."] = "選択されていません。",
         ["{0} items selected"] = "{0} 個の項目を選択中",
         ["No preview inside archives."] = "アーカイブ内はプレビューできません。",
         ["No preview available."] = "プレビューできません。",

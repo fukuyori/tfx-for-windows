@@ -7,16 +7,22 @@ namespace Tfx;
 
 // yazi-style quick preview: Space opens a bordered panel laid over the file
 // panes showing the selected item (text, image, or a folder's entries). It is
-// independent of the preview pane. While open, the selection keeps following
-// the listing (Up / Down), PageUp / PageDown scroll the panel, and Space, Esc,
-// or Enter closes it. Clicking the text selects it (Ctrl+C copies). Space is ignored while a text field has focus and
-// during the type-ahead window, so typing never triggers it.
+// independent of the preview pane. It is tied to the item it was opened for:
+// PageUp / PageDown scroll the panel; Space, Esc, Enter, Tab, or anything that
+// moves the selection to another item (Up / Down, Home / End, a search or
+// reload), changes the folder, tab or active pane closes it. Moving focus to the
+// terminal or the search box does not. Clicking the text selects it (Ctrl+C
+// copies). Space is ignored while a text field has focus and during the
+// type-ahead window, so typing never triggers it.
 public partial class MainWindow
 {
     private const int QuickPreviewFolderEntryCap = 500;
     private const int QuickPreviewFolderEnumerationCap = 5000;
 
     private CancellationTokenSource? _quickPreviewCts;
+
+    // Full path of the item the open panel shows; null while closed.
+    private string? _quickPreviewPath;
 
     private bool IsQuickPreviewOpen => QuickPreviewOverlay.Visibility == Visibility.Visible;
 
@@ -30,8 +36,9 @@ public partial class MainWindow
             return;
         }
 
+        _quickPreviewPath = item.FullPath;
         QuickPreviewOverlay.Visibility = Visibility.Visible;
-        UpdateQuickPreview(new[] { item });
+        ShowQuickPreview(item);
     }
 
     private bool IsFocusInQuickPreviewText() =>
@@ -39,10 +46,16 @@ public partial class MainWindow
 
     private void CloseQuickPreview()
     {
+        if (!IsQuickPreviewOpen)
+        {
+            return;
+        }
+
         // Clicking the text moves focus into it (to allow selecting / copying);
         // hand focus back to the listing so keyboard navigation continues.
         var restoreFocus = IsFocusInQuickPreviewText();
         _quickPreviewCts?.Cancel();
+        _quickPreviewPath = null;
         QuickPreviewOverlay.Visibility = Visibility.Collapsed;
         QuickPreviewImage.Source = null;
         QuickPreviewText.Text = "";
@@ -80,10 +93,15 @@ public partial class MainWindow
                 return true;
             }
 
-            if (IsShortcut("rename", e) || IsShortcut("newFile", e) || IsShortcut("newFolder", e))
+            if (e.Key == Key.Tab
+                || IsShortcut("rename", e) || IsShortcut("newFile", e) || IsShortcut("newFolder", e))
             {
-                // These start inline editing in the listing underneath; the
-                // editor would be hidden behind the opaque panel.
+                // Rename / new item start inline editing in the listing
+                // underneath; the editor would be hidden behind the opaque panel.
+                // Tab moves focus away from the item (to the other pane, or to
+                // another control in single-pane layout), which would leave the
+                // panel open with focus somewhere out of sight. The key itself
+                // still runs.
                 CloseQuickPreview();
                 return false;
             }
@@ -96,7 +114,8 @@ public partial class MainWindow
 
             if (inPanelText && e.Key is Key.Up or Key.Down && Keyboard.Modifiers == ModifierKeys.None)
             {
-                // Back to the listing so the panel keeps following the selection.
+                // Back to the listing, then move the selection: the selection
+                // leaving the item closes the panel.
                 FocusActiveListing();
                 MoveActiveListingSelection(e.Key, false);
                 return true;
@@ -114,7 +133,29 @@ public partial class MainWindow
         return false;
     }
 
-    private async void UpdateQuickPreview(IReadOnlyList<FileItem> selection)
+    /// <summary>
+    /// Closes the panel unless <paramref name="selection"/> is still exactly the
+    /// item it was opened for. The panel is tied to that one item: an empty
+    /// selection or a move to another item (Up / Down, Home / End, a search or
+    /// reload replacing the rows) closes it and returns to the listing.
+    /// </summary>
+    private void CloseQuickPreviewIfSelectionMoved(IReadOnlyList<FileItem> selection)
+    {
+        if (!IsQuickPreviewOpen)
+        {
+            return;
+        }
+
+        if (selection.Count == 1
+            && string.Equals(selection[0].FullPath, _quickPreviewPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        CloseQuickPreview();
+    }
+
+    private async void ShowQuickPreview(FileItem item)
     {
         _quickPreviewCts?.Cancel();
         var cts = new CancellationTokenSource();
@@ -128,23 +169,6 @@ public partial class MainWindow
         QuickPreviewScroll.ScrollToTop();
         QuickPreviewScroll.ScrollToLeftEnd();
 
-        if (selection.Count == 0)
-        {
-            QuickPreviewTitle.Text = "";
-            QuickPreviewMeta.Text = "";
-            QuickPreviewText.Text = Loc.T("Nothing selected.");
-            return;
-        }
-
-        if (selection.Count > 1)
-        {
-            QuickPreviewTitle.Text = Loc.F("{0} items selected", selection.Count);
-            QuickPreviewMeta.Text = "";
-            QuickPreviewText.Text = BuildMultiSelectionSummary(selection);
-            return;
-        }
-
-        var item = selection[0];
         QuickPreviewTitle.Text = item.Name;
         QuickPreviewMeta.Text = item.IsDirectory
             ? $"{item.Kind}  {item.ModifiedText}"

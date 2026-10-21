@@ -18,8 +18,10 @@ public partial class MainWindow
             return;
         }
 
-        // A folder change starts type-ahead from scratch.
+        // A folder change starts type-ahead from scratch, and the quick preview
+        // (tied to an item of the old folder) goes away.
         ResetTypeAhead();
+        CloseQuickPreview();
 
         // Navigating leaves search mode (cancels an in-flight walk, drops a
         // completed result set) and clears the search box so the new folder

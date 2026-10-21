@@ -73,6 +73,13 @@ public partial class MainWindow
 
     private void SearchBox_KeyDown(object sender, KeyEventArgs e)
     {
+        // Running (or clearing) a search replaces the rows the quick preview
+        // was opened on.
+        if (e.Key is Key.Escape or Key.Enter)
+        {
+            CloseQuickPreview();
+        }
+
         if (e.Key == Key.Escape)
         {
             if (_subfolderSearchShown)

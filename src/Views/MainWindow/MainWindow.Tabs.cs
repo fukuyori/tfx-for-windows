@@ -205,6 +205,8 @@ public partial class MainWindow
             return;
         }
 
+        // The listing is about to show another tab's folder.
+        CloseQuickPreview();
         SetActiveTabIndex(pane, index);
         var tab = tabs[index];
         SetPathOf(pane, tab.Path);

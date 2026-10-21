@@ -38,6 +38,9 @@ public partial class MainWindow
     private void SchedulePreviewUpdate(IEnumerable<FileItem> selection)
     {
         _pendingPreviewSelection = selection.Where(i => !i.IsParent).ToArray();
+        // Immediately, not after the debounce: the quick preview must not keep
+        // showing the old item while the selection has already moved on.
+        CloseQuickPreviewIfSelectionMoved(_pendingPreviewSelection);
         if (_previewDebounceTimer is null)
         {
             _previewDebounceTimer = new DispatcherTimer { Interval = PreviewDebounce };
@@ -60,11 +63,6 @@ public partial class MainWindow
 
     private async void UpdatePreview(IReadOnlyList<FileItem> selection)
     {
-        if (IsQuickPreviewOpen)
-        {
-            UpdateQuickPreview(selection);
-        }
-
         // Capture the token immediately: lambdas and later awaits read it after
         // a newer preview may have disposed `cts` (cts.Token would then throw).
         var cts = ReplacePreviewToken();
